@@ -1,0 +1,82 @@
+[
+  {
+    "id": "notif_001",
+    "organizationId": "org_novis_001",
+    "userId": "usr_mr_001",
+    "category": "VISIT",
+    "title": "Visit Scheduled",
+    "body": "You have a high-priority call with Dr. K. Saravanan scheduled at 09:00 AM.",
+    "isRead": false,
+    "createdAt": "2026-10-08T08:00:00.000Z"
+  },
+  {
+    "id": "notif_002",
+    "organizationId": "org_novis_001",
+    "userId": "usr_mr_001",
+    "category": "ORDER",
+    "title": "Order Dispatched",
+    "body": "Order ORD-2026-10-0001 for Apollo Pharmacy has been dispatched by Sri Ram Pharma.",
+    "isRead": false,
+    "createdAt": "2026-10-08T08:30:00.000Z"
+  },
+  {
+    "id": "notif_003",
+    "organizationId": "org_novis_001",
+    "userId": "usr_mr_001",
+    "category": "COLLECTION",
+    "title": "Payment Receipt Confirmed",
+    "body": "Payment receipt REC-2026-10-0001 of ₹12,500 has been reconciled.",
+    "isRead": true,
+    "createdAt": "2026-10-07T16:00:00.000Z"
+  },
+  {
+    "id": "notif_004",
+    "organizationId": "org_novis_001",
+    "userId": "usr_mr_001",
+    "category": "PRODUCT",
+    "title": "Low Stock Alert",
+    "body": "CardioVas 10mg is marked Low Stock across 4 pharmacies in Madurai North.",
+    "isRead": false,
+    "createdAt": "2026-10-08T07:15:00.000Z"
+  },
+  {
+    "id": "notif_005",
+    "organizationId": "org_novis_001",
+    "userId": "usr_mr_001",
+    "category": "TARGET",
+    "title": "Mid-Month Milestone",
+    "body": "You have achieved 41% of your monthly sales target. Keep up the momentum!",
+    "isRead": true,
+    "createdAt": "2026-10-06T18:00:00.000Z"
+  },
+  {
+    "id": "notif_006",
+    "organizationId": "org_novis_001",
+    "userId": "usr_mr_001",
+    "category": "SYSTEM",
+    "title": "Visual Aid Updated",
+    "body": "Version 2 of NormoTens 40mg detailing deck is now published.",
+    "isRead": true,
+    "createdAt": "2026-10-05T09:00:00.000Z"
+  },
+  {
+    "id": "notif_007",
+    "organizationId": "org_novis_001",
+    "userId": "usr_mgr_001",
+    "category": "VISIT",
+    "title": "Outside Radius Exception",
+    "body": "MR Dinesh Babu submitted an exception request for Dr. P. Dhanalakshmi (Distance: 380m).",
+    "isRead": false,
+    "createdAt": "2026-10-08T10:10:00.000Z"
+  },
+  {
+    "id": "notif_008",
+    "organizationId": "org_novis_001",
+    "userId": "usr_mgr_001",
+    "category": "TARGET",
+    "title": "Territory Call Compliance",
+    "body": "Madurai North reached 92% call compliance yesterday with 28 completed visits.",
+    "isRead": false,
+    "createdAt": "2026-10-08T07:00:00.000Z"
+  }
+]

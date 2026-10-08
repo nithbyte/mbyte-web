@@ -1,0 +1,302 @@
+[
+  {
+    "id": "mr_001",
+    "userId": "usr_mr_001",
+    "organizationId": "org_novis_001",
+    "territoryId": "ter_mdu_north",
+    "managerId": "usr_mgr_001",
+    "employeeCode": "NP-MR-101",
+    "designation": "Medical Representative",
+    "headquarters": "Madurai",
+    "dailyCallGoal": 10,
+    "monthlyTargetAmount": 450000,
+    "joiningDate": "2026-02-01",
+    "user": {
+      "id": "usr_mr_001",
+      "firstName": "Arun",
+      "lastName": "Kumar",
+      "email": "arun.kumar@novispharma.com",
+      "phone": "+91984201000"
+    }
+  },
+  {
+    "id": "mr_002",
+    "userId": "usr_mr_002",
+    "organizationId": "org_novis_001",
+    "territoryId": "ter_mdu_north",
+    "managerId": "usr_mgr_001",
+    "employeeCode": "NP-MR-102",
+    "designation": "Medical Representative",
+    "headquarters": "Madurai",
+    "dailyCallGoal": 10,
+    "monthlyTargetAmount": 450000,
+    "joiningDate": "2026-02-01",
+    "user": {
+      "id": "usr_mr_002",
+      "firstName": "Dinesh",
+      "lastName": "Babu",
+      "email": "dinesh.babu@novispharma.com",
+      "phone": "+91984201001"
+    }
+  },
+  {
+    "id": "mr_003",
+    "userId": "usr_mr_003",
+    "organizationId": "org_novis_001",
+    "territoryId": "ter_mdu_north",
+    "managerId": "usr_mgr_001",
+    "employeeCode": "NP-MR-103",
+    "designation": "Medical Representative",
+    "headquarters": "Madurai",
+    "dailyCallGoal": 10,
+    "monthlyTargetAmount": 450000,
+    "joiningDate": "2026-02-01",
+    "user": {
+      "id": "usr_mr_003",
+      "firstName": "Manikandan",
+      "lastName": "S",
+      "email": "manikandan.s@novispharma.com",
+      "phone": "+91984201002"
+    }
+  },
+  {
+    "id": "mr_004",
+    "userId": "usr_mr_004",
+    "organizationId": "org_novis_001",
+    "territoryId": "ter_mdu_south",
+    "managerId": "usr_mgr_002",
+    "employeeCode": "NP-MR-104",
+    "designation": "Medical Representative",
+    "headquarters": "Madurai",
+    "dailyCallGoal": 10,
+    "monthlyTargetAmount": 450000,
+    "joiningDate": "2026-02-01",
+    "user": {
+      "id": "usr_mr_004",
+      "firstName": "Saravanan",
+      "lastName": "P",
+      "email": "saravanan.p@novispharma.com",
+      "phone": "+91984201003"
+    }
+  },
+  {
+    "id": "mr_005",
+    "userId": "usr_mr_005",
+    "organizationId": "org_novis_001",
+    "territoryId": "ter_mdu_south",
+    "managerId": "usr_mgr_002",
+    "employeeCode": "NP-MR-105",
+    "designation": "Medical Representative",
+    "headquarters": "Madurai",
+    "dailyCallGoal": 10,
+    "monthlyTargetAmount": 450000,
+    "joiningDate": "2026-02-01",
+    "user": {
+      "id": "usr_mr_005",
+      "firstName": "Balaji",
+      "lastName": "R",
+      "email": "balaji.r@novispharma.com",
+      "phone": "+91984201004"
+    }
+  },
+  {
+    "id": "mr_006",
+    "userId": "usr_mr_006",
+    "organizationId": "org_novis_001",
+    "territoryId": "ter_mdu_south",
+    "managerId": "usr_mgr_002",
+    "employeeCode": "NP-MR-106",
+    "designation": "Medical Representative",
+    "headquarters": "Madurai",
+    "dailyCallGoal": 10,
+    "monthlyTargetAmount": 450000,
+    "joiningDate": "2026-02-01",
+    "user": {
+      "id": "usr_mr_006",
+      "firstName": "Vignesh",
+      "lastName": "K",
+      "email": "vignesh.k@novispharma.com",
+      "phone": "+91984201005"
+    }
+  },
+  {
+    "id": "mr_007",
+    "userId": "usr_mr_007",
+    "organizationId": "org_novis_001",
+    "territoryId": "ter_tri_central",
+    "managerId": "usr_mgr_003",
+    "employeeCode": "NP-MR-107",
+    "designation": "Medical Representative",
+    "headquarters": "Trichy",
+    "dailyCallGoal": 10,
+    "monthlyTargetAmount": 450000,
+    "joiningDate": "2026-02-01",
+    "user": {
+      "id": "usr_mr_007",
+      "firstName": "Murugan",
+      "lastName": "T",
+      "email": "murugan.t@novispharma.com",
+      "phone": "+91984201006"
+    }
+  },
+  {
+    "id": "mr_008",
+    "userId": "usr_mr_008",
+    "organizationId": "org_novis_001",
+    "territoryId": "ter_tri_central",
+    "managerId": "usr_mgr_003",
+    "employeeCode": "NP-MR-108",
+    "designation": "Medical Representative",
+    "headquarters": "Trichy",
+    "dailyCallGoal": 10,
+    "monthlyTargetAmount": 450000,
+    "joiningDate": "2026-02-01",
+    "user": {
+      "id": "usr_mr_008",
+      "firstName": "Anbarasan",
+      "lastName": "M",
+      "email": "anbarasan.m@novispharma.com",
+      "phone": "+91984201007"
+    }
+  },
+  {
+    "id": "mr_009",
+    "userId": "usr_mr_009",
+    "organizationId": "org_novis_001",
+    "territoryId": "ter_tri_central",
+    "managerId": "usr_mgr_003",
+    "employeeCode": "NP-MR-109",
+    "designation": "Medical Representative",
+    "headquarters": "Trichy",
+    "dailyCallGoal": 10,
+    "monthlyTargetAmount": 450000,
+    "joiningDate": "2026-02-01",
+    "user": {
+      "id": "usr_mr_009",
+      "firstName": "Suresh",
+      "lastName": "G",
+      "email": "suresh.g@novispharma.com",
+      "phone": "+91984201008"
+    }
+  },
+  {
+    "id": "mr_010",
+    "userId": "usr_mr_010",
+    "organizationId": "org_novis_001",
+    "territoryId": "ter_tnv_south",
+    "managerId": "usr_mgr_004",
+    "employeeCode": "NP-MR-110",
+    "designation": "Medical Representative",
+    "headquarters": "Tirunelveli",
+    "dailyCallGoal": 10,
+    "monthlyTargetAmount": 450000,
+    "joiningDate": "2026-02-01",
+    "user": {
+      "id": "usr_mr_010",
+      "firstName": "Vijay",
+      "lastName": "Anand",
+      "email": "vijay.anand@novispharma.com",
+      "phone": "+91984201009"
+    }
+  },
+  {
+    "id": "mr_011",
+    "userId": "usr_mr_011",
+    "organizationId": "org_novis_001",
+    "territoryId": "ter_tnv_south",
+    "managerId": "usr_mgr_004",
+    "employeeCode": "NP-MR-111",
+    "designation": "Medical Representative",
+    "headquarters": "Tirunelveli",
+    "dailyCallGoal": 10,
+    "monthlyTargetAmount": 450000,
+    "joiningDate": "2026-02-01",
+    "user": {
+      "id": "usr_mr_011",
+      "firstName": "Prakash",
+      "lastName": "R",
+      "email": "prakash.r@novispharma.com",
+      "phone": "+91984201010"
+    }
+  },
+  {
+    "id": "mr_012",
+    "userId": "usr_mr_012",
+    "organizationId": "org_novis_001",
+    "territoryId": "ter_tnv_south",
+    "managerId": "usr_mgr_004",
+    "employeeCode": "NP-MR-112",
+    "designation": "Medical Representative",
+    "headquarters": "Tirunelveli",
+    "dailyCallGoal": 10,
+    "monthlyTargetAmount": 450000,
+    "joiningDate": "2026-02-01",
+    "user": {
+      "id": "usr_mr_012",
+      "firstName": "Jayakumar",
+      "lastName": "K",
+      "email": "jayakumar.k@novispharma.com",
+      "phone": "+91984201011"
+    }
+  },
+  {
+    "id": "mr_013",
+    "userId": "usr_mr_013",
+    "organizationId": "org_novis_001",
+    "territoryId": "ter_cbe_east",
+    "managerId": "usr_mgr_005",
+    "employeeCode": "NP-MR-113",
+    "designation": "Medical Representative",
+    "headquarters": "Coimbatore",
+    "dailyCallGoal": 10,
+    "monthlyTargetAmount": 450000,
+    "joiningDate": "2026-02-01",
+    "user": {
+      "id": "usr_mr_013",
+      "firstName": "Ramkumar",
+      "lastName": "V",
+      "email": "ramkumar.v@novispharma.com",
+      "phone": "+91984201012"
+    }
+  },
+  {
+    "id": "mr_014",
+    "userId": "usr_mr_014",
+    "organizationId": "org_novis_001",
+    "territoryId": "ter_cbe_east",
+    "managerId": "usr_mgr_005",
+    "employeeCode": "NP-MR-114",
+    "designation": "Medical Representative",
+    "headquarters": "Coimbatore",
+    "dailyCallGoal": 10,
+    "monthlyTargetAmount": 450000,
+    "joiningDate": "2026-02-01",
+    "user": {
+      "id": "usr_mr_014",
+      "firstName": "Siva",
+      "lastName": "Prakash",
+      "email": "siva.prakash@novispharma.com",
+      "phone": "+91984201013"
+    }
+  },
+  {
+    "id": "mr_015",
+    "userId": "usr_mr_015",
+    "organizationId": "org_novis_001",
+    "territoryId": "ter_cbe_east",
+    "managerId": "usr_mgr_005",
+    "employeeCode": "NP-MR-115",
+    "designation": "Medical Representative",
+    "headquarters": "Coimbatore",
+    "dailyCallGoal": 10,
+    "monthlyTargetAmount": 450000,
+    "joiningDate": "2026-02-01",
+    "user": {
+      "id": "usr_mr_015",
+      "firstName": "Naveen",
+      "lastName": "Kumar",
+      "email": "naveen.kumar@novispharma.com",
+      "phone": "+91984201014"
+    }
+  }
+]

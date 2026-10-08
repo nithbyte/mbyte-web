@@ -1,0 +1,26 @@
+[
+  {
+    "id": "cat_cardio",
+    "organizationId": "org_novis_001",
+    "name": "Cardiovascular",
+    "slug": "cardiovascular"
+  },
+  {
+    "id": "cat_diabetic",
+    "organizationId": "org_novis_001",
+    "name": "Diabetes & Metabolic",
+    "slug": "diabetes-metabolic"
+  },
+  {
+    "id": "cat_anti_infective",
+    "organizationId": "org_novis_001",
+    "name": "Anti-Infectives",
+    "slug": "anti-infectives"
+  },
+  {
+    "id": "cat_pain_gastro",
+    "organizationId": "org_novis_001",
+    "name": "Pain & Gastroenterology",
+    "slug": "pain-gastroenterology"
+  }
+]

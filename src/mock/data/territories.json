@@ -1,0 +1,57 @@
+[
+  {
+    "id": "ter_mdu_north",
+    "organizationId": "org_novis_001",
+    "code": "TN-MDU-N",
+    "name": "Madurai North",
+    "zone": "South",
+    "region": "Madurai",
+    "area": "Goripalayam-KK Nagar",
+    "headquarters": "Madurai",
+    "isActive": true
+  },
+  {
+    "id": "ter_mdu_south",
+    "organizationId": "org_novis_001",
+    "code": "TN-MDU-S",
+    "name": "Madurai South",
+    "zone": "South",
+    "region": "Madurai",
+    "area": "Periyar-Villapuram",
+    "headquarters": "Madurai",
+    "isActive": true
+  },
+  {
+    "id": "ter_tri_central",
+    "organizationId": "org_novis_001",
+    "code": "TN-TRI-C",
+    "name": "Trichy Central",
+    "zone": "South",
+    "region": "Trichy",
+    "area": "Thillai Nagar-Cantonment",
+    "headquarters": "Trichy",
+    "isActive": true
+  },
+  {
+    "id": "ter_tnv_south",
+    "organizationId": "org_novis_001",
+    "code": "TN-TNV-S",
+    "name": "Tirunelveli",
+    "zone": "South",
+    "region": "Tirunelveli",
+    "area": "Palayamkottai-Vannarpettai",
+    "headquarters": "Tirunelveli",
+    "isActive": true
+  },
+  {
+    "id": "ter_cbe_east",
+    "organizationId": "org_novis_001",
+    "code": "TN-CBE-E",
+    "name": "Coimbatore East",
+    "zone": "West",
+    "region": "Coimbatore",
+    "area": "RS Puram-Gandhipuram",
+    "headquarters": "Coimbatore",
+    "isActive": true
+  }
+]
