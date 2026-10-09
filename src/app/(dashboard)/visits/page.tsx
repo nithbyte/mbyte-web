@@ -362,6 +362,7 @@ export default function VisitsPage() {
               <select
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
+                suppressHydrationWarning
                 className="w-full h-8 px-2 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
               >
                 <option value="ALL">All Recorded Dates</option>
@@ -381,6 +382,7 @@ export default function VisitsPage() {
               <select
                 value={selectedMR}
                 onChange={(e) => setSelectedMR(e.target.value)}
+                suppressHydrationWarning
                 className="w-full h-8 px-2 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
               >
                 <option value="ALL">All Medical Representatives</option>
@@ -400,6 +402,7 @@ export default function VisitsPage() {
               <select
                 value={selectedTerritory}
                 onChange={(e) => setSelectedTerritory(e.target.value)}
+                suppressHydrationWarning
                 className="w-full h-8 px-2 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
               >
                 <option value="ALL">All Territory Zones</option>
@@ -419,6 +422,7 @@ export default function VisitsPage() {
               <select
                 value={selectedCustomer}
                 onChange={(e) => setSelectedCustomer(e.target.value)}
+                suppressHydrationWarning
                 className="w-full h-8 px-2 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
               >
                 <option value="ALL">All Target Customers</option>
@@ -447,6 +451,7 @@ export default function VisitsPage() {
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
+                suppressHydrationWarning
                 className="w-full h-8 px-2 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
               >
                 <option value="ALL">All Call Statuses</option>

@@ -12,3 +12,5 @@ export * from "./dashboardService";
 export * from "./authService";
 export * from "./presenceService";
 export * from "./reportService";
+export * from "./targetService";
+export * from "./notificationService";

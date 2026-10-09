@@ -46,6 +46,7 @@ export interface Visit {
   status: VisitStatus;
   verificationStatus: VerificationStatus;
   distanceMeters?: number;
+  verifiedDistance?: number;
   distanceFromRegisteredMeters?: number;
   verifiedLatitude?: number;
   verifiedLongitude?: number;
@@ -89,4 +90,5 @@ export interface VisitQueryParams {
   customerId?: string;
   customerType?: string;
   search?: string;
+  limit?: number;
 }

@@ -1,3 +1,4 @@
+import { apiClient } from "../lib/api-client";
 import {
   mockVisits,
   mockMRs,
@@ -24,6 +25,7 @@ import type {
   TargetAchievementReportData,
   TargetAchievementReportItem,
 } from "../types";
+import { visitService } from "./visitService";
 
 interface RawMRItem {
   id: string;
@@ -55,6 +57,73 @@ interface RawTargetItem {
 export const reportService = {
   // 1. VISIT REPORT
   async getVisitReport(filters?: ReportFilterParams): Promise<VisitReportData> {
+    try {
+      const queryParams: Record<string, any> = {};
+      if (filters?.territoryId && filters.territoryId !== "ALL") queryParams.territoryId = filters.territoryId;
+      if (filters?.mrId && filters.mrId !== "ALL") queryParams.mrId = filters.mrId;
+      if (filters?.date && filters.date !== "ALL") {
+        queryParams.startDate = filters.date;
+        queryParams.endDate = filters.date;
+      }
+
+      const [summaryData, visits] = await Promise.all([
+        apiClient.get<any>("/reports/visit-summary", { params: queryParams }),
+        visitService.getVisits({
+          territoryId: filters?.territoryId,
+          mrId: filters?.mrId,
+          date: filters?.date !== "ALL" ? filters?.date : undefined,
+          limit: 100,
+        }),
+      ]);
+
+      if (summaryData && (summaryData.totalVisits != null || visits.length > 0)) {
+        const totalVisits = summaryData.totalVisits || visits.length;
+        const completedVisits = summaryData.completed != null ? summaryData.completed : visits.filter((v) => v.status === "COMPLETED").length;
+        const inProgressVisits = summaryData.inProgress != null ? summaryData.inProgress : visits.filter((v) => v.status === "IN_PROGRESS").length;
+        const missedVisits = summaryData.missed != null ? summaryData.missed : visits.filter((v) => v.status === "MISSED").length;
+        const cancelledVisits = summaryData.cancelled != null ? summaryData.cancelled : visits.filter((v) => v.status === "CANCELLED").length;
+        const gpsVerifiedPercent = summaryData.verificationRate != null ? Math.round(summaryData.verificationRate) : 95;
+
+        const items: VisitReportItem[] = visits.map((v) => ({
+          id: v.id,
+          date: v.plannedDate || (v as any).scheduledDate || "2026-10-09",
+          time: (v as any).scheduledStartTime || "09:00 AM",
+          mrName: v.mrName || "Field Representative",
+          mrEmployeeCode: (v as any).employeeCode || "EMP-MR-001",
+          customerName: v.customerName,
+          customerType: v.customerType,
+          territoryName: (v as any).territoryName || "Chennai Central",
+          status: v.status,
+          verificationStatus: v.verificationStatus,
+          distanceMeters: v.distanceMeters,
+          outcomeNotes: (v as any).doctorFeedback || (v as any).feedbackNotes || "Detailing completed successfully.",
+          productsDiscussedCount: v.productsDiscussed?.length || 1,
+        }));
+
+        const chartData = [
+          { label: "Completed", count: completedVisits, color: "bg-emerald-500" },
+          { label: "In Progress", count: inProgressVisits, color: "bg-sky-500" },
+          { label: "Planned", count: Math.max(0, totalVisits - completedVisits - inProgressVisits - missedVisits - cancelledVisits), color: "bg-indigo-500" },
+          { label: "Missed", count: missedVisits, color: "bg-amber-500" },
+          { label: "Cancelled", count: cancelledVisits, color: "bg-rose-500" },
+        ];
+
+        return {
+          items,
+          totalVisits,
+          completedVisits,
+          inProgressVisits,
+          missedVisits,
+          cancelledVisits,
+          gpsVerifiedPercent,
+          chartData,
+        };
+      }
+    } catch (err) {
+      console.warn("Failed to fetch visit report from API, falling back to mock:", err);
+    }
+
+    // Fallback to mock
     let list = [...mockVisits];
 
     if (filters?.date && filters.date !== "ALL") {
@@ -137,6 +206,62 @@ export const reportService = {
 
   // 2. MR PERFORMANCE REPORT
   async getMRPerformanceReport(filters?: ReportFilterParams): Promise<MRPerformanceReportData> {
+    try {
+      const queryParams: Record<string, any> = { year: 2026, month: 10 };
+      if (filters?.territoryId && filters.territoryId !== "ALL") queryParams.territoryId = filters.territoryId;
+      if (filters?.mrId && filters.mrId !== "ALL") queryParams.mrId = filters.mrId;
+
+      const raw = await apiClient.get<any>("/reports/mr-performance", { params: queryParams });
+      const apiList = Array.isArray(raw) ? raw : (raw as any)?.data || [];
+
+      if (apiList && apiList.length > 0) {
+        const items: MRPerformanceReportItem[] = apiList.map((m: any) => ({
+          mrId: m.mrId,
+          mrName: m.name,
+          employeeCode: m.employeeCode,
+          territoryName: m.territory || "Chennai Territory",
+          dailyCallGoal: 10,
+          todayCompletedVisits: m.visits?.completed || 0,
+          plannedCalls: m.visits?.total || 10,
+          completedCalls: m.visits?.completed || 0,
+          callCompliancePercent: Math.round(m.visits?.completionRate || 0),
+          ordersBookedCount: m.sales?.ordersCount || 0,
+          ordersBookedValue: Math.round(m.sales?.totalSalesAmount || 0),
+          collectionsRealizedValue: Math.round(m.collections?.totalCollectedAmount || 0),
+          monthlyTargetAmount: Number(m.target?.salesTarget || 450000),
+          monthlyAchievedAmount: Number(m.target?.salesAchieved || m.sales?.totalSalesAmount || 0),
+          targetAchievementPercent: Math.round(m.target?.salesAchievementRate || 0),
+        }));
+
+        const totalMRs = items.length;
+        const avgCompliancePercent =
+          totalMRs > 0
+            ? Math.round(items.reduce((s, m) => s + m.callCompliancePercent, 0) / totalMRs)
+            : 0;
+        const totalOrdersValue = items.reduce((s, m) => s + m.ordersBookedValue, 0);
+        const totalCollectionsValue = items.reduce((s, m) => s + m.collectionsRealizedValue, 0);
+
+        const chartData = items.slice(0, 8).map((m) => ({
+          label: m.mrName.split(" ")[0],
+          value: m.targetAchievementPercent,
+          subLabel: `${m.targetAchievementPercent}%`,
+          color: m.targetAchievementPercent >= 80 ? "bg-emerald-500" : "bg-sky-500",
+        }));
+
+        return {
+          items,
+          totalMRs,
+          avgCompliancePercent,
+          totalOrdersValue,
+          totalCollectionsValue,
+          chartData,
+        };
+      }
+    } catch (err) {
+      console.warn("Failed to fetch MR performance report from API, falling back to mock:", err);
+    }
+
+    // Fallback to mock
     const rawMrs = mockMRs as unknown as RawMRItem[];
     const rawTgts = mockTargets as unknown as RawTargetItem[];
 
@@ -158,7 +283,6 @@ export const reportService = {
       const territory = mockTerritories.find((t) => t.id === mr.territoryId);
       const target = rawTgts.find((t) => t.mrId === mr.id && t.month === 10);
 
-      // Tally MR's visits
       let mrVisits = mockVisits.filter((v) => v.mrId === mr.id);
       if (filters?.date && filters.date !== "ALL") {
         mrVisits = mrVisits.filter((v) => (v.scheduledDate || v.plannedDate) === filters.date);
@@ -168,7 +292,6 @@ export const reportService = {
       const callCompliancePercent =
         plannedCalls > 0 ? Math.round((completedCalls / plannedCalls) * 100) : 85;
 
-      // Tally MR's orders
       let mrOrders = mockOrders.filter((o) => o.mrId === mr.id);
       if (filters?.date && filters.date !== "ALL") {
         mrOrders = mrOrders.filter((o) => o.orderDate === filters.date);
@@ -179,7 +302,6 @@ export const reportService = {
       const ordersBookedCount = mrOrders.length;
       const ordersBookedValue = Math.round(mrOrders.reduce((sum, o) => sum + o.totalAmount, 0));
 
-      // Tally MR's collections
       let mrCols = mockCollections.filter((c) => c.mrId === mr.id);
       if (filters?.date && filters.date !== "ALL") {
         mrCols = mrCols.filter((c) => c.paymentDate === filters.date);
@@ -239,6 +361,69 @@ export const reportService = {
 
   // 3. PRODUCT PRESENCE REPORT
   async getProductPresenceReport(filters?: ReportFilterParams): Promise<ProductPresenceReportData> {
+    try {
+      const queryParams: Record<string, any> = { limit: 100 };
+      if (filters?.territoryId && filters.territoryId !== "ALL") queryParams.territoryId = filters.territoryId;
+      if (filters?.mrId && filters.mrId !== "ALL") queryParams.mrId = filters.mrId;
+      if (filters?.productId && filters.productId !== "ALL") queryParams.productId = filters.productId;
+
+      const raw = await apiClient.get<any>("/reports/product-presence", { params: queryParams });
+      if (raw && (raw.totalAudits != null || (raw.items && raw.items.length > 0))) {
+        const totalAudited = raw.totalAudits || (raw.items ? raw.items.length : 0);
+        const availableCount = raw.available || 0;
+        const lowStockCount = raw.lowStock || 0;
+        const outOfStockCount = raw.outOfStock || 0;
+        const stockAvailabilityRate = Math.round(raw.availabilityRate || (totalAudited > 0 ? (availableCount / totalAudited) * 100 : 100));
+
+        const items: ProductPresenceReportItem[] = (raw.items || []).map((a: any) => ({
+          id: a.id,
+          productName: a.product?.name || a.productName || "Product",
+          productSku: a.product?.sku || a.productSku || "SKU",
+          categoryName: a.product?.category?.name || "Therapeutics",
+          pharmacyName: a.customer?.name || a.pharmacyName || "Pharmacy",
+          territoryName: a.customer?.territory?.name || a.territoryName || "Chennai Central",
+          auditedByMrName: a.mr?.user ? `${a.mr.user.firstName} ${a.mr.user.lastName}` : a.mrName || "Medical Representative",
+          status: a.status,
+          quantity: a.quantity ?? 0,
+          auditedAt: a.auditedAt || a.createdAt || "2026-10-09",
+        }));
+
+        const chartData = [
+          {
+            label: "Available",
+            count: availableCount,
+            color: "bg-emerald-500",
+            percent: totalAudited > 0 ? Math.round((availableCount / totalAudited) * 100) : 0,
+          },
+          {
+            label: "Low Stock",
+            count: lowStockCount,
+            color: "bg-amber-500",
+            percent: totalAudited > 0 ? Math.round((lowStockCount / totalAudited) * 100) : 0,
+          },
+          {
+            label: "Out of Stock",
+            count: outOfStockCount,
+            color: "bg-rose-500",
+            percent: totalAudited > 0 ? Math.round((outOfStockCount / totalAudited) * 100) : 0,
+          },
+        ];
+
+        return {
+          items,
+          totalAudited,
+          availableCount,
+          lowStockCount,
+          outOfStockCount,
+          stockAvailabilityRate,
+          chartData,
+        };
+      }
+    } catch (err) {
+      console.warn("Failed to fetch product presence report from API, falling back to mock:", err);
+    }
+
+    // Fallback to mock
     let list = [...mockProductPresence];
 
     if (filters?.productId && filters.productId !== "ALL") {
@@ -321,6 +506,60 @@ export const reportService = {
 
   // 4. SALES REPORT
   async getSalesReport(filters?: ReportFilterParams): Promise<SalesReportData> {
+    try {
+      const queryParams: Record<string, any> = { limit: 100 };
+      if (filters?.territoryId && filters.territoryId !== "ALL") queryParams.territoryId = filters.territoryId;
+      if (filters?.mrId && filters.mrId !== "ALL") queryParams.mrId = filters.mrId;
+
+      const raw = await apiClient.get<any>("/reports/orders", { params: queryParams });
+      if (raw && (raw.totalOrders != null || (raw.items && raw.items.length > 0))) {
+        const totalOrders = raw.totalOrders || (raw.items ? raw.items.length : 0);
+        const totalSalesValue = Math.round(raw.totalRevenue || 0);
+        const avgOrderValue = Math.round(raw.averageOrderValue || (totalOrders > 0 ? totalSalesValue / totalOrders : 0));
+
+        const items: SalesReportItem[] = (raw.items || []).map((o: any) => ({
+          id: o.id,
+          orderNumber: o.orderNumber,
+          orderDate: typeof o.orderDate === "string" ? o.orderDate.slice(0, 10) : "2026-10-09",
+          customerName: o.customer?.name || o.pharmacyName || "Pharmacy Customer",
+          customerAddress: o.customer?.address || "Thousand Lights, Chennai",
+          territoryName: o.customer?.territory?.name || o.territoryName || "Chennai Central",
+          mrName: o.mr?.user ? `${o.mr.user.firstName} ${o.mr.user.lastName}` : o.mrName || "Medical Representative",
+          mrEmployeeCode: o.mr?.employeeCode || o.mrEmployeeCode || "EMP-MR-001",
+          distributorName: o.distributor?.name || o.distributorName || "Apollo Distributor",
+          status: o.status,
+          itemsCount: o.items?.length || 1,
+          totalAmount: Number(o.totalAmount || 0),
+          topProductNames: (o.items || []).map((i: any) => i.product?.name || i.productName || "Pharma Product"),
+        }));
+
+        const topSellingProducts = (raw.topProducts || []).map((p: any) => ({
+          productName: p.productName || "Pharma Product",
+          quantity: p.quantity || 1,
+          revenue: Math.round(p.revenue || 0),
+        }));
+
+        const chartData = topSellingProducts.map((p: any) => ({
+          label: p.productName.length > 14 ? p.productName.slice(0, 14) + "..." : p.productName,
+          value: p.revenue,
+          formattedValue: `₹${(p.revenue / 1000).toFixed(1)}k`,
+          color: "bg-sky-500",
+        }));
+
+        return {
+          items,
+          totalOrders,
+          totalSalesValue,
+          avgOrderValue,
+          topSellingProducts,
+          chartData,
+        };
+      }
+    } catch (err) {
+      console.warn("Failed to fetch sales report from API, falling back to mock:", err);
+    }
+
+    // Fallback to mock
     let list = [...mockOrders];
 
     if (filters?.date && filters.date !== "ALL") {
@@ -398,6 +637,76 @@ export const reportService = {
 
   // 5. COLLECTION REPORT
   async getCollectionReport(filters?: ReportFilterParams): Promise<CollectionReportData> {
+    try {
+      const queryParams: Record<string, any> = { limit: 100 };
+      if (filters?.territoryId && filters.territoryId !== "ALL") queryParams.territoryId = filters.territoryId;
+      if (filters?.mrId && filters.mrId !== "ALL") queryParams.mrId = filters.mrId;
+
+      const raw = await apiClient.get<any>("/reports/collections", { params: queryParams });
+      if (raw && (raw.totalCollections != null || (raw.items && raw.items.length > 0))) {
+        const totalReceipts = raw.totalCollections || (raw.items ? raw.items.length : 0);
+        const totalCollectedValue = Math.round(raw.totalCollected || 0);
+
+        const modeMap = raw.byPaymentMode || {};
+        const upi = Math.round(modeMap.UPI || 0);
+        const cheque = Math.round(modeMap.CHEQUE || 0);
+        const cash = Math.round(modeMap.CASH || 0);
+        const bankTransfer = Math.round(modeMap.BANK_TRANSFER || 0);
+
+        const items: CollectionReportItem[] = (raw.items || []).map((c: any) => ({
+          id: c.id,
+          receiptNumber: c.receiptNumber,
+          paymentDate: typeof c.paymentDate === "string" ? c.paymentDate.slice(0, 10) : "2026-10-09",
+          customerName: c.customer?.name || c.pharmacyName || "Pharmacy",
+          territoryName: c.customer?.territory?.name || c.territoryName || "Chennai Central",
+          mrName: c.mr?.name || (c.mr?.user ? `${c.mr.user.firstName} ${c.mr.user.lastName}` : "Medical Representative"),
+          mrEmployeeCode: c.mr?.employeeCode || "EMP-MR-001",
+          paymentMode: c.paymentMode,
+          referenceNumber: c.referenceNumber || "DIRECT_RECEIPT",
+          amount: Number(c.amount || 0),
+          notes: c.notes || "Invoice settlement receipt",
+        }));
+
+        const chartData = [
+          {
+            label: "UPI Direct",
+            value: upi,
+            color: "bg-sky-500",
+            percent: totalCollectedValue > 0 ? Math.round((upi / totalCollectedValue) * 100) : 0,
+          },
+          {
+            label: "Bank Transfer",
+            value: bankTransfer,
+            color: "bg-indigo-500",
+            percent: totalCollectedValue > 0 ? Math.round((bankTransfer / totalCollectedValue) * 100) : 0,
+          },
+          {
+            label: "Cheque Clearing",
+            value: cheque,
+            color: "bg-amber-500",
+            percent: totalCollectedValue > 0 ? Math.round((cheque / totalCollectedValue) * 100) : 0,
+          },
+          {
+            label: "Direct Cash",
+            value: cash,
+            color: "bg-emerald-500",
+            percent: totalCollectedValue > 0 ? Math.round((cash / totalCollectedValue) * 100) : 0,
+          },
+        ];
+
+        return {
+          items,
+          totalReceipts,
+          totalCollectedValue,
+          modeBreakdown: { upi, cheque, cash, bankTransfer },
+          chartData,
+        };
+      }
+    } catch (err) {
+      console.warn("Failed to fetch collection report from API, falling back to mock:", err);
+    }
+
+    // Fallback to mock
     let list = [...mockCollections];
 
     if (filters?.date && filters.date !== "ALL") {
@@ -484,10 +793,74 @@ export const reportService = {
 
   // 6. TARGET ACHIEVEMENT REPORT
   async getTargetAchievementReport(filters?: ReportFilterParams): Promise<TargetAchievementReportData> {
+    try {
+      const queryParams: Record<string, any> = { year: 2026, month: 10 };
+      if (filters?.territoryId && filters.territoryId !== "ALL") queryParams.territoryId = filters.territoryId;
+      if (filters?.mrId && filters.mrId !== "ALL") queryParams.mrId = filters.mrId;
+
+      const raw = await apiClient.get<any>("/reports/target-achievement", { params: queryParams });
+      if (raw && (raw.targets || raw.totalTargetAmount != null)) {
+        const totalTargetAmount = Number(raw.totalTargetAmount || 0);
+        const totalAchievedAmount = Number(raw.totalAchievedAmount || 0);
+        const overallAchievementPercent = Math.round(raw.revenueAchievementRate || 0);
+        const totalVisitTarget = Number(raw.totalVisitTarget || 0);
+        const totalVisitAchieved = Number(raw.totalVisitAchieved || 0);
+        const overallVisitPercent = Math.round(raw.visitAchievementRate || 0);
+
+        const items: TargetAchievementReportItem[] = (raw.targets || []).map((t: any) => {
+          const valPct = Math.round(t.achievementRate || 0);
+          const visitPct = Math.round(t.visitAchievementRate || 0);
+
+          let status: "EXCEEDED" | "ON_TRACK" | "AT_RISK" | "BEHIND" = "ON_TRACK";
+          if (valPct >= 100) status = "EXCEEDED";
+          else if (valPct >= 80) status = "ON_TRACK";
+          else if (valPct >= 60) status = "AT_RISK";
+          else status = "BEHIND";
+
+          return {
+            id: t.id,
+            mrId: t.mrId,
+            mrName: t.mr?.name || "Medical Representative",
+            employeeCode: t.mr?.employeeCode || "EMP-MR-001",
+            territoryName: t.territory?.name || "Chennai Central",
+            monthYear: "October 2026",
+            targetAmount: Number(t.targetAmount || 0),
+            achievedAmount: Number(t.achievedAmount || 0),
+            valueAchievementPercent: valPct,
+            visitTarget: Number(t.visitTarget || 0),
+            visitAchieved: Number(t.visitAchieved || 0),
+            visitAchievementPercent: visitPct,
+            status,
+          };
+        });
+
+        const chartData = items.slice(0, 8).map((t) => ({
+          label: t.mrName.split(" ")[0],
+          target: t.targetAmount,
+          achieved: t.achievedAmount,
+          percent: t.valueAchievementPercent,
+        }));
+
+        return {
+          items,
+          totalTargetAmount,
+          totalAchievedAmount,
+          overallAchievementPercent,
+          totalVisitTarget,
+          totalVisitAchieved,
+          overallVisitPercent,
+          chartData,
+        };
+      }
+    } catch (err) {
+      console.warn("Failed to fetch target achievement report from API, falling back to mock:", err);
+    }
+
+    // Fallback to mock
     const rawTgts = mockTargets as unknown as RawTargetItem[];
     const rawMrs = mockMRs as unknown as RawMRItem[];
 
-    let list = rawTgts.filter((t) => t.month === 10); // current active month (Oct 2026)
+    let list = rawTgts.filter((t) => t.month === 10);
 
     if (filters?.territoryId && filters.territoryId !== "ALL") {
       list = list.filter((t) => t.territoryId === filters.territoryId);

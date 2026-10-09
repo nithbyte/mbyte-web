@@ -710,14 +710,14 @@ export default function DoctorsPage() {
       >
         {selectedDetails && (
           <div className="space-y-4 text-xs">
-            <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100 dark:bg-slate-850 dark:border-slate-800">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100 dark:bg-slate-800/80 dark:border-slate-800">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100 text-sky-700 font-bold dark:bg-sky-950 dark:text-sky-300">
                   <Stethoscope className="h-5 w-5" />
                 </div>
                 <div>
                   <div className="font-bold text-sm text-slate-900 dark:text-slate-100">{selectedDetails.name}</div>
-                  <div className="text-slate-500">{selectedDetails.specialty} • {selectedDetails.qualification}</div>
+                  <div className="text-slate-500 dark:text-slate-400 font-medium">{selectedDetails.specialty} • {selectedDetails.qualification}</div>
                 </div>
               </div>
               <Badge variant={selectedDetails.tier === "A_PLUS" ? "default" : "info"}>

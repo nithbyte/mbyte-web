@@ -48,6 +48,7 @@ import {
   Target,
   Users,
   ShieldCheck,
+  X,
 } from "lucide-react";
 import { ReportTab } from "@/types";
 
@@ -144,9 +145,10 @@ export default function ReportsPage() {
           </div>
           <button
             onClick={() => setExportNotice(null)}
-            className="text-emerald-700 hover:text-emerald-900 font-bold"
+            className="text-emerald-700 hover:text-emerald-900 transition-colors p-0.5 rounded"
+            aria-label="Dismiss notice"
           >
-            ✕
+            <X className="h-4 w-4" />
           </button>
         </div>
       )}

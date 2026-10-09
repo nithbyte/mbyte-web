@@ -46,20 +46,20 @@ export function Header() {
   return (
     <>
       <header className="sticky top-0 z-20 flex h-16 w-full items-center justify-between border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95 lg:px-8">
-        {/* Left: Mobile Toggle & Territory Filter */}
-        <div className="flex items-center gap-3">
+        {/* Left: Mobile Toggle, Territory Filter & Date Badge */}
+        <div className="flex items-center gap-2.5 min-w-0">
           <button
             onClick={toggleMobileOpen}
-            className="lg:hidden rounded-lg p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+            className="lg:hidden rounded-lg p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 shrink-0"
             aria-label="Open navigation menu"
           >
             <Menu className="h-5 w-5" />
           </button>
 
           {/* Territory Selector */}
-          <div className="hidden sm:flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50/70 px-3 py-1.5 text-xs dark:border-slate-800 dark:bg-slate-850">
+          <div className="hidden sm:flex items-center gap-2 rounded-lg border border-slate-200 bg-white/90 px-3 py-1.5 text-xs shadow-xs dark:border-slate-800 dark:bg-slate-900/90 shrink-0">
             <MapPin className="h-3.5 w-3.5 text-sky-600 dark:text-sky-400 shrink-0" aria-hidden="true" />
-            <label htmlFor="header-territory-select" className="font-semibold text-slate-500 dark:text-slate-400">
+            <label htmlFor="header-territory-select" className="font-semibold text-slate-500 dark:text-slate-400 shrink-0">
               Territory:
             </label>
             <select
@@ -67,28 +67,33 @@ export function Header() {
               aria-label="Filter territory"
               value={selectedTerritoryId}
               onChange={(e) => setSelectedTerritoryId(e.target.value)}
-              className="bg-transparent font-medium text-slate-900 focus:outline-none dark:text-slate-100 cursor-pointer text-xs"
+              suppressHydrationWarning
+              className="bg-transparent font-medium text-slate-900 focus:outline-none dark:text-slate-100 cursor-pointer text-xs max-w-[150px] md:max-w-[180px] lg:max-w-[220px] truncate"
             >
-              <option value="ALL">All Territories (All Tamil Nadu)</option>
+              <option value="ALL" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+                All Territories (All Tamil Nadu)
+              </option>
               {territories?.map((t) => (
-                <option key={t.id} value={t.id}>
+                <option key={t.id} value={t.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
                   {t.name} ({t.code})
                 </option>
               ))}
             </select>
           </div>
 
-          {/* Date Context Badge */}
-          <div className="hidden md:flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50/70 px-3 py-1.5 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-850 dark:text-slate-300">
-            <Calendar className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
-            <span className="font-medium">Thu, 08 Oct 2026 (Live Field Ops)</span>
+          {/* Date Context Badge - High Contrast, Never Wraps, Perfectly Aligned */}
+          <div className="hidden md:inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-100/90 px-3 py-1.5 text-xs text-slate-700 shadow-xs dark:border-slate-700/80 dark:bg-slate-800/95 dark:text-slate-200 shrink-0 whitespace-nowrap">
+            <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            <span className="font-bold text-slate-900 dark:text-slate-100">Oct 2026</span>
+            <span className="text-slate-300 dark:text-slate-600 font-normal">|</span>
+            <span className="font-semibold text-sky-600 dark:text-sky-400">Live Field Ops</span>
           </div>
         </div>
 
         {/* Right: Search, Notifications & User Info */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 shrink-0">
           {/* Search trigger */}
-          <div className="relative hidden xl:block w-64">
+          <div className="relative hidden xl:block w-52 2xl:w-64">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" aria-hidden="true" />
             <input
               type="text"
@@ -99,14 +104,14 @@ export function Header() {
           </div>
 
           {/* Tenant Organization Tag */}
-          <div className="hidden lg:flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-800 dark:border-sky-800 dark:bg-sky-950/60 dark:text-sky-300">
+          <div className="hidden lg:flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-800 dark:border-sky-800/80 dark:bg-sky-950/70 dark:text-sky-300 shrink-0">
             <Building className="h-3.5 w-3.5 text-sky-600 dark:text-sky-400" aria-hidden="true" />
             <span>{APP_CONFIG.organization}</span>
           </div>
 
           {/* Notification Bell */}
           <button
-            className="relative rounded-lg p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+            className="relative rounded-lg p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 shrink-0"
             aria-label="View notifications"
           >
             <Bell className="h-5 w-5" />
@@ -120,7 +125,7 @@ export function Header() {
           <button
             onClick={() => setIsUserSwitcherOpen(true)}
             aria-label={`Current user: ${userName}. Click to switch persona`}
-            className="flex items-center gap-2.5 pl-2 border-l border-slate-200/80 dark:border-slate-800 hover:opacity-85 transition-opacity text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 rounded-lg py-1 px-1.5"
+            className="flex items-center gap-2.5 pl-2 border-l border-slate-200/80 dark:border-slate-800 hover:opacity-85 transition-opacity text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 rounded-lg py-1 px-1.5 shrink-0"
           >
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-sky-600 to-indigo-600 text-xs font-bold text-white shadow-xs shrink-0">
               {initials}
@@ -172,7 +177,7 @@ export function Header() {
                   className={`w-full flex items-center justify-between rounded-xl border p-3 text-left transition-all ${
                     isSelected
                       ? "border-sky-500 bg-sky-50/70 shadow-xs dark:bg-sky-950/40"
-                      : "border-slate-200 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-850"
+                      : "border-slate-200 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800"
                   }`}
                 >
                   <div className="flex items-center gap-3">

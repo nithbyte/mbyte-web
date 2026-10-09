@@ -13,6 +13,14 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  // Service files use `any` for API response mapping — this is intentional.
+  {
+    files: ["src/services/**/*.ts", "src/lib/**/*.ts", "scripts/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "prefer-const": "warn",
+    },
+  },
 ]);
 
 export default eslintConfig;

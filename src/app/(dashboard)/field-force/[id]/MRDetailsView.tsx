@@ -153,7 +153,7 @@ export function MRDetailsView({ id }: { id: string }) {
             </div>
 
             {/* Col 4: Today's Status */}
-            <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 space-y-1 text-xs dark:border-slate-800 dark:bg-slate-850">
+            <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 space-y-1 text-xs dark:border-slate-800 dark:bg-slate-800/80">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                 Current Field Status
               </span>

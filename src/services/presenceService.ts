@@ -1,11 +1,63 @@
+import { apiClient } from "../lib/api-client";
 import { mockProductPresence } from "../mock";
 import type { ProductPresenceAudit, PresenceQueryParams, PresenceCounts } from "../types";
 
-// In-memory state for mock presence intelligence
 const presenceState: ProductPresenceAudit[] = [...mockProductPresence];
+
+function mapApiPresenceAudit(a: any): ProductPresenceAudit {
+  return {
+    id: a.id,
+    organizationId: a.organizationId || "",
+    pharmacyId: a.pharmacyId || a.customerId,
+    pharmacyName: a.customer?.name || a.pharmacyName || "Pharmacy",
+    territoryId: a.territoryId || a.territory?.id,
+    territoryName: a.territory?.name || "Central Territory",
+    mrId: a.mrId,
+    mrName: a.mr?.name || "Field MR",
+    auditedByMrId: a.mrId,
+    auditedByMrName: a.mr?.name,
+    productId: a.productId || a.product?.id,
+    productName: a.product?.brandName || a.productName,
+    status: a.status,
+    quantity: a.quantity ?? a.currentQuantity,
+    currentQuantity: a.quantity ?? a.currentQuantity,
+    checkedAt: a.checkedAt || a.createdAt,
+    auditedAt: a.checkedAt || a.createdAt,
+    batchNumber: a.batchNumber,
+    notes: a.notes,
+  };
+}
 
 export const presenceService = {
   async getPresenceAudits(params?: PresenceQueryParams): Promise<ProductPresenceAudit[]> {
+    try {
+      const queryParams: Record<string, any> = { limit: 100 };
+      if (params?.productId && params.productId !== "ALL") queryParams.productId = params.productId;
+      if (params?.territoryId && params.territoryId !== "ALL") queryParams.territoryId = params.territoryId;
+      if (params?.mrId && params.mrId !== "ALL") queryParams.mrId = params.mrId;
+      if (params?.pharmacyId && params.pharmacyId !== "ALL") queryParams.customerId = params.pharmacyId;
+      if (params?.status && params.status !== "ALL") queryParams.status = params.status;
+
+      const res = await apiClient.get<any[]>("/product-presence", { params: queryParams });
+      if (Array.isArray(res) && res.length > 0) {
+        let list = res.map(mapApiPresenceAudit);
+
+        if (params?.search) {
+          const q = params.search.toLowerCase();
+          list = list.filter(
+            (a) =>
+              a.pharmacyName.toLowerCase().includes(q) ||
+              a.productName.toLowerCase().includes(q) ||
+              (a.mrName && a.mrName.toLowerCase().includes(q))
+          );
+        }
+
+        return list;
+      }
+    } catch (err) {
+      console.warn("Real /product-presence API failed, falling back to mock:", err);
+    }
+
     let list = [...presenceState];
 
     if (params?.productId && params.productId !== "ALL") {
@@ -83,6 +135,16 @@ export const presenceService = {
   },
 
   async getUniqueAuditDates(): Promise<string[]> {
+    try {
+      const audits = await this.getPresenceAudits();
+      const dates = Array.from(
+        new Set(audits.map((a) => (a.checkedAt || a.auditedAt).slice(0, 10)))
+      );
+      if (dates.length > 0) return dates.sort().reverse();
+    } catch {
+      // fallback
+    }
+
     const dates = Array.from(
       new Set(presenceState.map((a) => (a.checkedAt || a.auditedAt).slice(0, 10)))
     );

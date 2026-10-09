@@ -12,3 +12,5 @@ export * from "./useDistributors";
 export * from "./usePresence";
 export * from "./useReports";
 export * from "./useAuth";
+export * from "./useTargets";
+export * from "./useNotifications";

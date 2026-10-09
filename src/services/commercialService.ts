@@ -1,5 +1,6 @@
 import { orderService } from "./orderService";
 import { collectionService } from "./collectionService";
+import { fieldForceService } from "./fieldForceService";
 import { mockOrders, mockCollections, mockMRs } from "../mock";
 import type {
   CommercialKPIs,
@@ -59,6 +60,53 @@ export const commercialService = {
   },
 
   async getMrLeaderboard(): Promise<MrCommercialPerformance[]> {
+    try {
+      const [mrList, orders, collections] = await Promise.all([
+        fieldForceService.getMRList(),
+        orderService.getOrders({ limit: 200 }),
+        collectionService.getCollections({ limit: 100 }),
+      ]);
+
+      if (mrList && mrList.length > 0) {
+        const perfMap = new Map<string, MrCommercialPerformance>();
+
+        for (const mr of mrList) {
+          perfMap.set(mr.id, {
+            mrId: mr.id,
+            mrName: mr.name,
+            employeeCode: mr.employeeId || "NP-MR-101",
+            territoryName: mr.territoryName,
+            ordersCount: 0,
+            ordersValue: 0,
+            collectionsCount: 0,
+            collectionsValue: 0,
+          });
+        }
+
+        for (const o of orders) {
+          const existing = perfMap.get(o.mrId);
+          if (existing) {
+            existing.ordersCount++;
+            existing.ordersValue += o.totalAmount;
+          }
+        }
+
+        for (const c of collections) {
+          const existing = perfMap.get(c.mrId);
+          if (existing) {
+            existing.collectionsCount++;
+            existing.collectionsValue += c.amount;
+          }
+        }
+
+        const leaderboard = Array.from(perfMap.values());
+        leaderboard.sort((a, b) => b.ordersValue + b.collectionsValue - (a.ordersValue + a.collectionsValue));
+        return leaderboard;
+      }
+    } catch (err) {
+      console.warn("Failed to generate leaderboard from real services, falling back to mock:", err);
+    }
+
     interface RawMRItem {
       id: string;
       employeeCode?: string;

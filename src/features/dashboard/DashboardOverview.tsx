@@ -370,14 +370,14 @@ export function DashboardOverview() {
                   {attentionCenter.belowTargetMRs.map((mr) => (
                     <div
                       key={mr.mrId}
-                      className="rounded-lg border border-slate-200/80 bg-slate-50/50 p-3 space-y-2 dark:border-slate-800 dark:bg-slate-850"
+                      className="rounded-lg border border-slate-200/90 bg-white p-3.5 space-y-2 dark:border-slate-800 dark:bg-slate-900/90 shadow-2xs"
                     >
                       <div className="flex items-start justify-between">
                         <div>
-                          <div className="font-bold text-xs text-slate-900 dark:text-slate-100">
+                          <div className="font-bold text-xs text-slate-900 dark:text-slate-50">
                             {mr.mrName}
                           </div>
-                          <div className="text-[11px] text-slate-500">{mr.territoryName}</div>
+                          <div className="text-[11px] font-medium text-slate-600 dark:text-slate-400">{mr.territoryName}</div>
                         </div>
                         <Badge
                           variant={mr.severity === "HIGH" ? "destructive" : "warning"}
@@ -387,15 +387,15 @@ export function DashboardOverview() {
                         </Badge>
                       </div>
 
-                      <div className="flex justify-between text-xs pt-1 border-t border-slate-100 dark:border-slate-800">
-                        <span className="text-slate-500">Today Calls:</span>
-                        <span className="font-semibold text-slate-800 dark:text-slate-200">
+                      <div className="flex justify-between text-xs pt-1.5 border-t border-slate-100 dark:border-slate-800/80">
+                        <span className="text-slate-600 dark:text-slate-400 font-medium">Today Calls:</span>
+                        <span className="font-semibold text-slate-900 dark:text-slate-100">
                           {mr.callsCompletedToday} / {mr.callsPlannedToday} calls
                         </span>
                       </div>
 
                       <div className="flex justify-between text-xs">
-                        <span className="text-slate-500">Shortfall:</span>
+                        <span className="text-slate-600 dark:text-slate-400 font-medium">Shortfall:</span>
                         <span className="font-bold text-rose-600 dark:text-rose-400">
                           {formatCurrency(mr.shortfallAmount)}
                         </span>
@@ -405,7 +405,7 @@ export function DashboardOverview() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="w-full text-[11px] h-7 bg-white dark:bg-slate-900"
+                          className="w-full text-[11px] h-7 bg-white hover:bg-slate-50 dark:bg-slate-800/90 dark:hover:bg-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700"
                           onClick={() => alert(`Reviewing itinerary for ${mr.mrName}`)}
                         >
                           <PhoneCall className="h-3 w-3 mr-1" />
@@ -441,7 +441,7 @@ export function DashboardOverview() {
                         <div className="font-semibold text-slate-900 dark:text-slate-100">
                           {v.doctorName} ({v.specialty})
                         </div>
-                        <div className="text-[11px] text-slate-500">
+                        <div className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">
                           Assigned MR: {v.mrName} • {v.territoryName} • Slot: {v.scheduledTime}
                         </div>
                       </div>
@@ -497,7 +497,7 @@ export function DashboardOverview() {
                       <div className="text-xs text-slate-700 dark:text-slate-300 font-medium">
                         {stock.pharmacyName}
                       </div>
-                      <div className="text-[11px] text-slate-500 flex justify-between pt-1">
+                      <div className="text-[11px] text-slate-600 dark:text-slate-400 font-medium flex justify-between pt-1">
                         <span>{stock.territoryName}</span>
                         <span>Audited by {stock.auditedBy}</span>
                       </div>
@@ -535,7 +535,7 @@ export function DashboardOverview() {
                             {item.status}
                           </Badge>
                         </div>
-                        <div className="text-[11px] text-slate-500 mt-0.5">
+                        <div className="text-[11px] text-slate-600 dark:text-slate-400 font-medium mt-0.5">
                           {item.customerName} • Rep: {item.mrName} • {formatDate(item.date)}
                         </div>
                       </div>
@@ -644,7 +644,7 @@ export function DashboardOverview() {
                     {fieldForceSummary.map((mr) => (
                       <div
                         key={mr.mrId}
-                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 hover:bg-slate-50/60 dark:hover:bg-slate-850/50 transition-colors"
+                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 hover:bg-slate-50/60 dark:hover:bg-slate-800/60 transition-colors"
                       >
                         <div className="flex items-center gap-3">
                           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
@@ -672,8 +672,8 @@ export function DashboardOverview() {
                                 {mr.status}
                               </Badge>
                             </div>
-                            <p className="text-xs text-slate-500 flex items-center gap-1.5 mt-0.5">
-                              <MapPin className="h-3 w-3 text-slate-400" />
+                            <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
+                              <MapPin className="h-3 w-3 text-slate-400 dark:text-slate-400" />
                               {mr.territoryName} • <span className="text-sky-700 dark:text-sky-400 font-medium">{mr.currentActivity}</span>
                             </p>
                           </div>
@@ -681,14 +681,14 @@ export function DashboardOverview() {
 
                         <div className="flex items-center gap-6 sm:self-center">
                           <div className="text-right">
-                            <span className="text-xs font-medium text-slate-500">Call Progress</span>
+                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Call Progress</span>
                             <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
                               {mr.callsCompletedToday} / {mr.callsPlannedToday} ({mr.complianceRate}%)
                             </p>
                           </div>
 
                           <div className="text-right hidden sm:block">
-                            <span className="text-xs font-medium text-slate-500">Orders Booked</span>
+                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Orders Booked</span>
                             <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
                               {formatCurrency(mr.ordersBookedValue)}
                             </p>
@@ -710,7 +710,7 @@ export function DashboardOverview() {
                   <CardContent>
                     <div className="space-y-3">
                       <div className="flex justify-between items-center text-xs">
-                        <span className="text-slate-600 flex items-center gap-2">
+                        <span className="text-slate-600 dark:text-slate-300 flex items-center gap-2">
                           <span className="h-2 w-2 rounded-full bg-emerald-500" />
                           In-Call (Inside Clinic)
                         </span>
@@ -719,7 +719,7 @@ export function DashboardOverview() {
                         </span>
                       </div>
                       <div className="flex justify-between items-center text-xs">
-                        <span className="text-slate-600 flex items-center gap-2">
+                        <span className="text-slate-600 dark:text-slate-300 flex items-center gap-2">
                           <span className="h-2 w-2 rounded-full bg-sky-500" />
                           Traveling (En Route)
                         </span>
@@ -728,7 +728,7 @@ export function DashboardOverview() {
                         </span>
                       </div>
                       <div className="flex justify-between items-center text-xs">
-                        <span className="text-slate-600 flex items-center gap-2">
+                        <span className="text-slate-600 dark:text-slate-300 flex items-center gap-2">
                           <span className="h-2 w-2 rounded-full bg-slate-400" />
                           Day Calls Concluded
                         </span>
@@ -737,7 +737,7 @@ export function DashboardOverview() {
                         </span>
                       </div>
                       <div className="flex justify-between items-center text-xs">
-                        <span className="text-slate-600 flex items-center gap-2">
+                        <span className="text-slate-600 dark:text-slate-300 flex items-center gap-2">
                           <span className="h-2 w-2 rounded-full bg-amber-400" />
                           Idle / Pending Next Call
                         </span>
@@ -834,16 +834,16 @@ export function DashboardOverview() {
 
                   <div className="space-y-2 text-xs">
                     <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
-                      <span className="text-slate-500">Total Visits Screened</span>
-                      <span className="font-semibold">{kpis.calls.completedToday}</span>
+                      <span className="text-slate-500 dark:text-slate-400">Total Visits Screened</span>
+                      <span className="font-semibold text-slate-900 dark:text-slate-100">{kpis.calls.completedToday}</span>
                     </div>
                     <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
-                      <span className="text-slate-500">Verified Location Matches</span>
-                      <span className="font-semibold text-emerald-600">{kpis.calls.verifiedGpsCount}</span>
+                      <span className="text-slate-500 dark:text-slate-400">Verified Location Matches</span>
+                      <span className="font-semibold text-emerald-600 dark:text-emerald-400">{kpis.calls.verifiedGpsCount}</span>
                     </div>
                     <div className="flex justify-between py-1.5">
-                      <span className="text-slate-500">Outside Radius (Requires Reason)</span>
-                      <span className="font-semibold text-rose-600">{kpis.calls.outsideRadiusCount}</span>
+                      <span className="text-slate-500 dark:text-slate-400">Outside Radius (Requires Reason)</span>
+                      <span className="font-semibold text-rose-600 dark:text-rose-400">{kpis.calls.outsideRadiusCount}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -874,7 +874,7 @@ export function DashboardOverview() {
                           <div className="font-semibold text-slate-900 dark:text-slate-100">
                             {v.customerName}
                           </div>
-                          <div className="text-xs text-slate-500">{v.specialty || "Clinic"}</div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400">{v.specialty || "Clinic"}</div>
                         </TableCell>
                         <TableCell className="font-medium text-slate-700 dark:text-slate-300">
                           {v.mrName || "Assigned MR"}
@@ -977,7 +977,7 @@ export function DashboardOverview() {
                               {o.status}
                             </Badge>
                           </div>
-                          <div className="text-[11px] text-slate-500 mt-0.5">
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                             {o.pharmacyName} • Booked by {o.mrName || "MR"}
                           </div>
                         </div>
@@ -986,7 +986,7 @@ export function DashboardOverview() {
                           <div className="font-bold text-slate-900 dark:text-slate-100">
                             {formatCurrency(o.totalAmount)}
                           </div>
-                          <div className="text-[10px] text-slate-400">{formatDate(o.orderDate)}</div>
+                          <div className="text-[10px] text-slate-400 dark:text-slate-400">{formatDate(o.orderDate)}</div>
                         </div>
                       </div>
                     ))}
