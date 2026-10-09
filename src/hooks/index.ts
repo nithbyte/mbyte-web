@@ -14,3 +14,4 @@ export * from "./useReports";
 export * from "./useAuth";
 export * from "./useTargets";
 export * from "./useNotifications";
+export * from "./useIsMounted";

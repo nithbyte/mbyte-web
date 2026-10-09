@@ -111,8 +111,8 @@ export default function FieldForcePage() {
             Coverage Territories
           </span>
           <div className="flex items-baseline gap-2 mt-1">
-            <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-              {territories?.length || 6}
+            <span suppressHydrationWarning className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+              {territories?.length || 17}
             </span>
             <span className="text-xs text-sky-600 font-medium">Tamil Nadu Hubs</span>
           </div>

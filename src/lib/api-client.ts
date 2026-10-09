@@ -83,11 +83,36 @@ const axiosInstance: AxiosInstance = axios.create({
   },
 });
 
+function isTokenExpired(token: string | null): boolean {
+  if (!token) return true;
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return true;
+    const base64Url = parts[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload =
+      typeof window !== "undefined"
+        ? decodeURIComponent(
+            window
+              .atob(base64)
+              .split("")
+              .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+              .join("")
+          )
+        : Buffer.from(base64, "base64").toString("utf8");
+    const parsed = JSON.parse(jsonPayload);
+    if (!parsed.exp) return false;
+    return parsed.exp * 1000 <= Date.now() + 30000;
+  } catch {
+    return true;
+  }
+}
+
 // Ensure a valid authenticated manager session exists
 let authPromise: Promise<string | null> | null = null;
-export async function ensureAuthenticated(): Promise<string | null> {
+export async function ensureAuthenticated(force = false): Promise<string | null> {
   const existing = tokenStorage.getAccessToken();
-  if (existing) return existing;
+  if (existing && !force && !isTokenExpired(existing)) return existing;
 
   if (authPromise) return authPromise;
 
@@ -118,8 +143,8 @@ export async function ensureAuthenticated(): Promise<string | null> {
 axiosInstance.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     let token = tokenStorage.getAccessToken();
-    if (!token && !config.url?.includes("/auth/login")) {
-      token = await ensureAuthenticated();
+    if ((!token || isTokenExpired(token)) && !config.url?.includes("/auth/login")) {
+      token = await ensureAuthenticated(true);
     }
 
     if (token && config.headers) {
@@ -208,8 +233,16 @@ axiosInstance.interceptors.response.use(
           throw new Error("No access token returned from refresh endpoint");
         }
       } catch (refreshErr) {
-        processQueue(refreshErr, null);
         tokenStorage.clearTokens();
+        const freshToken = await ensureAuthenticated(true);
+        if (freshToken) {
+          processQueue(null, freshToken);
+          if (originalRequest.headers) {
+            originalRequest.headers.Authorization = `Bearer ${freshToken}`;
+          }
+          return axiosInstance(originalRequest);
+        }
+        processQueue(refreshErr, null);
         return Promise.reject(extractApiError(refreshErr));
       } finally {
         isRefreshing = false;

@@ -266,14 +266,14 @@ export function Sidebar() {
       <div className="border-t border-slate-200/80 p-3 dark:border-slate-800">
         {!isCollapsed && (
           <div className="mb-2 flex items-center gap-3 rounded-xl bg-slate-50/80 p-2.5 dark:bg-slate-800/80">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-100 text-xs font-bold text-sky-700 dark:bg-sky-900 dark:text-sky-300 shrink-0">
+            <div suppressHydrationWarning className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-100 text-xs font-bold text-sky-700 dark:bg-sky-900 dark:text-sky-300 shrink-0">
               {initials}
             </div>
             <div className="flex flex-col truncate">
-              <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+              <span suppressHydrationWarning className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
                 {userName}
               </span>
-              <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+              <span suppressHydrationWarning className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
                 {userRole}
               </span>
             </div>

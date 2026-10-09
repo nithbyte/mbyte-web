@@ -12,12 +12,13 @@ import {
   Check,
 } from "lucide-react";
 import { useSidebarStore, useFilterStore } from "@/store";
-import { useTerritories, useCurrentUser, useUserList, useSwitchUser } from "@/hooks";
+import { useTerritories, useCurrentUser, useUserList, useSwitchUser, useIsMounted } from "@/hooks";
 import { APP_CONFIG } from "@/lib/constants";
 import { Modal } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 
 export function Header() {
+  const isMounted = useIsMounted();
   const { toggleMobileOpen } = useSidebarStore();
   const { selectedTerritoryId, setSelectedTerritoryId } = useFilterStore();
   const { data: territories } = useTerritories();
@@ -73,11 +74,12 @@ export function Header() {
               <option value="ALL" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
                 All Territories (All Tamil Nadu)
               </option>
-              {territories?.map((t) => (
-                <option key={t.id} value={t.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
-                  {t.name} ({t.code})
-                </option>
-              ))}
+              {isMounted &&
+                territories?.map((t) => (
+                  <option key={t.id} value={t.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+                    {t.name} ({t.code})
+                  </option>
+                ))}
             </select>
           </div>
 
@@ -127,17 +129,17 @@ export function Header() {
             aria-label={`Current user: ${userName}. Click to switch persona`}
             className="flex items-center gap-2.5 pl-2 border-l border-slate-200/80 dark:border-slate-800 hover:opacity-85 transition-opacity text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 rounded-lg py-1 px-1.5 shrink-0"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-sky-600 to-indigo-600 text-xs font-bold text-white shadow-xs shrink-0">
+            <div suppressHydrationWarning className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-sky-600 to-indigo-600 text-xs font-bold text-white shadow-xs shrink-0">
               {initials}
             </div>
             <div className="hidden sm:flex flex-col text-left">
               <div className="flex items-center gap-1">
-                <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 leading-tight">
+                <span suppressHydrationWarning className="text-xs font-semibold text-slate-800 dark:text-slate-200 leading-tight">
                   {userName}
                 </span>
                 <ChevronDown className="h-3 w-3 text-slate-400" aria-hidden="true" />
               </div>
-              <span className="text-[10px] font-medium uppercase tracking-wider text-sky-600 dark:text-sky-400">
+              <span suppressHydrationWarning className="text-[10px] font-medium uppercase tracking-wider text-sky-600 dark:text-sky-400">
                 {userRole}
               </span>
             </div>

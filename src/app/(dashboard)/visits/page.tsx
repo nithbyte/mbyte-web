@@ -25,6 +25,7 @@ import {
   useMRList,
   useDoctors,
   usePharmacies,
+  useIsMounted,
 } from "@/hooks";
 import { formatDate } from "@/lib/utils";
 import type { Visit, VisitStatus, VerificationStatus, VisitQueryParams } from "@/types";
@@ -51,6 +52,8 @@ import {
 } from "lucide-react";
 
 export default function VisitsPage() {
+  const isMounted = useIsMounted();
+
   // Filters State
   const [selectedDate, setSelectedDate] = useState("2026-10-08"); // Today in mock data
   const [selectedMR, setSelectedMR] = useState("ALL");
@@ -366,11 +369,12 @@ export default function VisitsPage() {
                 className="w-full h-8 px-2 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
               >
                 <option value="ALL">All Recorded Dates</option>
-                {visitDates?.map((d) => (
-                  <option key={d} value={d}>
-                    {d === "2026-10-08" ? `Today (${formatDate(d)})` : formatDate(d)}
-                  </option>
-                ))}
+                {isMounted &&
+                  visitDates?.map((d) => (
+                    <option key={d} value={d}>
+                      {d === "2026-10-08" ? `Today (${formatDate(d)})` : formatDate(d)}
+                    </option>
+                  ))}
               </select>
             </div>
 
@@ -386,11 +390,12 @@ export default function VisitsPage() {
                 className="w-full h-8 px-2 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
               >
                 <option value="ALL">All Medical Representatives</option>
-                {mrList?.map((mr) => (
-                  <option key={mr.id} value={mr.id}>
-                    {mr.name} ({mr.employeeId})
-                  </option>
-                ))}
+                {isMounted &&
+                  mrList?.map((mr) => (
+                    <option key={mr.id} value={mr.id}>
+                      {mr.name} ({mr.employeeId})
+                    </option>
+                  ))}
               </select>
             </div>
 
@@ -406,11 +411,12 @@ export default function VisitsPage() {
                 className="w-full h-8 px-2 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
               >
                 <option value="ALL">All Territory Zones</option>
-                {territories?.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
+                {isMounted &&
+                  territories?.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
               </select>
             </div>
 
@@ -426,20 +432,24 @@ export default function VisitsPage() {
                 className="w-full h-8 px-2 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
               >
                 <option value="ALL">All Target Customers</option>
-                <optgroup label="Doctors & Clinics">
-                  {doctors?.slice(0, 15).map((doc) => (
-                    <option key={doc.id} value={doc.id}>
-                      {doc.name} ({doc.specialty})
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label="Pharmacies & Chemists">
-                  {pharmacies?.slice(0, 10).map((phm) => (
-                    <option key={phm.id} value={phm.id}>
-                      {phm.name}
-                    </option>
-                  ))}
-                </optgroup>
+                {isMounted && (
+                  <>
+                    <optgroup label="Doctors & Clinics">
+                      {doctors?.slice(0, 15).map((doc) => (
+                        <option key={doc.id} value={doc.id}>
+                          {doc.name} ({doc.specialty})
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Pharmacies & Chemists">
+                      {pharmacies?.slice(0, 10).map((phm) => (
+                        <option key={phm.id} value={phm.id}>
+                          {phm.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  </>
+                )}
               </select>
             </div>
 

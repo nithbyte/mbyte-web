@@ -29,6 +29,7 @@ import {
   useOrderTrend,
   useOrderDetail,
   useMRList,
+  useIsMounted,
 } from "@/hooks";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
@@ -47,6 +48,7 @@ import {
 import { OrderStatus } from "@/types";
 
 export default function OrdersPage() {
+  const isMounted = useIsMounted();
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [mrFilter, setMrFilter] = useState<string>("ALL");
   const [dateFilter, setDateFilter] = useState<string>("");
@@ -327,14 +329,16 @@ export default function OrdersPage() {
                 aria-label="Filter by field representative"
                 value={mrFilter}
                 onChange={(e) => setMrFilter(e.target.value)}
+                suppressHydrationWarning
                 className="h-9 rounded-md border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 shadow-xs dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300"
               >
                 <option value="ALL">All Representatives</option>
-                {mrs?.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name} ({m.employeeId})
-                  </option>
-                ))}
+                {isMounted &&
+                  mrs?.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name} ({m.employeeId})
+                    </option>
+                  ))}
               </select>
 
               {/* Date Filter */}
