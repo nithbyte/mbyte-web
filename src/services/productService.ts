@@ -14,11 +14,13 @@ import type {
   StockAlert,
   ProductPresenceSummary,
 } from "../types";
+import { authService } from "./authService";
 
 export interface ProductQueryParams {
   search?: string;
   categoryId?: string;
   status?: string;
+  organizationId?: string;
 }
 
 const productsState: Product[] = [...mockProducts];
@@ -102,18 +104,24 @@ export const productService = {
       const queryParams: Record<string, any> = { limit: 100 };
       if (params?.categoryId && params.categoryId !== "ALL") queryParams.categoryId = params.categoryId;
       if (params?.search) queryParams.search = params.search;
+      if (params?.organizationId) queryParams.organizationId = params.organizationId;
 
       const [prodsRes, vasRes, auditsRes] = await Promise.allSettled([
-        apiClient.get<any[]>("/products", { params: queryParams }),
-        apiClient.get<any[]>("/visual-aids", { params: { limit: 50 } }),
-        apiClient.get<any[]>("/product-presence", { params: { limit: 100 } }),
+        apiClient.get<any>("/products", { params: queryParams }),
+        apiClient.get<any>("/visual-aids", { params: { limit: 50 } }),
+        apiClient.get<any>("/product-presence", { params: { limit: 100 } }),
       ]);
 
-      if (prodsRes.status === "fulfilled" && Array.isArray(prodsRes.value) && prodsRes.value.length > 0) {
-        const vasList = vasRes.status === "fulfilled" && Array.isArray(vasRes.value) ? vasRes.value : [];
-        const auditsList = auditsRes.status === "fulfilled" && Array.isArray(auditsRes.value) ? auditsRes.value : [];
+      const prodsData = prodsRes.status === "fulfilled" ? prodsRes.value : null;
+      const prodsList = Array.isArray(prodsData) ? prodsData : (Array.isArray(prodsData?.items) ? prodsData.items : null);
 
-        return prodsRes.value.map((p) => {
+      if (prodsList && prodsList.length > 0) {
+        const vasData = vasRes.status === "fulfilled" ? vasRes.value : [];
+        const vasList = Array.isArray(vasData) ? vasData : (Array.isArray(vasData?.items) ? vasData.items : []);
+        const auditsData = auditsRes.status === "fulfilled" ? auditsRes.value : [];
+        const auditsList = Array.isArray(auditsData) ? auditsData : (Array.isArray(auditsData?.items) ? auditsData.items : []);
+
+        return prodsList.map((p: any) => {
           const item = mapApiProduct(p);
           const va = vasList.filter((v: any) => v.productId === p.id);
           return {
@@ -129,6 +137,13 @@ export const productService = {
     }
 
     let list = [...productsState];
+
+    // Enforce tenant scoping in mock fallback
+    const currentUser = await authService.getCurrentUser();
+    const effectiveOrgId = params?.organizationId || (currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined);
+    if (effectiveOrgId) {
+      list = list.filter((p) => p.organizationId === effectiveOrgId);
+    }
 
     if (params?.search) {
       const q = params.search.toLowerCase();

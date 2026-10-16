@@ -10,6 +10,7 @@ import {
   mockTargets,
   mockTerritories,
 } from "../mock";
+import { authService } from "./authService";
 import type {
   ReportFilterParams,
   VisitReportData,
@@ -125,6 +126,11 @@ export const reportService = {
 
     // Fallback to mock
     let list = [...mockVisits];
+    const currentUser = await authService.getCurrentUser();
+    const effectiveOrgId = (filters as any)?.organizationId || (currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined);
+    if (effectiveOrgId) {
+      list = list.filter((v) => v.organizationId === effectiveOrgId);
+    }
 
     if (filters?.date && filters.date !== "ALL") {
       list = list.filter((v) => (v.scheduledDate || v.plannedDate) === filters.date);
@@ -266,6 +272,11 @@ export const reportService = {
     const rawTgts = mockTargets as unknown as RawTargetItem[];
 
     let filteredMrs = rawMrs;
+    const currentUser = await authService.getCurrentUser();
+    const effectiveOrgId = (filters as any)?.organizationId || (currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined);
+    if (effectiveOrgId) {
+      filteredMrs = filteredMrs.filter((m: any) => m.organizationId === effectiveOrgId);
+    }
 
     if (filters?.territoryId && filters.territoryId !== "ALL") {
       filteredMrs = filteredMrs.filter((m) => m.territoryId === filters.territoryId);

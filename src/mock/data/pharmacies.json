@@ -678,5 +678,37 @@
     "creditLimit": 325000,
     "currentOutstanding": 119000,
     "isActive": true
+  },
+  {
+    "id": "phm_apex_001",
+    "organizationId": "org_apex_002",
+    "territoryId": "ter_blr_central",
+    "name": "Apex Care Pharmacy - Indiranagar",
+    "proprietorName": "Vinay Kulkarni",
+    "drugLicenseNo": "KA-BLR-20B-99120",
+    "gstin": "29AAACA9912A1Z1",
+    "address": "42 12th Main, HAL 2nd Stage, Indiranagar, Bengaluru",
+    "phone": "+919845022001",
+    "latitude": 12.9698,
+    "longitude": 77.6433,
+    "creditLimit": 450000,
+    "currentOutstanding": 42500,
+    "isActive": true
+  },
+  {
+    "id": "phm_apex_002",
+    "organizationId": "org_apex_002",
+    "territoryId": "ter_blr_south",
+    "name": "MedPlus Apex - Koramangala",
+    "proprietorName": "Suresh Gowda",
+    "drugLicenseNo": "KA-BLR-20B-88210",
+    "gstin": "29AAACM8821B1Z3",
+    "address": "19 80ft Road, 4th Block, Koramangala, Bengaluru",
+    "phone": "+919845022002",
+    "latitude": 12.9340,
+    "longitude": 77.6250,
+    "creditLimit": 500000,
+    "currentOutstanding": 68000,
+    "isActive": true
   }
 ]

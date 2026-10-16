@@ -3,7 +3,7 @@ import type { Organization, CreateOrganizationInput, UpdateOrganizationInput } f
 
 const fallbackOrganizations: Organization[] = [
   {
-    id: "e9655eae-b478-4be3-8ead-109fdf31e467",
+    id: "org_novis_001",
     name: "Novis Pharmaceuticals Private Limited",
     slug: "novis-pharma",
     code: "NOV",
@@ -18,19 +18,19 @@ const fallbackOrganizations: Organization[] = [
     updatedAt: "2026-10-16T12:00:00.000Z",
   },
   {
-    id: "org_zenith_002",
-    name: "Zenith Lifesciences India",
-    slug: "zenith-life",
-    code: "ZEN",
-    contactEmail: "ops@zenithlife.in",
-    contactPhone: "+91 98410 88888",
-    address: "45 Pharma City, Guindy, Chennai, Tamil Nadu 600032",
+    id: "org_apex_002",
+    name: "Apex Healthcare India Private Limited",
+    slug: "apex-healthcare",
+    code: "APX",
+    contactEmail: "admin@apexhealthcare.in",
+    contactPhone: "+91 98410 55001",
+    address: "88 100ft Road, Indiranagar, Bengaluru, Karnataka 560038",
     geofenceRadius: 250,
     currency: "INR",
     timezone: "Asia/Kolkata",
     isActive: true,
     createdAt: "2026-10-05T00:00:00.000Z",
-    updatedAt: "2026-10-15T00:00:00.000Z",
+    updatedAt: "2026-10-16T12:00:00.000Z",
   },
 ];
 

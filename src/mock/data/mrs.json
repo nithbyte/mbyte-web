@@ -298,5 +298,25 @@
       "email": "naveen.kumar@novispharma.com",
       "phone": "+91984201014"
     }
+  },
+  {
+    "id": "mr_apex_001",
+    "userId": "usr_mr_016",
+    "organizationId": "org_apex_002",
+    "territoryId": "ter_blr_central",
+    "managerId": "usr_mgr_006",
+    "employeeCode": "APX-MR-01",
+    "designation": "Medical Representative",
+    "headquarters": "Bengaluru",
+    "dailyCallGoal": 8,
+    "monthlyTargetAmount": 300000,
+    "joiningDate": "2026-02-05",
+    "user": {
+      "id": "usr_mr_016",
+      "firstName": "Deepak",
+      "lastName": "Verma",
+      "email": "mr.blr1@apexhealthcare.in",
+      "phone": "+919841055003"
+    }
   }
 ]

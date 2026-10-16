@@ -2523,5 +2523,41 @@
     "feedbackNotes": "Regular detailing call. Customer responsive to product portfolio.",
     "nextFollowUpDate": "2026-10-20",
     "priority": "HIGH"
+  },
+  {
+    "id": "vst_apex_001",
+    "organizationId": "org_apex_002",
+    "mrId": "usr_mr_016",
+    "customerType": "DOCTOR",
+    "customerId": "doc_apex_001",
+    "customerName": "Dr. Arvind Kumar",
+    "customerAddress": "88 100ft Road, Indiranagar, Bengaluru - 560038",
+    "scheduledDate": "2026-10-16",
+    "scheduledStartTime": "10:00 AM",
+    "scheduledEndTime": "10:30 AM",
+    "status": "COMPLETED",
+    "verifiedLatitude": 12.9716,
+    "verifiedLongitude": 77.6412,
+    "gpsAccuracy": 10,
+    "distanceMeters": 15.0,
+    "verificationStatus": "VERIFIED",
+    "durationSeconds": 1200,
+    "feedbackNotes": "Presented Apex CardioSafe 50mg clinical trial data. Highly receptive.",
+    "nextFollowUpDate": "2026-10-30",
+    "priority": "HIGH"
+  },
+  {
+    "id": "vst_apex_002",
+    "organizationId": "org_apex_002",
+    "mrId": "usr_mr_016",
+    "customerType": "PHARMACY",
+    "customerId": "phm_apex_001",
+    "customerName": "Apex Care Pharmacy - Indiranagar",
+    "customerAddress": "42 12th Main, HAL 2nd Stage, Indiranagar, Bengaluru",
+    "scheduledDate": "2026-10-17",
+    "scheduledStartTime": "02:00 PM",
+    "scheduledEndTime": "02:30 PM",
+    "status": "PLANNED",
+    "priority": "MEDIUM"
   }
 ]

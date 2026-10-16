@@ -91,4 +91,5 @@ export interface VisitQueryParams {
   customerType?: string;
   search?: string;
   limit?: number;
+  organizationId?: string;
 }

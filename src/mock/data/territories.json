@@ -53,5 +53,27 @@
     "area": "RS Puram-Gandhipuram",
     "headquarters": "Coimbatore",
     "isActive": true
+  },
+  {
+    "id": "ter_blr_central",
+    "organizationId": "org_apex_002",
+    "code": "KA-BLR-C",
+    "name": "Bengaluru Central",
+    "zone": "South-West",
+    "region": "Karnataka",
+    "area": "Indiranagar-MG Road",
+    "headquarters": "Bengaluru",
+    "isActive": true
+  },
+  {
+    "id": "ter_blr_south",
+    "organizationId": "org_apex_002",
+    "code": "KA-BLR-S",
+    "name": "Bengaluru South",
+    "zone": "South-West",
+    "region": "Karnataka",
+    "area": "Koramangala-HSR",
+    "headquarters": "Bengaluru",
+    "isActive": true
   }
 ]

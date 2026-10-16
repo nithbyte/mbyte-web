@@ -84,6 +84,7 @@ export interface OrderQueryParams {
   date?: string;
   search?: string;
   limit?: number;
+  organizationId?: string;
 }
 
 export interface CollectionQueryParams {
@@ -94,6 +95,7 @@ export interface CollectionQueryParams {
   date?: string;
   search?: string;
   limit?: number;
+  organizationId?: string;
 }
 
 export interface CommercialKPIs {

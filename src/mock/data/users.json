@@ -278,5 +278,48 @@
     "status": "ACTIVE",
     "avatarUrl": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150",
     "createdAt": "2026-02-01T00:00:00.000Z"
+  },
+  {
+    "id": "usr_admin_002",
+    "organizationId": "org_apex_002",
+    "email": "admin@apexhealthcare.in",
+    "phone": "+919841055001",
+    "firstName": "Dr. Sunita",
+    "lastName": "Rao",
+    "role": "COMPANY_ADMIN",
+    "status": "ACTIVE",
+    "avatarUrl": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150",
+    "designation": "Executive Director - Operations",
+    "createdAt": "2026-01-20T00:00:00.000Z"
+  },
+  {
+    "id": "usr_mgr_006",
+    "organizationId": "org_apex_002",
+    "email": "manager.blr@apexhealthcare.in",
+    "phone": "+919841055002",
+    "firstName": "Ramesh",
+    "lastName": "Babu",
+    "role": "MANAGER",
+    "status": "ACTIVE",
+    "territoryId": "ter_blr_central",
+    "employeeCode": "APX-MGR-01",
+    "designation": "Regional Sales Manager",
+    "avatarUrl": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150",
+    "createdAt": "2026-01-22T00:00:00.000Z"
+  },
+  {
+    "id": "usr_mr_016",
+    "organizationId": "org_apex_002",
+    "email": "mr.blr1@apexhealthcare.in",
+    "phone": "+919841055003",
+    "firstName": "Deepak",
+    "lastName": "Verma",
+    "role": "MR",
+    "status": "ACTIVE",
+    "territoryId": "ter_blr_central",
+    "employeeCode": "APX-MR-01",
+    "designation": "Medical Representative",
+    "avatarUrl": "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150",
+    "createdAt": "2026-02-05T00:00:00.000Z"
   }
 ]

@@ -1,10 +1,12 @@
 import { apiClient } from "../lib/api-client";
 import { mockDistributors, mockTerritories, mockOrders, mockProductPresence, mockProducts } from "../mock";
+import { authService } from "./authService";
 import type { Distributor, DistributorInput, CustomerHistoryItem, StockInwardInput } from "../types";
 
 export interface DistributorQueryParams {
   search?: string;
   territoryId?: string;
+  organizationId?: string;
 }
 
 const distributorsState: Distributor[] = [...mockDistributors];
@@ -34,16 +36,25 @@ export const distributorService = {
       const queryParams: Record<string, any> = { limit: 100 };
       if (params?.territoryId && params.territoryId !== "ALL") queryParams.territoryId = params.territoryId;
       if (params?.search) queryParams.search = params.search;
+      if (params?.organizationId) queryParams.organizationId = params.organizationId;
 
-      const res = await apiClient.get<any[]>("/distributors", { params: queryParams });
-      if (Array.isArray(res) && res.length > 0) {
-        return res.map(mapApiDistributor);
+      const res = await apiClient.get<any>("/distributors", { params: queryParams });
+      const items = Array.isArray(res) ? res : (Array.isArray(res?.items) ? res.items : null);
+      if (items && items.length > 0) {
+        return items.map(mapApiDistributor);
       }
     } catch (err) {
       console.warn("Real /distributors API call failed, falling back to mock:", err);
     }
 
     let list = [...distributorsState];
+
+    // Enforce tenant scoping in mock fallback
+    const currentUser = await authService.getCurrentUser();
+    const effectiveOrgId = params?.organizationId || (currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined);
+    if (effectiveOrgId) {
+      list = list.filter((d) => d.organizationId === effectiveOrgId);
+    }
 
     if (params?.search) {
       const q = params.search.toLowerCase();
@@ -79,6 +90,9 @@ export const distributorService = {
   },
 
   async createDistributor(input: DistributorInput): Promise<Distributor> {
+    const currentUser = await authService.getCurrentUser();
+    const effectiveOrgId = (input as any).organizationId || currentUser?.organizationId || "org_novis_001";
+
     try {
       const payload: Record<string, any> = {
         name: input.name.trim(),
@@ -90,6 +104,7 @@ export const distributorService = {
         territoryId: input.territoryId,
         creditLimit: 3000000,
         paymentTerms: "Net 30 Days",
+        organizationId: effectiveOrgId,
       };
       if (input.email) payload.email = input.email.trim();
 
@@ -106,7 +121,7 @@ export const distributorService = {
     const territory = mockTerritories.find((t) => t.id === input.territoryId);
     const newDst: Distributor = {
       id: `dst_${Date.now()}`,
-      organizationId: "org_novis_001",
+      organizationId: effectiveOrgId,
       name: input.name.trim(),
       contactPerson: input.contactPerson.trim(),
       phone: input.phone.trim(),

@@ -1,5 +1,6 @@
 import { apiClient } from "../lib/api-client";
 import { mockOrders } from "../mock";
+import { authService } from "./authService";
 import type { Order, OrderQueryParams } from "../types";
 
 export interface OrderKPIs {
@@ -62,23 +63,25 @@ export const orderService = {
       if (params?.status && params.status !== "ALL") queryParams.status = params.status;
       if (params?.mrId && params.mrId !== "ALL") queryParams.mrId = params.mrId;
       if (params?.customerId && params.customerId !== "ALL") queryParams.customerId = params.customerId;
+      if (params?.organizationId) queryParams.organizationId = params.organizationId;
 
-      const res = await apiClient.get<any[]>("/orders", { params: queryParams });
-      if (Array.isArray(res) && res.length > 0) {
-        let list = res.map(mapApiOrder);
+      const res = await apiClient.get<any>("/orders", { params: queryParams });
+      const items = Array.isArray(res) ? res : (Array.isArray(res?.items) ? res.items : null);
+      if (items && items.length > 0) {
+        let list = items.map(mapApiOrder);
 
         if (params?.territoryId && params.territoryId !== "ALL") {
-          list = list.filter((o) => o.territoryId === params.territoryId);
+          list = list.filter((o: any) => o.territoryId === params.territoryId);
         }
 
         if (params?.date) {
-          list = list.filter((o) => o.orderDate === params.date);
+          list = list.filter((o: any) => o.orderDate === params.date);
         }
 
         if (params?.search) {
           const q = params.search.toLowerCase().trim();
           list = list.filter(
-            (o) =>
+            (o: any) =>
               o.orderNumber.toLowerCase().includes(q) ||
               o.pharmacyName.toLowerCase().includes(q) ||
               (o.mrName && o.mrName.toLowerCase().includes(q))
@@ -96,6 +99,13 @@ export const orderService = {
     }
 
     let list = [...mockOrders];
+
+    // Enforce tenant scoping in mock fallback
+    const currentUser = await authService.getCurrentUser();
+    const effectiveOrgId = params?.organizationId || (currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined);
+    if (effectiveOrgId) {
+      list = list.filter((o) => o.organizationId === effectiveOrgId);
+    }
 
     if (params?.status && params.status !== "ALL") {
       list = list.filter((o) => o.status === params.status);

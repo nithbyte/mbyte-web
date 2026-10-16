@@ -298,5 +298,35 @@
     "mrp": 260,
     "gstRate": 12,
     "isActive": true
+  },
+  {
+    "id": "prod_apex_001",
+    "organizationId": "org_apex_002",
+    "categoryId": "cat_cardiology",
+    "sku": "APX-CRD-01",
+    "brandName": "Apex CardioSafe 50mg",
+    "genericName": "Metoprolol Succinate 50mg",
+    "dosageForm": "Tablet",
+    "packSize": "10x10 Tablets",
+    "ptr": 145,
+    "pts": 128,
+    "mrp": 195,
+    "gstRate": 12,
+    "isActive": true
+  },
+  {
+    "id": "prod_apex_002",
+    "organizationId": "org_apex_002",
+    "categoryId": "cat_neurology",
+    "sku": "APX-NRC-01",
+    "brandName": "Apex NeuroCalm 10mg",
+    "genericName": "Escitalopram Oxalate 10mg",
+    "dosageForm": "Tablet",
+    "packSize": "10x10 Tablets",
+    "ptr": 120,
+    "pts": 105,
+    "mrp": 160,
+    "gstRate": 12,
+    "isActive": true
   }
 ]

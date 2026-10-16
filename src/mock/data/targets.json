@@ -268,5 +268,31 @@
     "achievedAmount": 780000,
     "visitTarget": 660,
     "visitAchieved": 330
+  },
+  {
+    "id": "tgt_apex_mr_1",
+    "organizationId": "org_apex_002",
+    "mrId": "usr_mr_016",
+    "territoryId": "ter_blr_central",
+    "year": 2026,
+    "month": 10,
+    "targetAmount": 300000,
+    "achievedAmount": 185000,
+    "visitTarget": 180,
+    "visitAchieved": 115,
+    "dailyCallGoal": 8,
+    "todayCompletedVisits": 4
+  },
+  {
+    "id": "tgt_apex_mgr_1",
+    "organizationId": "org_apex_002",
+    "managerId": "usr_mgr_006",
+    "territoryId": "ter_blr_central",
+    "year": 2026,
+    "month": 10,
+    "targetAmount": 600000,
+    "achievedAmount": 370000,
+    "visitTarget": 360,
+    "visitAchieved": 230
   }
 ]

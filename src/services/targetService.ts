@@ -1,5 +1,6 @@
 import { apiClient } from "../lib/api-client";
 import { mockTargets, mockMRs, mockTerritories } from "../mock";
+import { authService } from "./authService";
 
 export interface TargetItem {
   id: string;
@@ -85,7 +86,7 @@ export const targetService = {
   }): Promise<TargetItem[]> {
     try {
       const raw = await apiClient.get<any>("/targets", { params: { limit: params?.limit || 100, ...params } });
-      const list = Array.isArray(raw) ? raw : (raw as any)?.data || [];
+      const list = Array.isArray(raw) ? raw : (raw as any)?.data || (raw as any)?.items || [];
       if (list && list.length > 0) {
         return list.map(mapTargetItem);
       }
@@ -95,6 +96,14 @@ export const targetService = {
 
     // Fallback to mock
     let list = [...mockTargets] as any[];
+
+    // Enforce tenant scoping in mock fallback
+    const currentUser = await authService.getCurrentUser();
+    const effectiveOrgId = (params as any)?.organizationId || (currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined);
+    if (effectiveOrgId) {
+      list = list.filter((t) => t.organizationId === effectiveOrgId);
+    }
+
     if (params?.mrId && params.mrId !== "ALL") list = list.filter((t) => t.mrId === params.mrId);
     if (params?.territoryId && params.territoryId !== "ALL") list = list.filter((t) => t.territoryId === params.territoryId);
     if (params?.year) list = list.filter((t) => t.year === params.year);

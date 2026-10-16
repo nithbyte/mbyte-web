@@ -1,5 +1,6 @@
 import { apiClient } from "../lib/api-client";
 import { mockDoctors, mockTerritories, mockVisits } from "../mock";
+import { authService } from "./authService";
 import type { Doctor, DoctorInput, CustomerHistoryItem } from "../types";
 
 export interface DoctorQueryParams {
@@ -7,6 +8,7 @@ export interface DoctorQueryParams {
   territoryId?: string;
   specialty?: string;
   tier?: string;
+  organizationId?: string;
 }
 
 // In-memory state for mock CRUD fallback
@@ -42,16 +44,25 @@ export const doctorService = {
       if (params?.specialty && params.specialty !== "ALL") queryParams.specialty = params.specialty;
       if (params?.tier && params.tier !== "ALL") queryParams.tier = params.tier;
       if (params?.search) queryParams.search = params.search;
+      if (params?.organizationId) queryParams.organizationId = params.organizationId;
 
-      const res = await apiClient.get<any[]>("/doctors", { params: queryParams });
-      if (Array.isArray(res) && res.length > 0) {
-        return res.map(mapApiDoctor);
+      const res = await apiClient.get<any>("/doctors", { params: queryParams });
+      const items = Array.isArray(res) ? res : (Array.isArray(res?.items) ? res.items : null);
+      if (items && items.length > 0) {
+        return items.map(mapApiDoctor);
       }
     } catch (err) {
       console.warn("Real /doctors API call failed, falling back to mock:", err);
     }
 
     let list = [...doctorsState];
+
+    // Enforce tenant scoping in mock fallback
+    const currentUser = await authService.getCurrentUser();
+    const effectiveOrgId = params?.organizationId || (currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined);
+    if (effectiveOrgId) {
+      list = list.filter((d) => d.organizationId === effectiveOrgId);
+    }
 
     if (params?.search) {
       const q = params.search.toLowerCase();
@@ -94,6 +105,9 @@ export const doctorService = {
   },
 
   async createDoctor(input: DoctorInput): Promise<Doctor> {
+    const currentUser = await authService.getCurrentUser();
+    const effectiveOrgId = (input as any).organizationId || currentUser?.organizationId || "org_novis_001";
+
     try {
       const payload: Record<string, any> = {
         name: input.name.trim(),
@@ -107,6 +121,7 @@ export const doctorService = {
         visitFrequency: input.visitFrequency || 2,
         latitude: input.latitude || 13.0569,
         longitude: input.longitude || 80.2520,
+        organizationId: effectiveOrgId,
       };
       if (input.email) payload.email = input.email.trim();
 
@@ -123,7 +138,7 @@ export const doctorService = {
     const territory = mockTerritories.find((t) => t.id === input.territoryId);
     const newDoc: Doctor = {
       id: `doc_${Date.now()}`,
-      organizationId: "org_novis_001",
+      organizationId: effectiveOrgId,
       name: input.name.trim(),
       specialty: input.specialty.trim(),
       qualification: input.qualification?.trim() || "MBBS, MD",

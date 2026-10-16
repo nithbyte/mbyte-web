@@ -148,5 +148,20 @@
     "creditLimit": 3000000,
     "paymentTerms": "Net 30 Days",
     "isActive": true
+  },
+  {
+    "id": "dst_apex_001",
+    "organizationId": "org_apex_002",
+    "territoryId": "ter_blr_central",
+    "name": "Karnataka Pharma Distributors",
+    "contactPerson": "H. R. Ananth",
+    "phone": "+919845033001",
+    "email": "orders@karnatakapharma.in",
+    "address": "Peenya Industrial Area, Phase 1, Bengaluru",
+    "gstin": "29AACFK9901A1Z9",
+    "drugLicenseNo": "KA-BLR-20B-DIST-8801",
+    "creditLimit": 5000000,
+    "paymentTerms": "Net 30 Days",
+    "isActive": true
   }
 ]

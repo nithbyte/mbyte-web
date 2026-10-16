@@ -448,5 +448,20 @@
     "notes": "Payment towards Invoice INV-2026-09-39",
     "receiptImageUrl": "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=400",
     "createdAt": "2026-10-02T11:45:00.000Z"
+  },
+  {
+    "id": "col_apex_001",
+    "organizationId": "org_apex_002",
+    "receiptNumber": "REC-APX-2026-001",
+    "mrId": "usr_mr_016",
+    "pharmacyId": "phm_apex_001",
+    "pharmacyName": "Apex Care Pharmacy - Indiranagar",
+    "amount": 35000,
+    "paymentMode": "NEFT",
+    "referenceNumber": "NEFT-APX-882190",
+    "paymentDate": "2026-10-16",
+    "notes": "Advance payment for launch order",
+    "receiptImageUrl": "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=400",
+    "createdAt": "2026-10-16T15:30:00.000Z"
   }
 ]

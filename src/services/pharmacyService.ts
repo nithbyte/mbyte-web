@@ -6,11 +6,13 @@ import {
   mockCollections,
   mockProductPresence,
 } from "../mock";
+import { authService } from "./authService";
 import type { Pharmacy, PharmacyInput, CustomerHistoryItem } from "../types";
 
 export interface PharmacyQueryParams {
   search?: string;
   territoryId?: string;
+  organizationId?: string;
 }
 
 const pharmaciesState: Pharmacy[] = [...mockPharmacies];
@@ -40,16 +42,25 @@ export const pharmacyService = {
       const queryParams: Record<string, any> = { limit: 100 };
       if (params?.territoryId && params.territoryId !== "ALL") queryParams.territoryId = params.territoryId;
       if (params?.search) queryParams.search = params.search;
+      if (params?.organizationId) queryParams.organizationId = params.organizationId;
 
-      const res = await apiClient.get<any[]>("/pharmacies", { params: queryParams });
-      if (Array.isArray(res) && res.length > 0) {
-        return res.map(mapApiPharmacy);
+      const res = await apiClient.get<any>("/pharmacies", { params: queryParams });
+      const items = Array.isArray(res) ? res : (Array.isArray(res?.items) ? res.items : null);
+      if (items && items.length > 0) {
+        return items.map(mapApiPharmacy);
       }
     } catch (err) {
       console.warn("Real /pharmacies API call failed, falling back to mock:", err);
     }
 
     let list = [...pharmaciesState];
+
+    // Enforce tenant scoping in mock fallback
+    const currentUser = await authService.getCurrentUser();
+    const effectiveOrgId = params?.organizationId || (currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined);
+    if (effectiveOrgId) {
+      list = list.filter((p) => p.organizationId === effectiveOrgId);
+    }
 
     if (params?.search) {
       const q = params.search.toLowerCase();
@@ -85,6 +96,9 @@ export const pharmacyService = {
   },
 
   async createPharmacy(input: PharmacyInput): Promise<Pharmacy> {
+    const currentUser = await authService.getCurrentUser();
+    const effectiveOrgId = (input as any).organizationId || currentUser?.organizationId || "org_novis_001";
+
     try {
       const payload: Record<string, any> = {
         name: input.name.trim(),
@@ -96,6 +110,7 @@ export const pharmacyService = {
         creditLimit: 500000,
         latitude: input.latitude || 13.0572,
         longitude: input.longitude || 80.2524,
+        organizationId: effectiveOrgId,
       };
       if (input.email) payload.email = input.email.trim();
 
@@ -112,7 +127,7 @@ export const pharmacyService = {
     const territory = mockTerritories.find((t) => t.id === input.territoryId);
     const newPhm: Pharmacy = {
       id: `phm_${Date.now()}`,
-      organizationId: "org_novis_001",
+      organizationId: effectiveOrgId,
       name: input.name.trim(),
       contactPerson: input.contactPerson.trim(),
       phone: input.phone.trim(),

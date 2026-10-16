@@ -1,5 +1,6 @@
 import { apiClient } from "../lib/api-client";
 import { mockCollections } from "../mock";
+import { authService } from "./authService";
 import type { Collection, CollectionQueryParams, PaymentMode } from "../types";
 
 export interface CollectionKPIs {
@@ -60,16 +61,17 @@ export const collectionService = {
       if (params?.customerId && params.customerId !== "ALL") queryParams.customerId = params.customerId;
       if (params?.date) queryParams.date = params.date;
       if (params?.search) queryParams.search = params.search;
+      if (params?.organizationId) queryParams.organizationId = params.organizationId;
 
       const raw = await apiClient.get<any>("/collections", { params: queryParams });
-      const list = Array.isArray(raw) ? raw : (raw as any)?.data || [];
+      const list = Array.isArray(raw) ? raw : (raw as any)?.data || (raw as any)?.items || [];
       if (list && list.length > 0) {
         let mapped: Collection[] = list.map(mapApiCollection);
 
         if (params?.search) {
           const q = params.search.toLowerCase().trim();
           mapped = mapped.filter(
-            (c) =>
+            (c: any) =>
               c.receiptNumber.toLowerCase().includes(q) ||
               c.pharmacyName.toLowerCase().includes(q) ||
               (c.mrName && c.mrName.toLowerCase().includes(q)) ||
@@ -79,7 +81,7 @@ export const collectionService = {
         }
 
         if (params?.territoryId && params.territoryId !== "ALL") {
-          mapped = mapped.filter((c) => c.territoryId === params.territoryId);
+          mapped = mapped.filter((c: any) => c.territoryId === params.territoryId);
         }
 
         mapped.sort((a, b) => {
@@ -100,6 +102,13 @@ export const collectionService = {
 
     // Fallback to mock
     let list = [...mockCollections];
+
+    // Enforce tenant scoping in mock fallback
+    const currentUser = await authService.getCurrentUser();
+    const effectiveOrgId = params?.organizationId || (currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined);
+    if (effectiveOrgId) {
+      list = list.filter((c) => c.organizationId === effectiveOrgId);
+    }
     if (params?.mode && params.mode !== "ALL") {
       list = list.filter((c) => c.paymentMode === params.mode);
     }

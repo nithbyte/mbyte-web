@@ -37,11 +37,10 @@ export function useSwitchUser() {
   return useMutation({
     mutationFn: (userId: string) => authService.switchUser(userId),
     onSuccess: (switchedUser) => {
+      // Clear all cached queries so previous company data is never retained in memory
+      queryClient.clear();
       setUser(switchedUser);
       queryClient.setQueryData(["currentUser"], switchedUser);
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-      queryClient.invalidateQueries({ queryKey: ["field-force"] });
-      queryClient.invalidateQueries({ queryKey: ["visits"] });
     },
   });
 }
@@ -54,9 +53,10 @@ export function useLogin() {
     mutationFn: (credentials: { email: string; password?: string }) =>
       authService.login(credentials),
     onSuccess: ({ user }) => {
+      // Clear all cached queries from previous sessions
+      queryClient.clear();
       setUser(user);
       queryClient.setQueryData(["currentUser"], user);
-      queryClient.invalidateQueries({ queryKey: ["currentUser"] });
     },
   });
 }
@@ -68,8 +68,9 @@ export function useLogout() {
   return useMutation({
     mutationFn: () => authService.logout(),
     onSuccess: () => {
+      // Clear all cached data on logout
+      queryClient.clear();
       logout();
-      queryClient.invalidateQueries({ queryKey: ["currentUser"] });
     },
   });
 }

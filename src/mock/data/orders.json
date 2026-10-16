@@ -1310,5 +1310,47 @@
         "lineTotal": 940.8
       }
     ]
+  },
+  {
+    "id": "ord_apex_001",
+    "organizationId": "org_apex_002",
+    "orderNumber": "ORD-APX-2026-001",
+    "mrId": "usr_mr_016",
+    "mrName": "Deepak Verma",
+    "customerType": "PHARMACY",
+    "customerId": "phm_apex_001",
+    "customerName": "Apex Care Pharmacy - Indiranagar",
+    "pharmacyId": "phm_apex_001",
+    "status": "APPROVED",
+    "subtotalAmount": 37946.43,
+    "discountAmount": 0,
+    "taxAmount": 4553.57,
+    "totalAmount": 42500,
+    "remarks": "Initial stock order for Bengaluru launch",
+    "createdAt": "2026-10-15T11:00:00.000Z",
+    "items": [
+      {
+        "id": "ord_item_apx_1",
+        "productId": "prod_apex_001",
+        "productName": "Apex CardioSafe 50mg",
+        "sku": "APX-CRD-01",
+        "unitPrice": 145,
+        "quantity": 150,
+        "discount": 0,
+        "taxRate": 12,
+        "lineTotal": 24360
+      },
+      {
+        "id": "ord_item_apx_2",
+        "productId": "prod_apex_002",
+        "productName": "Apex NeuroCalm 10mg",
+        "sku": "APX-NRC-01",
+        "unitPrice": 120,
+        "quantity": 135,
+        "discount": 0,
+        "taxRate": 12,
+        "lineTotal": 18140
+      }
+    ]
   }
 ]

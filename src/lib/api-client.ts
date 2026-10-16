@@ -108,35 +108,12 @@ function isTokenExpired(token: string | null): boolean {
   }
 }
 
-// Ensure a valid authenticated manager session exists
+// Ensure a valid authenticated manager session exists if token is already present
 let authPromise: Promise<string | null> | null = null;
-export async function ensureAuthenticated(force = false): Promise<string | null> {
+export async function ensureAuthenticated(): Promise<string | null> {
   const existing = tokenStorage.getAccessToken();
-  if (existing && !force && !isTokenExpired(existing)) return existing;
-
-  if (authPromise) return authPromise;
-
-  authPromise = (async () => {
-    try {
-      const res = await axios.post(`${API_BASE_URL}/auth/login`, {
-        email: "manager.chennai@novispharma.com",
-        password: "Password123!",
-      });
-
-      const data = res.data?.data || res.data;
-      if (data?.accessToken) {
-        tokenStorage.setTokens(data.accessToken, data.refreshToken);
-        return data.accessToken;
-      }
-    } catch (err) {
-      console.warn("Auto-authentication with manager credentials failed, proceeding in offline mode:", err);
-    } finally {
-      authPromise = null;
-    }
-    return null;
-  })();
-
-  return authPromise;
+  if (existing && !isTokenExpired(existing)) return existing;
+  return null;
 }
 
 // Request Interceptor: Attach Bearer JWT if available
@@ -252,7 +229,7 @@ axiosInstance.interceptors.response.use(
         }
       } catch (refreshErr) {
         tokenStorage.clearTokens();
-        const freshToken = await ensureAuthenticated(true);
+        const freshToken = await ensureAuthenticated();
         if (freshToken) {
           processQueue(null, freshToken);
           if (originalRequest.headers) {

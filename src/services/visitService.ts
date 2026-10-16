@@ -1,5 +1,6 @@
 import { apiClient } from "../lib/api-client";
 import { mockVisits } from "../mock";
+import { authService } from "./authService";
 import type { Visit, VisitQueryParams, VisitCounts } from "../types";
 
 function mapApiVisit(v: any): Visit {
@@ -54,27 +55,29 @@ export const visitService = {
       if (params?.mrId && params.mrId !== "ALL") queryParams.mrId = params.mrId;
       if (params?.status && params.status !== "ALL") queryParams.status = params.status;
       if (params?.customerId && params.customerId !== "ALL") queryParams.doctorId = params.customerId;
+      if (params?.organizationId) queryParams.organizationId = params.organizationId;
 
-      const res = await apiClient.get<any[]>("/visits", { params: queryParams });
-      if (Array.isArray(res) && res.length > 0) {
-        let list = res.map(mapApiVisit);
+      const res = await apiClient.get<any>("/visits", { params: queryParams });
+      const items = Array.isArray(res) ? res : (Array.isArray(res?.items) ? res.items : null);
+      if (items && items.length > 0) {
+        let list = items.map(mapApiVisit);
 
         if (params?.territoryId && params.territoryId !== "ALL") {
-          list = list.filter((v) => v.territoryId === params.territoryId);
+          list = list.filter((v: any) => v.territoryId === params.territoryId);
         }
 
         if (params?.customerType && params.customerType !== "ALL") {
-          list = list.filter((v) => v.customerType === params.customerType);
+          list = list.filter((v: any) => v.customerType === params.customerType);
         }
 
         if (params?.verificationStatus && params.verificationStatus !== "ALL") {
-          list = list.filter((v) => v.verificationStatus === params.verificationStatus);
+          list = list.filter((v: any) => v.verificationStatus === params.verificationStatus);
         }
 
         if (params?.search) {
           const q = params.search.toLowerCase();
           list = list.filter(
-            (v) =>
+            (v: any) =>
               v.customerName.toLowerCase().includes(q) ||
               (v.mrName && v.mrName.toLowerCase().includes(q)) ||
               (v.specialty && v.specialty.toLowerCase().includes(q))
@@ -88,6 +91,13 @@ export const visitService = {
     }
 
     let list = [...mockVisits];
+
+    // Enforce tenant scoping in mock fallback
+    const currentUser = await authService.getCurrentUser();
+    const effectiveOrgId = params?.organizationId || (currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined);
+    if (effectiveOrgId) {
+      list = list.filter((v) => v.organizationId === effectiveOrgId);
+    }
 
     if (params?.date && params.date !== "ALL") {
       list = list.filter(
