@@ -1,7 +1,7 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from "axios";
 
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1";
+  process.env.NEXT_PUBLIC_API_URL || "https://mbyte-backend.onrender.com/api/v1";
 
 export class ApiError extends Error {
   statusCode: number;
