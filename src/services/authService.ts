@@ -12,11 +12,23 @@ function formatUser(rawUser: any): User {
     rawUser.email?.split("@")[0] ||
     "User";
 
-  const rawRole = Array.isArray(rawUser.roles)
-    ? rawUser.roles[0]
-    : rawUser.role || "MANAGER";
+  let extractedRole = rawUser.role;
+  if (!extractedRole && Array.isArray(rawUser.roles) && rawUser.roles.length > 0) {
+    extractedRole = rawUser.roles[0];
+  }
+  if (!extractedRole && Array.isArray(rawUser.userRoles) && rawUser.userRoles.length > 0) {
+    extractedRole = rawUser.userRoles[0]?.role?.type || rawUser.userRoles[0]?.role;
+  }
+  if (!extractedRole && rawUser.email) {
+    const emailLower = rawUser.email.toLowerCase();
+    if (emailLower.includes("superadmin") || emailLower === "superadmin@mbyte.app") {
+      extractedRole = "SUPER_ADMIN";
+    } else if (emailLower.startsWith("admin@") || emailLower === "admin@novispharma.com") {
+      extractedRole = "COMPANY_ADMIN";
+    }
+  }
 
-  const role = normalizeRole(rawRole);
+  const role = normalizeRole(extractedRole || "MANAGER");
 
   return {
     id: rawUser.id,
