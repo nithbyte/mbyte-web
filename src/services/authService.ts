@@ -30,21 +30,42 @@ function formatUser(rawUser: any): User {
 
   const role = normalizeRole(extractedRole || "MANAGER");
 
+  const companyName =
+    rawUser.organization?.name ||
+    rawUser.organizationName ||
+    rawUser.companyName ||
+    (rawUser.organizationId === "org_apex_002" || rawUser.organizationId === "31524081-7b14-4925-a331-e4cd05a62e04"
+      ? "Apex Healthcare"
+      : rawUser.organizationId === "org_novis_001" || rawUser.organizationId === "28101346-8d53-4e0e-9433-feec8dbfeb28"
+      ? "Novis Pharmaceuticals Pvt Ltd"
+      : undefined);
+
+  const employeeCode =
+    rawUser.medicalRepresentative?.employeeCode ||
+    rawUser.employeeCode ||
+    rawUser.employeeId ||
+    "EMP-001";
+
   return {
     id: rawUser.id,
     organizationId: rawUser.organizationId || null,
+    organization: rawUser.organization || null,
+    organizationName: companyName,
+    companyName: companyName,
     name: computedName,
     firstName: rawUser.firstName,
     lastName: rawUser.lastName,
     email: rawUser.email,
     phone: rawUser.phone || "+91 98400 22222",
     role,
-    employeeId: rawUser.medicalRepresentative?.employeeCode || rawUser.employeeId || "EMP-001",
+    employeeId: employeeCode,
+    employeeCode: employeeCode,
     designation:
       rawUser.designation ||
       rawUser.medicalRepresentative?.designation ||
       getRoleLabel(role),
     territoryId: rawUser.medicalRepresentative?.territoryId || rawUser.territoryId,
+    territoryName: rawUser.medicalRepresentative?.territory?.name || rawUser.territoryName,
     status: rawUser.status === "ACTIVE" ? "ACTIVE" : "INACTIVE",
     createdAt: rawUser.createdAt,
   };

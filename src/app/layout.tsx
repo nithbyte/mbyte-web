@@ -5,7 +5,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "MByte FieldOps | Pharma Field-Force Admin Portal",
   description:
-    "Enterprise Field-Force Operations & Territory Management System for Novis Pharma. Real-time visit telemetry, GPS compliance, order booking, and stock analytics.",
+    "Enterprise Multi-Tenant Field-Force Operations & Territory Management System. Real-time visit telemetry, GPS compliance, order booking, and stock analytics.",
 };
 
 export const viewport: Viewport = {

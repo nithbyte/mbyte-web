@@ -18,7 +18,7 @@ import {
   PhoneCall,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useDashboardData } from "@/hooks";
+import { useDashboardData, useCurrentUser } from "@/hooks";
 import { useFilterStore } from "@/store";
 import { MetricCard } from "@/components/ui/metric-card";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -40,8 +40,25 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 
 export function DashboardOverview() {
   const queryClient = useQueryClient();
+  const { data: currentUser } = useCurrentUser();
   const { selectedTerritoryId } = useFilterStore();
   const { data, isLoading, isFetching } = useDashboardData(selectedTerritoryId);
+
+  const tenantName =
+    currentUser?.role === "SUPER_ADMIN"
+      ? "Platform Control"
+      : currentUser?.organization?.name ||
+        currentUser?.organizationName ||
+        currentUser?.companyName ||
+        (currentUser?.organizationId === "org_apex_002" ||
+        currentUser?.organizationId === "31524081-7b14-4925-a331-e4cd05a62e04"
+          ? "Apex Healthcare"
+          : currentUser?.organizationId === "org_novis_001" ||
+            currentUser?.organizationId === "28101346-8d53-4e0e-9433-feec8dbfeb28"
+          ? "Novis Pharma"
+          : currentUser?.organizationId
+          ? "Corporate Operations"
+          : "Field Operations");
 
   // Active view tabs for deep dives
   const [activeAttentionTab, setActiveAttentionTab] = useState<
@@ -186,10 +203,12 @@ export function DashboardOverview() {
           </div>
           <div>
             <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <span>Novis Pharma Operations Hub</span>
+              <span>{tenantName} Operations Hub</span>
               <span className="text-slate-300">•</span>
               <span className="text-sky-700 dark:text-sky-400 font-semibold">
-                Tamil Nadu Territory Active Telemetry
+                {selectedTerritoryId && selectedTerritoryId !== "ALL"
+                  ? `${territorySummary?.find((t) => t.territoryId === selectedTerritoryId)?.territoryName || "Territory"} Active Telemetry`
+                  : "Authorized Territory Active Telemetry"}
               </span>
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">

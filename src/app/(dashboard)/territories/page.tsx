@@ -115,7 +115,7 @@ export default function TerritoriesPage() {
     try {
       await createTerritoryMutation.mutateAsync({
         ...form,
-        organizationId: currentUser?.organizationId || "org_novis_001",
+        organizationId: currentUser?.organizationId || undefined,
       });
       setFormSuccess(`Territory "${form.name}" created successfully! It is now available for field assignment.`);
       refetch();

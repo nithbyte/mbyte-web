@@ -216,7 +216,7 @@ export default function FieldForcePage() {
     try {
       await createTerritoryMutation.mutateAsync({
         ...territoryForm,
-        organizationId: currentUser?.organizationId || "org_novis_001",
+        organizationId: currentUser?.organizationId || undefined,
       });
       setTerritoryFormSuccess(`Territory "${territoryForm.name}" created successfully!`);
       refetchTerritories();
@@ -625,7 +625,7 @@ export default function FieldForcePage() {
                         </TableCell>
                         <TableCell>
                           <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                            {org?.name || "Novis Pharmaceuticals Pvt Ltd"}
+                            {org?.name || user.organizationName || user.companyName || (user.organizationId ? "Corporate Enterprise" : "System Platform")}
                           </div>
                           <div className="text-[10px] text-slate-400">{org?.code || "Tenant Organization"}</div>
                         </TableCell>

@@ -48,10 +48,18 @@ export function Header() {
   const tenantCompanyName =
     canonicalRole === "SUPER_ADMIN"
       ? "Platform Control"
-      : currentUser?.organizationId === "org_apex_002" ||
+      : currentUser?.organization?.name ||
+        currentUser?.organizationName ||
+        currentUser?.companyName ||
+        (currentUser?.organizationId === "org_apex_002" ||
         currentUser?.organizationId === "31524081-7b14-4925-a331-e4cd05a62e04"
-      ? "Apex Healthcare"
-      : "Novis Pharma";
+          ? "Apex Healthcare"
+          : currentUser?.organizationId === "org_novis_001" ||
+            currentUser?.organizationId === "28101346-8d53-4e0e-9433-feec8dbfeb28"
+          ? "Novis Pharma"
+          : currentUser?.organizationId
+          ? "Corporate Enterprise"
+          : "Field Operations");
 
   const handleLogout = async () => {
     try {

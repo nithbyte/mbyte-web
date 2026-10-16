@@ -55,6 +55,9 @@ export interface CreateTerritoryInput {
 export interface User {
   id: string;
   organizationId: string | null;
+  organization?: { id: string; name: string; slug?: string; code?: string } | null;
+  organizationName?: string;
+  companyName?: string;
   name?: string;
   firstName?: string;
   lastName?: string;
