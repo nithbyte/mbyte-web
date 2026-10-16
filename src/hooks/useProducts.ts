@@ -1,5 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { productService, ProductQueryParams } from "../services";
+import type { ProductInput } from "../types";
 
 export function useProducts(params?: ProductQueryParams) {
   return useQuery({
@@ -42,5 +43,35 @@ export function useLowStockAlerts(limit: number = 6) {
   return useQuery({
     queryKey: ["products", "low-stock-alerts", limit],
     queryFn: () => productService.getLowStockAlerts(limit),
+  });
+}
+
+export function useCreateProduct() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ProductInput) => productService.createProduct(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["product-categories"] });
+    },
+  });
+}
+
+export function useCreateVisualAid() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      productId: string;
+      title: string;
+      type: string;
+      fileUrl: string;
+      thumbnailUrl?: string;
+      description?: string;
+      version?: string;
+    }) => productService.createVisualAid(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["visual-aids"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    },
   });
 }

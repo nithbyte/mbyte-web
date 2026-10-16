@@ -26,6 +26,7 @@ import {
   useDoctors,
   usePharmacies,
   useIsMounted,
+  useCreateVisit,
 } from "@/hooks";
 import { formatDate } from "@/lib/utils";
 import type { Visit, VisitStatus, VerificationStatus, VisitQueryParams } from "@/types";
@@ -49,7 +50,20 @@ import {
   Boxes,
   ShieldCheck,
   CalendarCheck,
+  Plus,
+  AlertCircle,
 } from "lucide-react";
+
+const INITIAL_VISIT_FORM = {
+  mrId: "",
+  customerId: "",
+  customerType: "DOCTOR" as "DOCTOR" | "PHARMACY",
+  scheduledDate: "2026-10-08",
+  scheduledStartTime: "10:00",
+  scheduledEndTime: "10:30",
+  priority: "ROUTINE",
+  notes: "",
+};
 
 export default function VisitsPage() {
   const isMounted = useIsMounted();
@@ -98,6 +112,30 @@ export default function VisitsPage() {
     setSelectedCustomer("ALL");
     setSelectedStatus("ALL");
     setSearch("");
+  };
+
+  // Schedule Visit Modal
+  const createVisitMutation = useCreateVisit();
+  const [isScheduleOpen, setIsScheduleOpen] = useState(false);
+  const [visitForm, setVisitForm] = useState(INITIAL_VISIT_FORM);
+  const [visitFormErrors, setVisitFormErrors] = useState<Record<string, string>>({});
+
+  const validateVisitForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    if (!visitForm.mrId) errors.mrId = "Please assign a Medical Representative.";
+    if (!visitForm.customerId) errors.customerId = "Please select a target doctor or pharmacy.";
+    if (!visitForm.scheduledDate) errors.scheduledDate = "Scheduled date is required.";
+    if (!visitForm.scheduledStartTime) errors.scheduledStartTime = "Start time is required.";
+    setVisitFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleScheduleVisit = async () => {
+    if (!validateVisitForm()) return;
+    await createVisitMutation.mutateAsync(visitForm);
+    setVisitForm(INITIAL_VISIT_FORM);
+    setVisitFormErrors({});
+    setIsScheduleOpen(false);
   };
 
   const hasActiveFilters =
@@ -209,6 +247,16 @@ export default function VisitsPage() {
             >
               <CalendarCheck className="h-3.5 w-3.5" />
               <span>Today: Oct 8, 2026</span>
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+              onClick={() => setIsScheduleOpen(true)}
+              id="btn-schedule-visit"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Schedule Visit</span>
             </Button>
           </div>
         }
@@ -848,6 +896,190 @@ export default function VisitsPage() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* SCHEDULE VISIT MODAL */}
+      <Modal
+        isOpen={isScheduleOpen}
+        onClose={() => { setIsScheduleOpen(false); setVisitForm(INITIAL_VISIT_FORM); setVisitFormErrors({}); }}
+        title="Schedule New Field Visit"
+        description="Plan a doctor or pharmacy call and assign it to a Medical Representative for execution."
+      >
+        <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
+
+          {/* Assignment */}
+          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-3">
+            <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 uppercase tracking-wider">
+              <User className="h-3.5 w-3.5 text-sky-600" />
+              Assignment
+            </h4>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Medical Representative *</label>
+              <select
+                id="visit-mr"
+                value={visitForm.mrId}
+                onChange={(e) => setVisitForm(f => ({ ...f, mrId: e.target.value }))}
+                className={`w-full h-9 px-3 rounded-md border bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500 ${visitFormErrors.mrId ? "border-rose-400" : "border-slate-200 dark:border-slate-800"}`}
+              >
+                <option value="">Select MR…</option>
+                {mrList?.map(mr => (
+                  <option key={mr.id} value={mr.id}>{mr.name} — {mr.territoryName || "Territory"}</option>
+                ))}
+              </select>
+              {visitFormErrors.mrId && <p className="text-[11px] text-rose-500 mt-0.5 flex items-center gap-1"><AlertCircle className="h-3 w-3" />{visitFormErrors.mrId}</p>}
+            </div>
+          </div>
+
+          {/* Target Customer */}
+          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-3">
+            <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 uppercase tracking-wider">
+              <Stethoscope className="h-3.5 w-3.5 text-indigo-600" />
+              Target Customer
+            </h4>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => setVisitForm(f => ({ ...f, customerType: "DOCTOR", customerId: "" }))}
+                className={`py-2 rounded-lg border text-xs font-semibold transition-colors ${
+                  visitForm.customerType === "DOCTOR"
+                    ? "border-sky-500 bg-sky-50 text-sky-700 dark:bg-sky-950/40"
+                    : "border-slate-200 dark:border-slate-700 text-slate-600 hover:border-sky-300"
+                }`}
+              >
+                <Stethoscope className="h-3.5 w-3.5 mx-auto mb-0.5" />
+                Doctor
+              </button>
+              <button
+                type="button"
+                onClick={() => setVisitForm(f => ({ ...f, customerType: "PHARMACY", customerId: "" }))}
+                className={`py-2 rounded-lg border text-xs font-semibold transition-colors ${
+                  visitForm.customerType === "PHARMACY"
+                    ? "border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40"
+                    : "border-slate-200 dark:border-slate-700 text-slate-600 hover:border-emerald-300"
+                }`}
+              >
+                <Building2 className="h-3.5 w-3.5 mx-auto mb-0.5" />
+                Pharmacy
+              </button>
+              <button
+                type="button"
+                disabled
+                className="py-2 rounded-lg border border-dashed border-slate-200 dark:border-slate-700 text-xs text-slate-400 cursor-not-allowed"
+              >
+                <Boxes className="h-3.5 w-3.5 mx-auto mb-0.5" />
+                Stockist
+              </button>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                {visitForm.customerType === "DOCTOR" ? "Doctor" : "Pharmacy"} *
+              </label>
+              <select
+                id="visit-customer"
+                value={visitForm.customerId}
+                onChange={(e) => setVisitForm(f => ({ ...f, customerId: e.target.value }))}
+                className={`w-full h-9 px-3 rounded-md border bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500 ${visitFormErrors.customerId ? "border-rose-400" : "border-slate-200 dark:border-slate-800"}`}
+              >
+                <option value="">Select {visitForm.customerType === "DOCTOR" ? "Doctor" : "Pharmacy"}…</option>
+                {visitForm.customerType === "DOCTOR"
+                  ? doctors?.map(d => <option key={d.id} value={d.id}>{d.name}{d.specialty ? ` — ${d.specialty}` : ""}</option>)
+                  : pharmacies?.map(p => <option key={p.id} value={p.id}>{p.name}</option>)
+                }
+              </select>
+              {visitFormErrors.customerId && <p className="text-[11px] text-rose-500 mt-0.5 flex items-center gap-1"><AlertCircle className="h-3 w-3" />{visitFormErrors.customerId}</p>}
+            </div>
+          </div>
+
+          {/* Schedule */}
+          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-3">
+            <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 uppercase tracking-wider">
+              <Calendar className="h-3.5 w-3.5 text-amber-600" />
+              Schedule & Timing
+            </h4>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Date *</label>
+                <input
+                  id="visit-date"
+                  type="date"
+                  value={visitForm.scheduledDate}
+                  onChange={(e) => setVisitForm(f => ({ ...f, scheduledDate: e.target.value }))}
+                  className={`w-full h-9 px-3 rounded-md border bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500 ${visitFormErrors.scheduledDate ? "border-rose-400" : "border-slate-200 dark:border-slate-800"}`}
+                />
+                {visitFormErrors.scheduledDate && <p className="text-[11px] text-rose-500 mt-0.5">{visitFormErrors.scheduledDate}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Start Time *</label>
+                <input
+                  id="visit-start-time"
+                  type="time"
+                  value={visitForm.scheduledStartTime}
+                  onChange={(e) => setVisitForm(f => ({ ...f, scheduledStartTime: e.target.value }))}
+                  className={`w-full h-9 px-3 rounded-md border bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500 ${visitFormErrors.scheduledStartTime ? "border-rose-400" : "border-slate-200 dark:border-slate-800"}`}
+                />
+                {visitFormErrors.scheduledStartTime && <p className="text-[11px] text-rose-500 mt-0.5">{visitFormErrors.scheduledStartTime}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">End Time</label>
+                <input
+                  id="visit-end-time"
+                  type="time"
+                  value={visitForm.scheduledEndTime}
+                  onChange={(e) => setVisitForm(f => ({ ...f, scheduledEndTime: e.target.value }))}
+                  className="w-full h-9 px-3 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Priority</label>
+                <select
+                  id="visit-priority"
+                  value={visitForm.priority}
+                  onChange={(e) => setVisitForm(f => ({ ...f, priority: e.target.value }))}
+                  className="w-full h-9 px-3 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                >
+                  <option value="ROUTINE">Routine</option>
+                  <option value="HIGH">High Priority</option>
+                  <option value="URGENT">Urgent</option>
+                  <option value="FOLLOW_UP">Follow-Up</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Internal Notes</label>
+                <Input
+                  id="visit-notes"
+                  placeholder="Optional briefing notes for MR…"
+                  value={visitForm.notes}
+                  onChange={(e) => setVisitForm(f => ({ ...f, notes: e.target.value }))}
+                  className="h-9 text-xs"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setIsScheduleOpen(false); setVisitForm(INITIAL_VISIT_FORM); setVisitFormErrors({}); }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleScheduleVisit}
+              disabled={createVisitMutation.isPending}
+              id="btn-save-visit"
+              className="gap-1.5"
+            >
+              <CalendarCheck className="h-3.5 w-3.5" />
+              {createVisitMutation.isPending ? "Scheduling…" : "Schedule & Assign Visit"}
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

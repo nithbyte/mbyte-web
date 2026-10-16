@@ -226,5 +226,81 @@ export const visitService = {
     const v = mockVisits.find((item) => item.id === id);
     return Promise.resolve(v || null);
   },
+
+  async createVisit(input: {
+    mrId: string;
+    customerId: string;
+    customerType: 'DOCTOR' | 'PHARMACY';
+    scheduledDate: string;
+    scheduledStartTime: string;
+    scheduledEndTime?: string;
+    priority?: string;
+    notes?: string;
+  }): Promise<Visit> {
+    try {
+      const datePart = input.scheduledDate.includes('T')
+        ? input.scheduledDate.split('T')[0]
+        : input.scheduledDate;
+
+      const payload: Record<string, any> = {
+        mrId: input.mrId,
+        customerType: input.customerType,
+        scheduledDate: datePart,
+      };
+
+      if (input.customerType === 'DOCTOR') {
+        payload.doctorId = input.customerId;
+      } else if (input.customerType === 'PHARMACY') {
+        payload.pharmacyId = input.customerId;
+      }
+
+      if (input.scheduledStartTime && input.scheduledStartTime.trim()) {
+        try {
+          payload.scheduledStartTime = new Date(`${datePart}T${input.scheduledStartTime.trim()}:00Z`).toISOString();
+        } catch {
+          // ignore
+        }
+      }
+
+      if (input.scheduledEndTime && input.scheduledEndTime.trim()) {
+        try {
+          payload.scheduledEndTime = new Date(`${datePart}T${input.scheduledEndTime.trim()}:00Z`).toISOString();
+        } catch {
+          // ignore
+        }
+      }
+
+      const res = await apiClient.post<any>('/visits', payload);
+      if (res && res.id) {
+        const mapped = mapApiVisit(res);
+        mockVisits.unshift(mapped as any);
+        return mapped;
+      }
+    } catch (err) {
+      console.warn('Real POST /visits failed, using mock:', err);
+    }
+    // Mock fallback
+    const newVisit: Visit = {
+      id: `visit_${Date.now()}`,
+      organizationId: 'org_novis_001',
+      mrId: input.mrId,
+      mrName: 'Medical Representative',
+      customerId: input.customerId,
+      customerName: 'Scheduled Customer',
+      customerType: input.customerType,
+      customerAddress: 'Address to be confirmed',
+      plannedDate: input.scheduledDate,
+      scheduledDate: input.scheduledDate,
+      scheduledStartTime: input.scheduledStartTime,
+      scheduledEndTime: input.scheduledEndTime || '',
+      status: 'PLANNED',
+      verificationStatus: 'UNVERIFIED',
+      priority: input.priority || 'ROUTINE',
+      feedbackNotes: input.notes,
+      createdAt: new Date().toISOString(),
+    };
+    mockVisits.unshift(newVisit as any);
+    return Promise.resolve(newVisit);
+  },
 };
 export type { VisitQueryParams };

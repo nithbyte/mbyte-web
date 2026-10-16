@@ -314,4 +314,115 @@ export const productService = {
 
     return Promise.resolve(alerts.slice(0, limit));
   },
+
+  async createProduct(input: import('../types').ProductInput): Promise<Product> {
+    try {
+      const payload: Record<string, any> = {
+        categoryId: input.categoryId,
+        sku: input.sku,
+        brandName: input.name,
+        genericName: input.genericName,
+        dosageForm: input.dosageForm,
+        packSize: input.packSize,
+        mrp: Number(input.mrp),
+        ptr: Number(input.ptr),
+        pts: Number(input.pts),
+        gstRate: Number(input.gstPercent || 12),
+      };
+      if (input.imageUrl) {
+        payload.imageUrl = input.imageUrl;
+      }
+      const res = await apiClient.post<any>('/products', payload);
+      if (res && res.id) {
+        const newProduct = mapApiProduct(res);
+        productsState.push(newProduct);
+        return newProduct;
+      }
+    } catch (err) {
+      console.warn('Real POST /products failed, using mock:', err);
+    }
+    // Mock fallback: add to in-memory state
+    const newProd: Product = {
+      id: `prod_${Date.now()}`,
+      organizationId: 'org_novis_001',
+      name: input.name,
+      genericName: input.genericName,
+      sku: input.sku,
+      categoryId: input.categoryId,
+      categoryName: mockProductCategories.find(c => c.id === input.categoryId)?.name || 'Therapeutics',
+      dosageForm: input.dosageForm,
+      strength: input.strength,
+      packSize: input.packSize,
+      mrp: input.mrp,
+      ptr: input.ptr,
+      pts: input.pts,
+      gstPercent: input.gstPercent,
+      description: input.description,
+      imageUrl: input.imageUrl,
+      isActive: input.isActive,
+      visualAids: [],
+      visualAidsCount: 0,
+      presenceSummary: { totalAudits: 0, availableCount: 0, lowStockCount: 0, outOfStockCount: 0, unknownCount: 0, availabilityRate: 0, recentAudits: [] },
+    };
+    productsState.push(newProd);
+    return Promise.resolve(newProd);
+  },
+
+  async createVisualAid(input: {
+    productId: string;
+    title: string;
+    type: string;
+    fileUrl: string;
+    thumbnailUrl?: string;
+    description?: string;
+    version?: string;
+  }): Promise<import('../types').VisualAid> {
+    try {
+      const payload: Record<string, any> = {
+        productId: input.productId,
+        title: input.title,
+        fileUrl: input.fileUrl,
+        type: input.type || 'PDF',
+        fileSizeBytes: 2 * 1024 * 1024, // 2MB default
+        version: parseInt(input.version || '1', 10) || 1,
+        isPublished: true,
+      };
+      if (input.thumbnailUrl) {
+        payload.thumbnailUrl = input.thumbnailUrl;
+      }
+      const res = await apiClient.post<any>('/visual-aids', payload);
+      if (res && res.id) {
+        return {
+          id: res.id,
+          productId: res.productId,
+          title: res.title,
+          type: res.type,
+          fileUrl: res.fileUrl,
+          thumbnailUrl: res.thumbnailUrl,
+          fileSizeBytes: res.fileSizeBytes,
+          version: res.version || '1.0',
+          isPublished: res.isPublished ?? true,
+          description: res.description,
+        };
+      }
+    } catch (err) {
+      console.warn('Real POST /visual-aids failed, using mock:', err);
+    }
+    // Mock fallback
+    const newVA: import('../types').VisualAid = {
+      id: `va_${Date.now()}`,
+      productId: input.productId,
+      title: input.title,
+      type: input.type,
+      fileUrl: input.fileUrl || 'https://example.com/deck.pdf',
+      thumbnailUrl: input.thumbnailUrl,
+      version: input.version || '1.0',
+      isPublished: true,
+      publishedAt: new Date().toISOString(),
+      description: input.description,
+      fileSizeBytes: 2048000,
+    };
+    mockVisualAids.push(newVA as any);
+    return Promise.resolve(newVA);
+  },
 };

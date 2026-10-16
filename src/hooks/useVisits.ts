@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { visitService, VisitQueryParams } from "../services";
 
 export function useTodayVisits(territoryId?: string) {
@@ -34,5 +34,24 @@ export function useVisitDetail(id: string) {
     queryKey: ["visits", "detail", id],
     queryFn: () => visitService.getVisitById(id),
     enabled: Boolean(id),
+  });
+}
+
+export function useCreateVisit() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      mrId: string;
+      customerId: string;
+      customerType: 'DOCTOR' | 'PHARMACY';
+      scheduledDate: string;
+      scheduledStartTime: string;
+      scheduledEndTime?: string;
+      priority?: string;
+      notes?: string;
+    }) => visitService.createVisit(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["visits"] });
+    },
   });
 }

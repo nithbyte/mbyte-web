@@ -19,9 +19,15 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import { useProducts, useProductCategories, useVisualAids } from "@/hooks";
+import {
+  useProducts,
+  useProductCategories,
+  useVisualAids,
+  useCreateProduct,
+  useCreateVisualAid,
+} from "@/hooks";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import type { Product } from "@/types";
+import type { Product, ProductInput } from "@/types";
 import {
   Package,
   Search,
@@ -38,6 +44,9 @@ import {
   Boxes,
   BookOpen,
   Compass,
+  Plus,
+  Upload,
+  AlertCircle,
 } from "lucide-react";
 
 export default function ProductsPage() {
@@ -54,10 +63,84 @@ export default function ProductsPage() {
     status: selectedStatus,
   });
 
+  // Mutations
+  const createProductMutation = useCreateProduct();
+  const createVisualAidMutation = useCreateVisualAid();
+
   // Modals state
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [visualAidsModalProduct, setVisualAidsModalProduct] = useState<Product | null>(null);
   const [presenceModalProduct, setPresenceModalProduct] = useState<Product | null>(null);
+  const [isAddProductOpen, setIsAddProductOpen] = useState(false);
+  const [uploadVAProduct, setUploadVAProduct] = useState<Product | null>(null);
+
+  // Add Product Form state
+  const initialProductForm: ProductInput = {
+    name: "", sku: "", categoryId: "", genericName: "", description: "",
+    dosageForm: "Tablet", strength: "", packSize: "10x10",
+    mrp: 0, ptr: 0, pts: 0, gstPercent: 12, isActive: true,
+  };
+  const [productForm, setProductForm] = useState<ProductInput>(initialProductForm);
+  const [productFormErrors, setProductFormErrors] = useState<Record<string, string>>({});
+
+  // Upload Visual Aid Form state
+  const initialVAForm = {
+    title: "", type: "PDF", fileUrl: "", description: "", version: "1.0",
+  };
+  const [vaForm, setVAForm] = useState(initialVAForm);
+  const [vaFormErrors, setVAFormErrors] = useState<Record<string, string>>({});
+
+  const validateProductForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    if (!productForm.name.trim() || productForm.name.trim().length < 2)
+      errors.name = "Brand name must be at least 2 characters.";
+    if (!productForm.genericName.trim())
+      errors.genericName = "Generic (molecule) name is required.";
+    if (!productForm.sku.trim())
+      errors.sku = "SKU code is required.";
+    if (!productForm.categoryId)
+      errors.categoryId = "Please select a therapeutic category.";
+    if (!productForm.dosageForm.trim())
+      errors.dosageForm = "Dosage form is required (e.g. Tablet, Syrup).";
+    if (!productForm.strength.trim())
+      errors.strength = "Strength is required (e.g. 500mg).";
+    if (!productForm.mrp || productForm.mrp <= 0)
+      errors.mrp = "MRP must be greater than 0.";
+    if (!productForm.ptr || productForm.ptr <= 0)
+      errors.ptr = "PTR must be greater than 0.";
+    if (!productForm.pts || productForm.pts <= 0)
+      errors.pts = "PTS must be greater than 0.";
+    setProductFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleAddProduct = async () => {
+    if (!validateProductForm()) return;
+    await createProductMutation.mutateAsync(productForm);
+    setProductForm(initialProductForm);
+    setProductFormErrors({});
+    setIsAddProductOpen(false);
+  };
+
+  const validateVAForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    if (!vaForm.title.trim()) errors.title = "Title is required.";
+    if (!vaForm.type) errors.type = "Type is required.";
+    if (!vaForm.fileUrl.trim()) errors.fileUrl = "File URL or asset link is required.";
+    setVAFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleUploadVA = async () => {
+    if (!uploadVAProduct || !validateVAForm()) return;
+    await createVisualAidMutation.mutateAsync({
+      productId: uploadVAProduct.id,
+      ...vaForm,
+    });
+    setVAForm(initialVAForm);
+    setVAFormErrors({});
+    setUploadVAProduct(null);
+  };
 
   const handleResetFilters = () => {
     setSearch("");
@@ -86,12 +169,24 @@ export default function ProductsPage() {
         description="Comprehensive SKU registry, category classification, commercial price structures, detailing visual aids, and field presence audits."
         badge={<Badge variant="default">{totalProducts} Formulations Listed</Badge>}
         actions={
-          <Link href="/products/presence">
-            <Button variant="primary" size="sm" className="h-8 gap-1.5 text-xs">
-              <Compass className="h-3.5 w-3.5" />
-              <span>Presence Intelligence & GIS Map</span>
+          <div className="flex items-center gap-2">
+            <Link href="/products/presence">
+              <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
+                <Compass className="h-3.5 w-3.5" />
+                <span>Presence & GIS Map</span>
+              </Button>
+            </Link>
+            <Button
+              variant="primary"
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+              onClick={() => setIsAddProductOpen(true)}
+              id="btn-add-product"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Add New Product</span>
             </Button>
-          </Link>
+          </div>
         }
       />
 
@@ -435,6 +530,16 @@ export default function ProductsPage() {
                             >
                               <Eye className="h-3.5 w-3.5 mr-1" />
                               Details
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 px-2 text-xs text-amber-700 hover:text-amber-800 border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100"
+                              onClick={() => setUploadVAProduct(p)}
+                              title="Upload Visual Aid for this product"
+                            >
+                              <Upload className="h-3.5 w-3.5 mr-1" />
+                              Add Visual Aid
                             </Button>
                             <Button
                               variant="outline"
@@ -858,6 +963,323 @@ export default function ProductsPage() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* MODAL 4: ADD NEW PRODUCT */}
+      <Modal
+        isOpen={isAddProductOpen}
+        onClose={() => { setIsAddProductOpen(false); setProductForm(initialProductForm); setProductFormErrors({}); }}
+        title="Add New Pharmaceutical Product"
+        description="Register a new formulation in the product catalog. All fields marked with * are required."
+      >
+        <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
+          {/* Section: Identity */}
+          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-3">
+            <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 uppercase tracking-wider">
+              <Package className="h-3.5 w-3.5 text-sky-600" />
+              Product Identity
+            </h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Brand Name *</label>
+                <Input
+                  id="product-brand-name"
+                  placeholder="e.g. Noviscard 5mg"
+                  value={productForm.name}
+                  onChange={(e) => setProductForm(f => ({ ...f, name: e.target.value }))}
+                  className={`h-9 text-xs ${productFormErrors.name ? "border-rose-400" : ""}`}
+                />
+                {productFormErrors.name && <p className="text-[11px] text-rose-500 mt-0.5 flex items-center gap-1"><AlertCircle className="h-3 w-3" />{productFormErrors.name}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Generic Name / Molecule *</label>
+                <Input
+                  id="product-generic-name"
+                  placeholder="e.g. Amlodipine"
+                  value={productForm.genericName}
+                  onChange={(e) => setProductForm(f => ({ ...f, genericName: e.target.value }))}
+                  className={`h-9 text-xs ${productFormErrors.genericName ? "border-rose-400" : ""}`}
+                />
+                {productFormErrors.genericName && <p className="text-[11px] text-rose-500 mt-0.5 flex items-center gap-1"><AlertCircle className="h-3 w-3" />{productFormErrors.genericName}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">SKU Code *</label>
+                <Input
+                  id="product-sku"
+                  placeholder="e.g. NVC-5MG-10X10"
+                  value={productForm.sku}
+                  onChange={(e) => setProductForm(f => ({ ...f, sku: e.target.value.toUpperCase() }))}
+                  className={`h-9 text-xs font-mono ${productFormErrors.sku ? "border-rose-400" : ""}`}
+                />
+                {productFormErrors.sku && <p className="text-[11px] text-rose-500 mt-0.5 flex items-center gap-1"><AlertCircle className="h-3 w-3" />{productFormErrors.sku}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Therapeutic Category *</label>
+                <select
+                  id="product-category"
+                  value={productForm.categoryId}
+                  onChange={(e) => setProductForm(f => ({ ...f, categoryId: e.target.value }))}
+                  className={`w-full h-9 px-3 rounded-md border bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500 ${productFormErrors.categoryId ? "border-rose-400" : "border-slate-200 dark:border-slate-800"}`}
+                >
+                  <option value="">Select Category…</option>
+                  {categories?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+                {productFormErrors.categoryId && <p className="text-[11px] text-rose-500 mt-0.5 flex items-center gap-1"><AlertCircle className="h-3 w-3" />{productFormErrors.categoryId}</p>}
+              </div>
+            </div>
+          </div>
+
+          {/* Section: Formulation Details */}
+          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-3">
+            <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 uppercase tracking-wider">
+              <FileText className="h-3.5 w-3.5 text-indigo-600" />
+              Formulation Details
+            </h4>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Dosage Form *</label>
+                <select
+                  id="product-dosage-form"
+                  value={productForm.dosageForm}
+                  onChange={(e) => setProductForm(f => ({ ...f, dosageForm: e.target.value }))}
+                  className="w-full h-9 px-3 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                >
+                  {["Tablet", "Capsule", "Syrup", "Injection", "Cream", "Ointment", "Drops", "Inhaler", "Powder", "Gel", "Suppository"].map(f => <option key={f} value={f}>{f}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Strength *</label>
+                <Input
+                  id="product-strength"
+                  placeholder="e.g. 500mg"
+                  value={productForm.strength}
+                  onChange={(e) => setProductForm(f => ({ ...f, strength: e.target.value }))}
+                  className={`h-9 text-xs ${productFormErrors.strength ? "border-rose-400" : ""}`}
+                />
+                {productFormErrors.strength && <p className="text-[11px] text-rose-500 mt-0.5 flex items-center gap-1"><AlertCircle className="h-3 w-3" />{productFormErrors.strength}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Pack Size</label>
+                <Input
+                  id="product-pack-size"
+                  placeholder="e.g. 10x10"
+                  value={productForm.packSize}
+                  onChange={(e) => setProductForm(f => ({ ...f, packSize: e.target.value }))}
+                  className="h-9 text-xs"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Description / Clinical Profile</label>
+              <textarea
+                id="product-description"
+                placeholder="Brief clinical description, indications, and usage..."
+                value={productForm.description || ""}
+                onChange={(e) => setProductForm(f => ({ ...f, description: e.target.value }))}
+                rows={2}
+                className="w-full px-3 py-2 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500 resize-none"
+              />
+            </div>
+          </div>
+
+          {/* Section: Pricing */}
+          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-3">
+            <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 uppercase tracking-wider">
+              <Percent className="h-3.5 w-3.5 text-emerald-600" />
+              Commercial Pricing Architecture
+            </h4>
+            <div className="grid grid-cols-4 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">MRP (₹) *</label>
+                <Input
+                  id="product-mrp"
+                  type="number" min="0" step="0.01"
+                  placeholder="0.00"
+                  value={productForm.mrp || ""}
+                  onChange={(e) => setProductForm(f => ({ ...f, mrp: parseFloat(e.target.value) || 0 }))}
+                  className={`h-9 text-xs font-mono ${productFormErrors.mrp ? "border-rose-400" : ""}`}
+                />
+                {productFormErrors.mrp && <p className="text-[11px] text-rose-500 mt-0.5">{productFormErrors.mrp}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-sky-700 dark:text-sky-400 mb-1">PTR (₹) *</label>
+                <Input
+                  id="product-ptr"
+                  type="number" min="0" step="0.01"
+                  placeholder="0.00"
+                  value={productForm.ptr || ""}
+                  onChange={(e) => setProductForm(f => ({ ...f, ptr: parseFloat(e.target.value) || 0 }))}
+                  className={`h-9 text-xs font-mono ${productFormErrors.ptr ? "border-rose-400" : ""}`}
+                />
+                {productFormErrors.ptr && <p className="text-[11px] text-rose-500 mt-0.5">{productFormErrors.ptr}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-indigo-700 dark:text-indigo-400 mb-1">PTS (₹) *</label>
+                <Input
+                  id="product-pts"
+                  type="number" min="0" step="0.01"
+                  placeholder="0.00"
+                  value={productForm.pts || ""}
+                  onChange={(e) => setProductForm(f => ({ ...f, pts: parseFloat(e.target.value) || 0 }))}
+                  className={`h-9 text-xs font-mono ${productFormErrors.pts ? "border-rose-400" : ""}`}
+                />
+                {productFormErrors.pts && <p className="text-[11px] text-rose-500 mt-0.5">{productFormErrors.pts}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-amber-700 dark:text-amber-400 mb-1">GST %</label>
+                <select
+                  id="product-gst"
+                  value={productForm.gstPercent}
+                  onChange={(e) => setProductForm(f => ({ ...f, gstPercent: parseInt(e.target.value) }))}
+                  className="w-full h-9 px-3 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                >
+                  {[0, 5, 12, 18, 28].map(r => <option key={r} value={r}>{r}%</option>)}
+                </select>
+              </div>
+            </div>
+            {productForm.mrp > 0 && productForm.ptr > 0 && (
+              <div className="text-[11px] text-slate-500 p-2 bg-white dark:bg-slate-950 rounded border border-slate-200 dark:border-slate-800">
+                Chemist margin: <span className="font-bold text-emerald-600">{Math.round(((productForm.mrp - productForm.ptr) / productForm.mrp) * 100)}%</span>
+                {" "} • Stockist margin: <span className="font-bold text-indigo-600">{Math.round(((productForm.ptr - productForm.pts) / productForm.ptr) * 100)}%</span>
+              </div>
+            )}
+          </div>
+
+          {/* Active Toggle */}
+          <div className="flex items-center gap-3 px-1">
+            <label className="flex items-center gap-2.5 cursor-pointer">
+              <div
+                onClick={() => setProductForm(f => ({ ...f, isActive: !f.isActive }))}
+                className={`relative w-10 h-5 rounded-full transition-colors cursor-pointer ${productForm.isActive ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-700"}`}
+              >
+                <div className={`absolute top-0.5 h-4 w-4 bg-white rounded-full shadow transition-transform ${productForm.isActive ? "translate-x-5" : "translate-x-0.5"}`} />
+              </div>
+              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                {productForm.isActive ? "Active in Distribution" : "Inactive / On Hold"}
+              </span>
+            </label>
+          </div>
+
+          {/* Footer Buttons */}
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setIsAddProductOpen(false); setProductForm(initialProductForm); setProductFormErrors({}); }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleAddProduct}
+              disabled={createProductMutation.isPending}
+              id="btn-save-product"
+            >
+              {createProductMutation.isPending ? "Saving…" : "Save Product to Catalog"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* MODAL 5: UPLOAD VISUAL AID FOR A PRODUCT */}
+      <Modal
+        isOpen={Boolean(uploadVAProduct)}
+        onClose={() => { setUploadVAProduct(null); setVAForm(initialVAForm); setVAFormErrors({}); }}
+        title={`Upload Visual Aid: ${uploadVAProduct?.name || ""}`}
+        description={`Add a detailing deck, clinical evidence PDF, or promotional presentation for ${uploadVAProduct?.genericName || "this product"}.`}
+      >
+        <div className="space-y-4">
+          <div className="p-3 rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30">
+            <div className="flex items-center gap-2 text-xs text-amber-800 dark:text-amber-300">
+              <BookOpen className="h-3.5 w-3.5 shrink-0" />
+              <span>Visual aids help MRs present clinical evidence in the field. Provide a URL to your file hosted on S3, SharePoint, or any CDN.</span>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Deck Title *</label>
+              <Input
+                id="va-title"
+                placeholder="e.g. Noviscard Clinical Efficacy – 2026 Update"
+                value={vaForm.title}
+                onChange={(e) => setVAForm(f => ({ ...f, title: e.target.value }))}
+                className={`h-9 text-xs ${vaFormErrors.title ? "border-rose-400" : ""}`}
+              />
+              {vaFormErrors.title && <p className="text-[11px] text-rose-500 mt-0.5 flex items-center gap-1"><AlertCircle className="h-3 w-3" />{vaFormErrors.title}</p>}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Asset Type *</label>
+                <select
+                  id="va-type"
+                  value={vaForm.type}
+                  onChange={(e) => setVAForm(f => ({ ...f, type: e.target.value }))}
+                  className="w-full h-9 px-3 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                >
+                  {["PDF", "SLIDES", "VIDEO", "IMAGE", "PRESENTATION", "BROCHURE"].map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Version</label>
+                <Input
+                  id="va-version"
+                  placeholder="e.g. 1.0"
+                  value={vaForm.version}
+                  onChange={(e) => setVAForm(f => ({ ...f, version: e.target.value }))}
+                  className="h-9 text-xs font-mono"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Asset File URL *</label>
+              <Input
+                id="va-file-url"
+                placeholder="https://cdn.novis.com/visual-aids/noviscard-2026.pdf"
+                value={vaForm.fileUrl}
+                onChange={(e) => setVAForm(f => ({ ...f, fileUrl: e.target.value }))}
+                className={`h-9 text-xs font-mono ${vaFormErrors.fileUrl ? "border-rose-400" : ""}`}
+              />
+              {vaFormErrors.fileUrl && <p className="text-[11px] text-rose-500 mt-0.5 flex items-center gap-1"><AlertCircle className="h-3 w-3" />{vaFormErrors.fileUrl}</p>}
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Description</label>
+              <textarea
+                id="va-description"
+                placeholder="Brief summary of what this visual aid covers..."
+                value={vaForm.description}
+                onChange={(e) => setVAForm(f => ({ ...f, description: e.target.value }))}
+                rows={2}
+                className="w-full px-3 py-2 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500 resize-none"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setUploadVAProduct(null); setVAForm(initialVAForm); setVAFormErrors({}); }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleUploadVA}
+              disabled={createVisualAidMutation.isPending}
+              id="btn-save-visual-aid"
+              className="gap-1.5"
+            >
+              <Upload className="h-3.5 w-3.5" />
+              {createVisualAidMutation.isPending ? "Uploading…" : "Publish Visual Aid"}
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
