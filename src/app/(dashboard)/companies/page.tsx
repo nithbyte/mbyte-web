@@ -1,8 +1,5 @@
 "use client";
 
-// @ts-ignore - Next.js Turbopack instant navigation validation
-export const instant = false;
-
 import React, { useState } from "react";
 import Link from "next/link";
 import {
