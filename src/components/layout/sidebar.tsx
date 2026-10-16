@@ -59,57 +59,15 @@ function getNavSections(role: CanonicalRole): NavSection[] {
               badgeVariant: "live",
             },
             {
-              title: "Enterprise Users",
+              title: "Company Administrators",
               href: "/field-force",
               icon: Users,
             },
           ],
         },
         {
-          title: "Operations Oversight",
-          items: [
-            {
-              title: "All Tenant Visits",
-              href: "/visits",
-              icon: CalendarCheck,
-              badge: "LIVE",
-              badgeVariant: "live",
-            },
-            {
-              title: "Commercial Orders",
-              href: "/orders",
-              icon: ShoppingCart,
-            },
-            {
-              title: "Collections & Receipts",
-              href: "/collections",
-              icon: Receipt,
-            },
-          ],
-        },
-        {
-          title: "Catalog & Presence",
-          items: [
-            {
-              title: "Products & Visual Aids",
-              href: "/products",
-              icon: Package,
-            },
-            {
-              title: "Product Presence Intel",
-              href: "/product-presence",
-              icon: MapPin,
-            },
-          ],
-        },
-        {
           title: "Platform System",
           items: [
-            {
-              title: "Platform Reports",
-              href: "/reports",
-              icon: BarChart3,
-            },
             {
               title: "Global Settings",
               href: "/settings",

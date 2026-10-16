@@ -23,12 +23,27 @@ const MR_RESTRICTED_PREFIXES = [
   "/companies",
 ];
 
+const SUPER_ADMIN_RESTRICTED_PREFIXES = [
+  "/visits",
+  "/orders",
+  "/collections",
+  "/distributors",
+  "/pharmacies",
+  "/doctors",
+  "/products",
+  "/product-presence",
+  "/commercial",
+  "/reports",
+];
+
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { isCollapsed } = useSidebarStore();
   const { data: currentUser, isLoading } = useCurrentUser();
   const [authChecked, setAuthChecked] = useState(false);
+
+  const canonicalRole = normalizeRole(currentUser?.role);
 
   useEffect(() => {
     const token = tokenStorage.getAccessToken();
@@ -40,11 +55,19 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     }
   }, [isLoading, router]);
 
-  const canonicalRole = normalizeRole(currentUser?.role);
+  useEffect(() => {
+    if (canonicalRole === "SUPER_ADMIN" && pathname === "/") {
+      router.replace("/companies");
+    }
+  }, [canonicalRole, pathname, router]);
 
   // Check Role Route Authorization
   const isSuperAdminRoute = pathname.startsWith("/companies");
   const isBlockedSuperAdmin = isSuperAdminRoute && canonicalRole !== "SUPER_ADMIN";
+
+  const isBlockedOperationalForSuperAdmin =
+    canonicalRole === "SUPER_ADMIN" &&
+    SUPER_ADMIN_RESTRICTED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 
   const isBlockedMR =
     canonicalRole === "MR" &&
@@ -83,6 +106,25 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   >
                     <ArrowLeft className="h-3.5 w-3.5" />
                     <span>Return to Company Dashboard</span>
+                  </Link>
+                </div>
+              </div>
+            ) : isBlockedOperationalForSuperAdmin ? (
+              <div className="rounded-2xl border border-purple-200 bg-purple-50/50 p-8 text-center dark:border-purple-900/50 dark:bg-purple-950/20 shadow-xs">
+                <ShieldAlert className="mx-auto h-12 w-12 text-purple-600 dark:text-purple-400 mb-3" />
+                <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                  Company Operational Details are Isolated
+                </h2>
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-400 max-w-md mx-auto">
+                  Super Admin permissions are limited to platform company creation and Company Administrator provisioning. Operational field visits, customer relations, products, and inventory are strictly isolated to each respective Company Administrator.
+                </p>
+                <div className="mt-4">
+                  <Link
+                    href="/companies"
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-purple-600 px-4 py-2 text-xs font-semibold text-white hover:bg-purple-500 transition-colors"
+                  >
+                    <ArrowLeft className="h-3.5 w-3.5" />
+                    <span>Return to Companies Portal</span>
                   </Link>
                 </div>
               </div>

@@ -82,7 +82,7 @@ export default function FieldForcePage() {
       email: "",
       password: "Password123!",
       phone: "",
-      role: canonicalRole === "SUPER_ADMIN" ? "ADMIN" : "MR",
+      role: canonicalRole === "SUPER_ADMIN" ? "ADMIN" : "TERRITORY_MANAGER",
       organizationId: canonicalRole === "SUPER_ADMIN" ? (organizations?.[0]?.id || "") : (currentUser?.organizationId || ""),
       territoryId: territories?.[0]?.id || "",
       managerId: managers?.[0]?.id || "",
@@ -135,9 +135,17 @@ export default function FieldForcePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Field Force Directory & Performance Management"
-        description="Monitor representative territory deployment, daily call compliance, sales quota pacing, and live operational status."
-        badge={<Badge variant="default">{totalReps} Representatives Active</Badge>}
+        title={canonicalRole === "SUPER_ADMIN" ? "Company Administrators" : "Field Force Directory & Team Management"}
+        description={
+          canonicalRole === "SUPER_ADMIN"
+            ? "Provision and manage corporate Administrator accounts for tenant pharmaceutical companies."
+            : "Monitor representative territory deployment, daily call compliance, sales quota pacing, and live operational status."
+        }
+        badge={
+          <Badge variant="default">
+            {canonicalRole === "SUPER_ADMIN" ? "Tenant Company Governance" : `${totalReps} Field Reps Active`}
+          </Badge>
+        }
         actions={
           (canonicalRole === "SUPER_ADMIN" || canonicalRole === "ADMIN") ? (
             <Button
@@ -147,7 +155,7 @@ export default function FieldForcePage() {
               className="gap-1.5 h-8 text-xs cursor-pointer"
             >
               <Plus className="h-3.5 w-3.5" />
-              <span>Provision User / Rep</span>
+              <span>{canonicalRole === "SUPER_ADMIN" ? "Add Company Admin" : "Add Territory Manager / MR"}</span>
             </Button>
           ) : undefined
         }
@@ -584,11 +592,14 @@ export default function FieldForcePage() {
                 onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
                 className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 font-semibold"
               >
-                {canonicalRole === "SUPER_ADMIN" && (
+                {canonicalRole === "SUPER_ADMIN" ? (
                   <option value="ADMIN">ADMIN (Company Administrator)</option>
+                ) : (
+                  <>
+                    <option value="TERRITORY_MANAGER">TERRITORY_MANAGER (Area Sales Manager)</option>
+                    <option value="MR">MR (Medical Representative)</option>
+                  </>
                 )}
-                <option value="TERRITORY_MANAGER">TERRITORY_MANAGER (Area Sales Manager)</option>
-                <option value="MR">MR (Medical Representative)</option>
               </select>
             </div>
 
@@ -605,41 +616,45 @@ export default function FieldForcePage() {
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Assigned Territory
-              </label>
-              <select
-                value={userForm.territoryId}
-                onChange={(e) => setUserForm({ ...userForm, territoryId: e.target.value })}
-                className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
-              >
-                <option value="">Select Territory…</option>
-                {territories?.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name} ({t.code})
-                  </option>
-                ))}
-              </select>
-            </div>
+            {userForm.role !== "ADMIN" && (
+              <>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Assigned Territory
+                  </label>
+                  <select
+                    value={userForm.territoryId}
+                    onChange={(e) => setUserForm({ ...userForm, territoryId: e.target.value })}
+                    className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                  >
+                    <option value="">Select Territory…</option>
+                    {territories?.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name} ({t.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Reporting Manager
-              </label>
-              <select
-                value={userForm.managerId}
-                onChange={(e) => setUserForm({ ...userForm, managerId: e.target.value })}
-                className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
-              >
-                <option value="">Select Reporting Manager…</option>
-                {managers?.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Reporting Manager
+                  </label>
+                  <select
+                    value={userForm.managerId}
+                    onChange={(e) => setUserForm({ ...userForm, managerId: e.target.value })}
+                    className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                  >
+                    <option value="">Select Reporting Manager…</option>
+                    {managers?.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
