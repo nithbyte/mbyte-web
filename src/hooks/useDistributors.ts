@@ -46,3 +46,17 @@ export function useUpdateDistributor() {
     },
   });
 }
+
+export function useRecordStockInward() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: import("../types").StockInwardInput) =>
+      distributorService.recordStockInward(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["distributors"] });
+      queryClient.invalidateQueries({ queryKey: ["presence"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["reports"] });
+    },
+  });
+}

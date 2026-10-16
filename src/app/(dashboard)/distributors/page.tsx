@@ -23,10 +23,13 @@ import {
   useDistributorHistory,
   useCreateDistributor,
   useUpdateDistributor,
+  useRecordStockInward,
+  useProducts,
+  useMRList,
   useTerritories,
 } from "@/hooks";
 import { formatDate, formatCurrency } from "@/lib/utils";
-import type { Distributor, DistributorInput } from "@/types";
+import type { Distributor, DistributorInput, StockInwardInput } from "@/types";
 import {
   Truck,
   Search,
@@ -44,6 +47,13 @@ import {
   UserCheck,
   CreditCard,
   Building,
+  PackagePlus,
+  PackageCheck,
+  Boxes,
+  Calendar,
+  AlertCircle,
+  Building2,
+  CheckCircle2,
 } from "lucide-react";
 
 export default function DistributorsPage() {
@@ -56,16 +66,36 @@ export default function DistributorsPage() {
     search,
     territoryId,
   });
+  const { data: productList } = useProducts();
+  const { data: mrList } = useMRList();
 
   // Mutations
   const createMutation = useCreateDistributor();
   const updateMutation = useUpdateDistributor();
+  const recordStockMutation = useRecordStockInward();
 
   // Modals state
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingDistributor, setEditingDistributor] = useState<Distributor | null>(null);
   const [historyDistributor, setHistoryDistributor] = useState<Distributor | null>(null);
   const [selectedDetails, setSelectedDetails] = useState<Distributor | null>(null);
+
+  // Stock Inward Modal State
+  const [isStockInwardOpen, setIsStockInwardOpen] = useState(false);
+  const [stockInwardTarget, setStockInwardTarget] = useState<Distributor | null>(null);
+  const initialStockForm: StockInwardInput = {
+    distributorId: "",
+    productId: "",
+    quantity: 50,
+    status: "AVAILABLE",
+    batchNumber: "NOV-BATCH-2026-A1",
+    expiryDate: "2028-12-31",
+    mrId: "mr_001",
+    notes: "Consignment inwarded at stockist warehouse",
+  };
+  const [stockForm, setStockForm] = useState<StockInwardInput>(initialStockForm);
+  const [stockErrors, setStockErrors] = useState<Record<string, string>>({});
+  const [stockSuccessMsg, setStockSuccessMsg] = useState("");
 
   // Form state
   const initialForm: DistributorInput = {
@@ -150,6 +180,59 @@ export default function DistributorsPage() {
     setFormErrors({});
   };
 
+  const handleOpenStockInward = (dst?: Distributor | null) => {
+    setStockInwardTarget(dst || null);
+    setStockForm({
+      distributorId: dst?.id || (distributors?.[0]?.id || ""),
+      productId: productList?.[0]?.id || "",
+      quantity: 50,
+      status: "AVAILABLE",
+      batchNumber: "NOV-BATCH-2026-A1",
+      expiryDate: "2028-12-31",
+      mrId: mrList?.[0]?.id || "mr_001",
+      notes: dst ? `Consignment inwarded at ${dst.name}` : "Wholesale stockist consignment inwarding",
+    });
+    setStockErrors({});
+    setStockSuccessMsg("");
+    setIsStockInwardOpen(true);
+  };
+
+  const handleSaveStockInward = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const errors: Record<string, string> = {};
+    if (!stockForm.distributorId) errors.distributorId = "Please select a target stockist.";
+    if (!stockForm.productId) errors.productId = "Please select a pharmaceutical product.";
+    if (stockForm.quantity === undefined || isNaN(Number(stockForm.quantity)) || Number(stockForm.quantity) < 0) {
+      errors.quantity = "Inward quantity must be 0 or greater.";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setStockErrors(errors);
+      return;
+    }
+
+    try {
+      await recordStockMutation.mutateAsync({
+        distributorId: stockForm.distributorId,
+        productId: stockForm.productId,
+        quantity: Number(stockForm.quantity),
+        status: stockForm.status,
+        batchNumber: stockForm.batchNumber,
+        expiryDate: stockForm.expiryDate,
+        notes: stockForm.notes,
+        mrId: stockForm.mrId,
+      });
+
+      setStockSuccessMsg("Stock inventory recorded and synchronized successfully!");
+      setTimeout(() => {
+        setIsStockInwardOpen(false);
+        setStockSuccessMsg("");
+      }, 1200);
+    } catch (err: any) {
+      setStockErrors({ form: err?.message || "Failed to record stock inwarding." });
+    }
+  };
+
   const handleResetFilters = () => {
     setSearch("");
     setTerritoryId("ALL");
@@ -167,10 +250,21 @@ export default function DistributorsPage() {
         description="Authorized pharmaceutical wholesale stockists, consignment agents, wholesale drug licenses, and supply fulfillment centers."
         badge={<Badge variant="default">{distributors?.length || 0} Registered Stockists</Badge>}
         actions={
-          <Button variant="primary" size="sm" onClick={handleOpenCreate} className="gap-1.5 text-xs">
-            <Plus className="h-4 w-4" />
-            <span>Register New Distributor</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleOpenStockInward(null)}
+              className="gap-1.5 text-xs border-emerald-300 dark:border-emerald-700/80 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+            >
+              <PackagePlus className="h-3.5 w-3.5 text-emerald-600" />
+              <span>Inward Stock</span>
+            </Button>
+            <Button variant="primary" size="sm" onClick={handleOpenCreate} className="gap-1.5 text-xs">
+              <Plus className="h-4 w-4" />
+              <span>Register New Distributor</span>
+            </Button>
+          </div>
         }
       />
 
@@ -325,6 +419,16 @@ export default function DistributorsPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 px-2 text-xs text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                            onClick={() => handleOpenStockInward(dst)}
+                            title="Inward / Adjust Stock for this Stockist"
+                          >
+                            <PackagePlus className="h-3.5 w-3.5 mr-1 text-emerald-600" />
+                            Inward Stock
+                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -907,6 +1011,286 @@ export default function DistributorsPage() {
             </Button>
           </div>
         </div>
+      </Modal>
+
+      {/* STOCK INWARD & WAREHOUSE INVENTORY ADJUSTMENT MODAL */}
+      <Modal
+        isOpen={isStockInwardOpen}
+        onClose={() => {
+          setIsStockInwardOpen(false);
+          setStockSuccessMsg("");
+          setStockErrors({});
+        }}
+        title="Stock Inward & Inventory Adjustment"
+        description="Record physical warehouse stock consignment, inward factory batch, or adjust shelf count for wholesale stockists."
+      >
+        <form onSubmit={handleSaveStockInward} className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
+          {stockSuccessMsg && (
+            <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+              <span>{stockSuccessMsg}</span>
+            </div>
+          )}
+
+          {stockErrors.form && (
+            <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-xs text-rose-800 dark:text-rose-300 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
+              <span>{stockErrors.form}</span>
+            </div>
+          )}
+
+          {/* Section 1: Stockist & Inward Officer */}
+          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-3">
+            <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 uppercase tracking-wider">
+              <Building2 className="h-3.5 w-3.5 text-sky-600" />
+              Target Stockist & Inward Authority
+            </h4>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                  Wholesale Stockist *
+                </label>
+                <select
+                  id="stock-distributor"
+                  value={stockForm.distributorId}
+                  onChange={(e) => setStockForm((f) => ({ ...f, distributorId: e.target.value }))}
+                  className={`w-full h-9 px-3 rounded-md border bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500 ${
+                    stockErrors.distributorId ? "border-rose-400" : "border-slate-200 dark:border-slate-800"
+                  }`}
+                >
+                  <option value="">Select Stockist / Distributor...</option>
+                  {distributors?.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name} — {d.territoryName}
+                    </option>
+                  ))}
+                </select>
+                {stockErrors.distributorId && (
+                  <p className="text-[11px] text-rose-500 mt-0.5 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {stockErrors.distributorId}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                  Handling Officer / MR *
+                </label>
+                <select
+                  id="stock-mr"
+                  value={stockForm.mrId}
+                  onChange={(e) => setStockForm((f) => ({ ...f, mrId: e.target.value }))}
+                  className="w-full h-9 px-3 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                >
+                  {mrList?.map((mr) => (
+                    <option key={mr.id} value={mr.id}>
+                      {mr.name} — {mr.territoryName || "Territory Field Force"}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Formulation & Physical Quantity */}
+          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-3">
+            <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 uppercase tracking-wider">
+              <Boxes className="h-3.5 w-3.5 text-emerald-600" />
+              Product Formulation & Inward Quantity
+            </h4>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                Pharmaceutical Product *
+              </label>
+              <select
+                id="stock-product"
+                value={stockForm.productId}
+                onChange={(e) => setStockForm((f) => ({ ...f, productId: e.target.value }))}
+                className={`w-full h-9 px-3 rounded-md border bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500 ${
+                  stockErrors.productId ? "border-rose-400" : "border-slate-200 dark:border-slate-800"
+                }`}
+              >
+                <option value="">Select Formulation...</option>
+                {productList?.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} ({p.genericName}) — SKU: {p.sku} | PTS: ₹{p.pts}
+                  </option>
+                ))}
+              </select>
+              {stockErrors.productId && (
+                <p className="text-[11px] text-rose-500 mt-0.5 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {stockErrors.productId}
+                </p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                  Inward Quantity (Packs / Units) *
+                </label>
+                <Input
+                  id="stock-qty"
+                  type="number"
+                  min="0"
+                  step="1"
+                  placeholder="e.g. 100"
+                  value={stockForm.quantity}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    const q = isNaN(val) ? 0 : val;
+                    setStockForm((f) => ({
+                      ...f,
+                      quantity: q,
+                      status: q > 10 ? "AVAILABLE" : q > 0 ? "LOW_STOCK" : "OUT_OF_STOCK",
+                    }));
+                  }}
+                  className={`h-9 text-xs font-bold ${
+                    stockErrors.quantity ? "border-rose-400" : ""
+                  }`}
+                />
+                {stockErrors.quantity && (
+                  <p className="text-[11px] text-rose-500 mt-0.5">{stockErrors.quantity}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                  Availability Status
+                </label>
+                <div className="grid grid-cols-3 gap-1.5 pt-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setStockForm((f) => ({ ...f, status: "AVAILABLE" }))}
+                    className={`py-1.5 px-2 rounded-lg border text-[11px] font-semibold text-center transition-colors ${
+                      stockForm.status === "AVAILABLE"
+                        ? "border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50"
+                        : "border-slate-200 dark:border-slate-800 text-slate-500 hover:border-emerald-300"
+                    }`}
+                  >
+                    Available
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStockForm((f) => ({ ...f, status: "LOW_STOCK" }))}
+                    className={`py-1.5 px-2 rounded-lg border text-[11px] font-semibold text-center transition-colors ${
+                      stockForm.status === "LOW_STOCK"
+                        ? "border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-950/50"
+                        : "border-slate-200 dark:border-slate-800 text-slate-500 hover:border-amber-300"
+                    }`}
+                  >
+                    Low Stock
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStockForm((f) => ({ ...f, status: "OUT_OF_STOCK" }))}
+                    className={`py-1.5 px-2 rounded-lg border text-[11px] font-semibold text-center transition-colors ${
+                      stockForm.status === "OUT_OF_STOCK"
+                        ? "border-rose-500 bg-rose-50 text-rose-700 dark:bg-rose-950/50"
+                        : "border-slate-200 dark:border-slate-800 text-slate-500 hover:border-rose-300"
+                    }`}
+                  >
+                    Stockout
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Commercial valuation preview */}
+            {stockForm.productId && productList?.find((p) => p.id === stockForm.productId) && (
+              <div className="p-2.5 rounded-lg bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-800/40 text-xs flex items-center justify-between">
+                <span className="text-slate-600 dark:text-slate-400">
+                  Valuation at Price to Stockist (PTS):
+                </span>
+                <span className="font-bold text-emerald-700 dark:text-emerald-300">
+                  {formatCurrency(
+                    Number(stockForm.quantity || 0) *
+                      (productList.find((p) => p.id === stockForm.productId)?.pts || 0)
+                  )}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Section 3: Batch Traceability & Notes */}
+          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-3">
+            <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 uppercase tracking-wider">
+              <Calendar className="h-3.5 w-3.5 text-amber-600" />
+              Batch Number & Consignment Inwarding Note
+            </h4>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                  Batch Number
+                </label>
+                <Input
+                  id="stock-batch"
+                  placeholder="e.g. NOV-BATCH-2026-A1"
+                  value={stockForm.batchNumber}
+                  onChange={(e) => setStockForm((f) => ({ ...f, batchNumber: e.target.value }))}
+                  className="h-9 text-xs font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                  Batch Expiry Date
+                </label>
+                <Input
+                  id="stock-expiry"
+                  type="date"
+                  value={stockForm.expiryDate}
+                  onChange={(e) => setStockForm((f) => ({ ...f, expiryDate: e.target.value }))}
+                  className="h-9 text-xs font-mono"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                Consignment / Inward Remarks
+              </label>
+              <Input
+                id="stock-notes"
+                placeholder="e.g. Invoice #INV-4921 / Consignment received via VRL Logistics"
+                value={stockForm.notes}
+                onChange={(e) => setStockForm((f) => ({ ...f, notes: e.target.value }))}
+                className="h-9 text-xs"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setIsStockInwardOpen(false);
+                setStockSuccessMsg("");
+                setStockErrors({});
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              disabled={recordStockMutation.isPending}
+              id="btn-save-stock-inward"
+              className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              <PackageCheck className="h-3.5 w-3.5" />
+              {recordStockMutation.isPending ? "Recording Inward..." : "Inward Stock & Update Inventory"}
+            </Button>
+          </div>
+        </form>
       </Modal>
     </div>
   );

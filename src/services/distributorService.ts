@@ -1,6 +1,6 @@
 import { apiClient } from "../lib/api-client";
-import { mockDistributors, mockTerritories, mockOrders } from "../mock";
-import type { Distributor, DistributorInput, CustomerHistoryItem } from "../types";
+import { mockDistributors, mockTerritories, mockOrders, mockProductPresence, mockProducts } from "../mock";
+import type { Distributor, DistributorInput, CustomerHistoryItem, StockInwardInput } from "../types";
 
 export interface DistributorQueryParams {
   search?: string;
@@ -208,5 +208,54 @@ export const distributorService = {
 
     history.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     return Promise.resolve(history);
+  },
+
+  async recordStockInward(input: StockInwardInput): Promise<any> {
+    const status = input.status || (input.quantity > 10 ? "AVAILABLE" : input.quantity > 0 ? "LOW_STOCK" : "OUT_OF_STOCK");
+    try {
+      const payload: Record<string, any> = {
+        productId: input.productId,
+        customerType: "DISTRIBUTOR",
+        distributorId: input.distributorId,
+        mrId: input.mrId || "mr_001",
+        status,
+        quantity: Number(input.quantity),
+      };
+      if (input.batchNumber) payload.batchNumber = input.batchNumber;
+      if (input.expiryDate) payload.expiryDate = input.expiryDate;
+      if (input.notes) payload.notes = input.notes;
+
+      const res = await apiClient.post<any>("/product-presence", payload);
+      if (res && res.id) {
+        return res;
+      }
+    } catch (err) {
+      console.warn("Real POST /product-presence failed, using mock fallback:", err);
+    }
+
+    const dst = distributorsState.find((d) => d.id === input.distributorId);
+    const prod = mockProducts.find((p) => p.id === input.productId);
+
+    const newAudit = {
+      id: `audit_${Date.now()}`,
+      organizationId: "org_novis_001",
+      pharmacyId: input.distributorId,
+      pharmacyName: dst?.name || "Stockist Warehouse",
+      territoryId: dst?.territoryId || "ter_001",
+      territoryName: dst?.territoryName || "Central Territory",
+      mrId: input.mrId || "mr_001",
+      mrName: "Admin Operations",
+      productId: input.productId,
+      productName: prod?.name || "Pharmaceutical Formulation",
+      status,
+      quantity: Number(input.quantity),
+      currentQuantity: Number(input.quantity),
+      checkedAt: new Date().toISOString(),
+      auditedAt: new Date().toISOString(),
+      batchNumber: input.batchNumber,
+      notes: input.notes,
+    };
+    mockProductPresence.unshift(newAudit as any);
+    return Promise.resolve(newAudit);
   },
 };

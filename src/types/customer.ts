@@ -105,3 +105,14 @@ export interface CustomerHistoryItem {
   notes?: string;
   mrName?: string;
 }
+
+export interface StockInwardInput {
+  distributorId: string;
+  productId: string;
+  quantity: number;
+  status?: "AVAILABLE" | "LOW_STOCK" | "OUT_OF_STOCK";
+  batchNumber?: string;
+  expiryDate?: string;
+  notes?: string;
+  mrId?: string;
+}
