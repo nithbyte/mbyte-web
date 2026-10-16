@@ -49,8 +49,15 @@ export function useCreateUser() {
 
 export function useUpdateMRTerritory() {
   return useMutation({
-    mutationFn: ({ mrId, territoryId }: { mrId: string; territoryId: string }) =>
-      fieldForceService.updateMRTerritory(mrId, territoryId),
+    mutationFn: ({
+      mrId,
+      territoryId,
+      managerId,
+    }: {
+      mrId: string;
+      territoryId: string;
+      managerId?: string;
+    }) => fieldForceService.updateMRTerritory(mrId, territoryId, managerId),
   });
 }
 

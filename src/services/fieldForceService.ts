@@ -279,10 +279,11 @@ export const fieldForceService = {
             email: mr.user?.email || "",
             phone: mr.user?.phone || "",
             territoryId: mr.territoryId,
-            territoryName: mr.territory?.name || mr.territoryId || "Assigned Territory",
             managerId: mr.managerId || "",
-            managerName: "Area Sales Manager",
-            headquarters: mr.headquarters || "Chennai",
+            managerName: mr.manager?.user
+              ? `${mr.manager.user.firstName || ""} ${mr.manager.user.lastName || ""}`.trim()
+              : (mr.manager?.employeeCode || (mr.designation?.toLowerCase().includes("manager") ? "Area Lead" : "Direct Company Reporting")),
+            headquarters: mr.headquarters || mr.territory?.name || "Chennai",
             designation: mr.designation || "Medical Representative",
             joiningDate: mr.joiningDate ? mr.joiningDate.slice(0, 10) : "2026-02-01",
             status,
@@ -655,6 +656,34 @@ export const fieldForceService = {
 
   async getManagers(organizationId?: string): Promise<Array<{ id: string; name: string }>> {
     try {
+      // 1. Query /mrs for managers with medicalRepresentative field profiles
+      const rawMrs = await apiClient.get<any>("/mrs", {
+        params: {
+          organizationId: organizationId !== "ALL" ? organizationId : undefined,
+          limit: 100,
+        },
+      });
+      const mrList = Array.isArray(rawMrs) ? rawMrs : (Array.isArray(rawMrs?.items) ? rawMrs.items : null);
+      if (mrList !== null && mrList.length > 0) {
+        const managersFromMrs = mrList
+          .filter((m: any) =>
+            (m.designation && m.designation.toLowerCase().includes("manager")) ||
+            (m.employeeCode && m.employeeCode.includes("MGR")) ||
+            (m.user?.roles && m.user.roles.includes("MANAGER"))
+          )
+          .map((m: any) => ({
+            id: m.id,
+            name: m.user
+              ? `${m.user.firstName || ""} ${m.user.lastName || ""}`.trim() || m.user.email
+              : m.employeeCode,
+          }));
+
+        if (managersFromMrs.length > 0) {
+          return managersFromMrs;
+        }
+      }
+
+      // 2. Fallback to /users
       const raw = await apiClient.get<any>("/users", {
         params: {
           role: "MANAGER",
@@ -664,7 +693,7 @@ export const fieldForceService = {
       const list = Array.isArray(raw) ? raw : (Array.isArray(raw?.items) ? raw.items : null);
       if (list !== null) {
         return list.map((u: any) => ({
-          id: u.id,
+          id: u.medicalRepresentative?.id || u.id,
           name: `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email,
         }));
       }
@@ -788,15 +817,20 @@ export const fieldForceService = {
     }
   },
 
-  async updateMRTerritory(mrId: string, territoryId: string): Promise<any> {
+  async updateMRTerritory(mrId: string, territoryId: string, managerId?: string): Promise<any> {
     try {
-      const res = await apiClient.put<any>(`/mrs/${mrId}`, { territoryId });
+      const payload: { territoryId: string; managerId?: string | null } = { territoryId };
+      if (managerId !== undefined) {
+        payload.managerId = managerId || null;
+      }
+      const res = await apiClient.put<any>(`/mrs/${mrId}`, payload);
       return res;
     } catch (err: any) {
       console.warn("Backend MR territory update failed, updating mock data:", err);
       const targetMockMR = mockMRs.find((m) => m.id === mrId);
       if (targetMockMR) {
         targetMockMR.territoryId = territoryId;
+        if (managerId !== undefined) targetMockMR.managerId = managerId || "";
       }
       const targetUser = mockUsers.find((u) => u.id === mrId);
       if (targetUser) {

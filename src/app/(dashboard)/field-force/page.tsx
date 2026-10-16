@@ -83,8 +83,15 @@ export default function FieldForcePage() {
 
   // Assign Territory Modal state (Company Admin only)
   const [isAssignTerritoryOpen, setIsAssignTerritoryOpen] = useState(false);
-  const [selectedRepForTerritory, setSelectedRepForTerritory] = useState<{ id: string; name: string; currentTerritoryId?: string } | null>(null);
+  const [selectedRepForTerritory, setSelectedRepForTerritory] = useState<{
+    id: string;
+    name: string;
+    currentTerritoryId?: string;
+    currentManagerId?: string;
+    designation?: string;
+  } | null>(null);
   const [targetTerritoryId, setTargetTerritoryId] = useState("");
+  const [targetManagerId, setTargetManagerId] = useState("");
   const [territoryAssignSuccess, setTerritoryAssignSuccess] = useState<string | null>(null);
   const [territoryAssignError, setTerritoryAssignError] = useState<string | null>(null);
 
@@ -109,7 +116,7 @@ export default function FieldForcePage() {
   const { data: mrList, isLoading: isMRLoading, refetch: refetchMRs } = useMRList({
     search,
     organizationId: companyOrgId,
-    territoryId: canonicalRole === "TERRITORY_MANAGER" && currentUser?.territoryId ? currentUser.territoryId : territoryId,
+    territoryId: territoryId !== "ALL" ? territoryId : undefined,
     managerId,
     status,
     performance,
@@ -160,9 +167,16 @@ export default function FieldForcePage() {
     }
   };
 
-  const handleOpenAssignTerritory = (rep: { id: string; name: string; currentTerritoryId?: string }) => {
+  const handleOpenAssignTerritory = (rep: {
+    id: string;
+    name: string;
+    currentTerritoryId?: string;
+    currentManagerId?: string;
+    designation?: string;
+  }) => {
     setSelectedRepForTerritory(rep);
     setTargetTerritoryId(rep.currentTerritoryId || territories?.[0]?.id || "");
+    setTargetManagerId(rep.currentManagerId || "");
     setTerritoryAssignError(null);
     setTerritoryAssignSuccess(null);
     setIsAssignTerritoryOpen(true);
@@ -176,6 +190,7 @@ export default function FieldForcePage() {
       await updateTerritoryMutation.mutateAsync({
         mrId: selectedRepForTerritory.id,
         territoryId: targetTerritoryId,
+        managerId: targetManagerId || undefined,
       });
       setTerritoryAssignSuccess(`Territory updated successfully for ${selectedRepForTerritory.name}!`);
       refetchMRs();
@@ -277,34 +292,14 @@ export default function FieldForcePage() {
           </Badge>
         }
         actions={
-          (canonicalRole === "SUPER_ADMIN" || canonicalRole === "ADMIN") ? (
+          canonicalRole === "SUPER_ADMIN" ? (
             <div className="flex items-center gap-2">
-              {canonicalRole === "SUPER_ADMIN" ? (
-                <Link href="/companies">
-                  <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs cursor-pointer">
-                    <Building className="h-3.5 w-3.5" />
-                    <span>Manage Companies</span>
-                  </Button>
-                </Link>
-              ) : (
-                <>
-                  <Link href="/territories">
-                    <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs cursor-pointer">
-                      <MapPin className="h-3.5 w-3.5 text-sky-600" />
-                      <span>Territories Master</span>
-                    </Button>
-                  </Link>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleOpenAddTerritory}
-                    className="gap-1.5 h-8 text-xs cursor-pointer"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    <span>Add Territory</span>
-                  </Button>
-                </>
-              )}
+              <Link href="/companies">
+                <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs cursor-pointer">
+                  <Building className="h-3.5 w-3.5" />
+                  <span>Manage Companies</span>
+                </Button>
+              </Link>
               <Button
                 variant="primary"
                 size="sm"
@@ -312,7 +307,25 @@ export default function FieldForcePage() {
                 className="gap-1.5 h-8 text-xs cursor-pointer"
               >
                 <Plus className="h-3.5 w-3.5" />
-                <span>{canonicalRole === "SUPER_ADMIN" ? "Add Personnel" : "Add Territory Manager / MR"}</span>
+                <span>Add Personnel</span>
+              </Button>
+            </div>
+          ) : canonicalRole === "ADMIN" ? (
+            <div className="flex items-center gap-2">
+              <Link href="/territories">
+                <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs cursor-pointer">
+                  <MapPin className="h-3.5 w-3.5 text-sky-600" />
+                  <span>Territories Master</span>
+                </Button>
+              </Link>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleOpenAddTerritory}
+                className="gap-1.5 h-8 text-xs cursor-pointer"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Add Territory</span>
               </Button>
             </div>
           ) : undefined
@@ -726,7 +739,7 @@ export default function FieldForcePage() {
                               {mr.name}
                             </Link>
                             <div className="font-mono text-[11px] text-slate-500">
-                              {mr.employeeId}
+                              {mr.employeeId} • {mr.designation}
                             </div>
                           </div>
                         </div>
@@ -737,7 +750,13 @@ export default function FieldForcePage() {
                           <span>{mr.territoryName}</span>
                           {canonicalRole === "ADMIN" && (
                             <button
-                              onClick={() => handleOpenAssignTerritory({ id: mr.id, name: mr.name, currentTerritoryId: mr.territoryId })}
+                              onClick={() => handleOpenAssignTerritory({
+                                id: mr.id,
+                                name: mr.name,
+                                currentTerritoryId: mr.territoryId,
+                                currentManagerId: mr.managerId,
+                                designation: mr.designation,
+                              })}
                               title="Assign/Change Territory"
                               className="p-1 text-slate-400 hover:text-sky-600 rounded hover:bg-sky-50 dark:hover:bg-slate-800 cursor-pointer"
                             >
@@ -812,8 +831,14 @@ export default function FieldForcePage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="h-7 text-xs gap-1 hover:bg-slate-50 dark:hover:bg-slate-800"
-                              onClick={() => handleOpenAssignTerritory({ id: mr.id, name: mr.name, currentTerritoryId: mr.territoryId })}
+                              className="h-7 text-xs gap-1 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+                              onClick={() => handleOpenAssignTerritory({
+                                id: mr.id,
+                                name: mr.name,
+                                currentTerritoryId: mr.territoryId,
+                                currentManagerId: mr.managerId,
+                                designation: mr.designation,
+                              })}
                             >
                               <MapPin className="h-3 w-3 text-sky-600" />
                               <span>Assign Territory</span>
@@ -1059,7 +1084,7 @@ export default function FieldForcePage() {
         isOpen={isAssignTerritoryOpen}
         onClose={() => setIsAssignTerritoryOpen(false)}
         title="Assign Territory to Field Personnel"
-        description={`Allocate or change the authorized operational territory for ${selectedRepForTerritory?.name}.`}
+        description={`Allocate or change the authorized operational territory and reporting manager for ${selectedRepForTerritory?.name}.`}
         maxWidth="md"
       >
         <form onSubmit={handleAssignTerritorySubmit} className="space-y-4">
@@ -1096,9 +1121,29 @@ export default function FieldForcePage() {
             </select>
           </div>
 
+          {!selectedRepForTerritory?.designation?.toLowerCase().includes("manager") && (
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Reporting Manager
+              </label>
+              <select
+                value={targetManagerId}
+                onChange={(e) => setTargetManagerId(e.target.value)}
+                className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 font-semibold"
+              >
+                <option value="">None / Direct Company Reporting</option>
+                {managers?.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-400">
             <span className="font-semibold text-slate-800 dark:text-slate-200">Company Governance: </span>
-            This rep will immediately gain authorized access to doctors, pharmacies, and visit scheduling mapped to this territory.
+            This field representative or manager will immediately gain authorized access to doctors, pharmacies, and operational scheduling mapped to this territory.
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
