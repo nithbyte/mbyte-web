@@ -139,12 +139,30 @@ export async function ensureAuthenticated(force = false): Promise<string | null>
   return authPromise;
 }
 
-// Request Interceptor: Attach Bearer JWT
+// Request Interceptor: Attach Bearer JWT if available
 axiosInstance.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     let token = tokenStorage.getAccessToken();
-    if ((!token || isTokenExpired(token)) && !config.url?.includes("/auth/login")) {
-      token = await ensureAuthenticated(true);
+
+    // If token exists but expired, and refreshToken exists, try to refresh
+    if (token && isTokenExpired(token) && !config.url?.includes("/auth/login") && !config.url?.includes("/auth/refresh")) {
+      const refreshToken = tokenStorage.getRefreshToken();
+      if (refreshToken) {
+        try {
+          const refreshRes = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken });
+          const newAccessToken = refreshRes.data?.data?.accessToken || refreshRes.data?.accessToken;
+          const newRefreshToken = refreshRes.data?.data?.refreshToken || refreshRes.data?.refreshToken;
+          if (newAccessToken) {
+            tokenStorage.setTokens(newAccessToken, newRefreshToken);
+            token = newAccessToken;
+          }
+        } catch {
+          tokenStorage.clearTokens();
+          token = null;
+        }
+      } else {
+        token = null;
+      }
     }
 
     if (token && config.headers) {

@@ -27,9 +27,10 @@ import {
   usePharmacies,
   useIsMounted,
   useCreateVisit,
+  useCurrentUser,
 } from "@/hooks";
 import { formatDate } from "@/lib/utils";
-import type { Visit, VisitStatus, VerificationStatus, VisitQueryParams } from "@/types";
+import { normalizeRole, type Visit, type VisitStatus, type VerificationStatus, type VisitQueryParams } from "@/types";
 import {
   Navigation,
   Radio,
@@ -104,6 +105,44 @@ export default function VisitsPage() {
   const { data: mrList } = useMRList();
   const { data: doctors } = useDoctors();
   const { data: pharmacies } = usePharmacies();
+  const { data: currentUser } = useCurrentUser();
+
+  const canonicalRole = normalizeRole(currentUser?.role);
+  const isTerritoryManager = canonicalRole === "TERRITORY_MANAGER";
+  const isMR = canonicalRole === "MR";
+  const managerTerritoryId = isTerritoryManager ? currentUser?.territoryId : null;
+
+  // Role-scoped eligible MRs for scheduling
+  const eligibleMRs = useMemo(() => {
+    if (!mrList) return [];
+    if (isTerritoryManager && managerTerritoryId) {
+      const filtered = mrList.filter(
+        (m) => m.territoryId === managerTerritoryId || m.managerId === currentUser?.id
+      );
+      return filtered.length > 0 ? filtered : mrList;
+    }
+    return mrList;
+  }, [mrList, isTerritoryManager, managerTerritoryId, currentUser?.id]);
+
+  // Role-scoped eligible Doctors for scheduling
+  const eligibleDoctors = useMemo(() => {
+    if (!doctors) return [];
+    if (isTerritoryManager && managerTerritoryId) {
+      const filtered = doctors.filter((d) => d.territoryId === managerTerritoryId);
+      return filtered.length > 0 ? filtered : doctors;
+    }
+    return doctors;
+  }, [doctors, isTerritoryManager, managerTerritoryId]);
+
+  // Role-scoped eligible Pharmacies for scheduling
+  const eligiblePharmacies = useMemo(() => {
+    if (!pharmacies) return [];
+    if (isTerritoryManager && managerTerritoryId) {
+      const filtered = pharmacies.filter((p) => p.territoryId === managerTerritoryId);
+      return filtered.length > 0 ? filtered : pharmacies;
+    }
+    return pharmacies;
+  }, [pharmacies, isTerritoryManager, managerTerritoryId]);
 
   const handleResetFilters = () => {
     setSelectedDate("2026-10-08");
@@ -248,16 +287,18 @@ export default function VisitsPage() {
               <CalendarCheck className="h-3.5 w-3.5" />
               <span>Today: Oct 8, 2026</span>
             </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              className="h-8 gap-1.5 text-xs"
-              onClick={() => setIsScheduleOpen(true)}
-              id="btn-schedule-visit"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              <span>Schedule Visit</span>
-            </Button>
+            {!isMR && (
+              <Button
+                variant="primary"
+                size="sm"
+                className="h-8 gap-1.5 text-xs"
+                onClick={() => setIsScheduleOpen(true)}
+                id="btn-schedule-visit"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Schedule Visit</span>
+              </Button>
+            )}
           </div>
         }
       />
@@ -907,6 +948,12 @@ export default function VisitsPage() {
       >
         <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
 
+          {isTerritoryManager && (
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-50/60 dark:bg-emerald-950/30 p-3 text-xs text-emerald-800 dark:text-emerald-300">
+              <span className="font-bold">Territory Enforced:</span> Assignments are restricted to Medical Representatives and customers within your assigned territory ({currentUser?.territoryName || "Assigned Territory"}).
+            </div>
+          )}
+
           {/* Assignment */}
           <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-3">
             <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 uppercase tracking-wider">
@@ -922,7 +969,7 @@ export default function VisitsPage() {
                 className={`w-full h-9 px-3 rounded-md border bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500 ${visitFormErrors.mrId ? "border-rose-400" : "border-slate-200 dark:border-slate-800"}`}
               >
                 <option value="">Select MR…</option>
-                {mrList?.map(mr => (
+                {eligibleMRs.map(mr => (
                   <option key={mr.id} value={mr.id}>{mr.name} — {mr.territoryName || "Territory"}</option>
                 ))}
               </select>
@@ -982,8 +1029,8 @@ export default function VisitsPage() {
               >
                 <option value="">Select {visitForm.customerType === "DOCTOR" ? "Doctor" : "Pharmacy"}…</option>
                 {visitForm.customerType === "DOCTOR"
-                  ? doctors?.map(d => <option key={d.id} value={d.id}>{d.name}{d.specialty ? ` — ${d.specialty}` : ""}</option>)
-                  : pharmacies?.map(p => <option key={p.id} value={p.id}>{p.name}</option>)
+                  ? eligibleDoctors.map(d => <option key={d.id} value={d.id}>{d.name}{d.specialty ? ` — ${d.specialty}` : ""}</option>)
+                  : eligiblePharmacies.map(p => <option key={p.id} value={p.id}>{p.name}</option>)
                 }
               </select>
               {visitFormErrors.customerId && <p className="text-[11px] text-rose-500 mt-0.5 flex items-center gap-1"><AlertCircle className="h-3 w-3" />{visitFormErrors.customerId}</p>}

@@ -44,25 +44,25 @@ async function runTestSuite() {
   try {
     // 1. Centralized Authentication Service
     console.log("\n--- [1] Authentication & Persona Service ---");
-    const currentUser = await authService.getCurrentUser();
-    assert(!!currentUser && typeof currentUser.id === "string", "getCurrentUser returns active user object");
-    assert(currentUser.role === "MANAGER" || currentUser.role === "COMPANY_ADMIN", "Default user is MANAGER or COMPANY_ADMIN");
-
     const users = await authService.getAllUsers();
     assert(Array.isArray(users) && users.length >= 3, "getAllUsers returns available personas list");
-
-    const switched = await authService.switchUser(users[1].id);
-    assert(switched.id === users[1].id, `switchUser switches persona to ${users[1].name}`);
-
-    // Restore primary manager
-    await authService.switchUser("usr_mgr_001");
 
     const loggedIn = await authService.login({ email: "admin@novispharma.com", password: "Password123!" });
     assert(!!loggedIn?.user?.id, "login validates credentials and returns session");
 
+    const currentUser = await authService.getCurrentUser();
+    assert(!!currentUser && typeof currentUser.id === "string", "getCurrentUser returns active user object");
+    assert(currentUser?.role === "ADMIN" || currentUser?.role === "COMPANY_ADMIN", "Logged-in user is ADMIN");
+
+    const switched = await authService.switchUser(users[1].id);
+    assert(switched.id === users[1].id, `switchUser switches persona to ${users[1].name}`);
+
     await authService.logout();
     const afterLogoutUser = await authService.getCurrentUser();
-    assert(!!afterLogoutUser, "logout safely restores state");
+    assert(afterLogoutUser === null, "logout safely clears session tokens");
+
+    // Restore primary manager session for downstream service checks
+    await authService.login({ email: "rajesh.kannan@novispharma.com", password: "Password123!" });
 
     // 2. Territory Service
     console.log("\n--- [2] Territory Service ---");

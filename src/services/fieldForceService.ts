@@ -695,4 +695,59 @@ export const fieldForceService = {
     };
     return Promise.resolve(user);
   },
+
+  async createUser(data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    password?: string;
+    phone?: string;
+    role: string;
+    organizationId?: string;
+    territoryId?: string;
+    managerId?: string;
+  }): Promise<any> {
+    const roleMapping: Record<string, string> = {
+      SUPER_ADMIN: "SUPER_ADMIN",
+      ADMIN: "COMPANY_ADMIN",
+      COMPANY_ADMIN: "COMPANY_ADMIN",
+      TERRITORY_MANAGER: "MANAGER",
+      MANAGER: "MANAGER",
+      MR: "MR",
+    };
+
+    const backendRole = roleMapping[data.role] || data.role;
+
+    try {
+      const res = await apiClient.post<any>("/users", {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        password: data.password || "Password123!",
+        phone: data.phone,
+        role: backendRole,
+        organizationId: data.organizationId,
+      });
+      return res;
+    } catch (err: any) {
+      console.warn("Backend user creation failed, falling back to mock creation:", err);
+      // Create in mock users
+      const newMockUser = {
+        id: `usr_${Date.now()}`,
+        organizationId: data.organizationId || "org_novis_001",
+        firstName: data.firstName,
+        lastName: data.lastName,
+        name: `${data.firstName} ${data.lastName}`,
+        email: data.email,
+        phone: data.phone || "+91 98400 99999",
+        role: data.role,
+        status: "ACTIVE",
+        employeeCode: `EMP-${Math.floor(100 + Math.random() * 900)}`,
+        territoryId: data.territoryId || "ter_01",
+      };
+      mockUsers.push(newMockUser as any);
+      return newMockUser;
+    }
+  },
 };
+

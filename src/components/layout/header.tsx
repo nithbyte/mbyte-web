@@ -12,12 +12,16 @@ import {
   Check,
 } from "lucide-react";
 import { useSidebarStore, useFilterStore } from "@/store";
-import { useTerritories, useCurrentUser, useUserList, useSwitchUser, useIsMounted } from "@/hooks";
+import { useTerritories, useCurrentUser, useUserList, useSwitchUser, useLogout, useIsMounted } from "@/hooks";
+import { normalizeRole, getRoleLabel, type CanonicalRole } from "@/types";
 import { APP_CONFIG } from "@/lib/constants";
 import { Modal } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { useRouter } from "next/navigation";
+import { LogOut } from "lucide-react";
 
 export function Header() {
+  const router = useRouter();
   const isMounted = useIsMounted();
   const { toggleMobileOpen } = useSidebarStore();
   const { selectedTerritoryId, setSelectedTerritoryId } = useFilterStore();
@@ -25,23 +29,46 @@ export function Header() {
   const { data: currentUser } = useCurrentUser();
   const { data: userList } = useUserList();
   const switchUserMutation = useSwitchUser();
+  const logoutMutation = useLogout();
 
   const [isUserSwitcherOpen, setIsUserSwitcherOpen] = useState(false);
 
-  // Derive display initials and name
-  const userName = currentUser?.name || "Field Manager";
-  const userRole = currentUser?.designation || currentUser?.role || "Area Manager";
+  const canonicalRole = normalizeRole(currentUser?.role);
+  const userName = currentUser?.name || "Field User";
+  const userRole = getRoleLabel(canonicalRole);
   const initials = userName
     .split(" ")
     .map((part) => part[0])
     .filter(Boolean)
     .slice(0, 2)
     .join("")
-    .toUpperCase() || "FM";
+    .toUpperCase() || "MB";
 
   const handleSelectUser = async (userId: string) => {
     await switchUserMutation.mutateAsync(userId);
     setIsUserSwitcherOpen(false);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logoutMutation.mutateAsync();
+    } finally {
+      setIsUserSwitcherOpen(false);
+      router.push("/login");
+    }
+  };
+
+  const getBadgeStyle = (role: CanonicalRole) => {
+    switch (role) {
+      case "SUPER_ADMIN":
+        return "bg-purple-100 text-purple-700 dark:bg-purple-950/70 dark:text-purple-300 border-purple-200 dark:border-purple-800";
+      case "ADMIN":
+        return "bg-sky-100 text-sky-700 dark:bg-sky-950/70 dark:text-sky-300 border-sky-200 dark:border-sky-800";
+      case "TERRITORY_MANAGER":
+        return "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800";
+      case "MR":
+        return "bg-amber-100 text-amber-700 dark:bg-amber-950/70 dark:text-amber-300 border-amber-200 dark:border-amber-800";
+    }
   };
 
   return (
@@ -163,6 +190,7 @@ export function Header() {
           <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
             {userList?.map((user) => {
               const isSelected = user.id === currentUser?.id;
+              const uRole = normalizeRole(user.role);
               const itemInitials = (user.name || `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email)
                 .split(" ")
                 .map((part) => part[0])
@@ -191,19 +219,38 @@ export function Header() {
                         {user.name}
                       </div>
                       <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                        {user.designation || user.role} • {user.email}
+                        {getRoleLabel(uRole)} • {user.email}
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant={user.role === "MANAGER" ? "default" : "secondary"} className="text-[10px]">
-                      {user.role}
-                    </Badge>
+                    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${getBadgeStyle(uRole)}`}>
+                      {uRole}
+                    </span>
                     {isSelected && <Check className="h-4 w-4 text-sky-600" aria-hidden="true" />}
                   </div>
                 </button>
               );
             })}
+          </div>
+
+          <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-100 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-400 dark:hover:bg-rose-950/70 transition-colors cursor-pointer"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Sign Out of Portal</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsUserSwitcherOpen(false)}
+              className="rounded-xl border border-slate-200 px-3.5 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              Close
+            </button>
           </div>
         </div>
       </Modal>

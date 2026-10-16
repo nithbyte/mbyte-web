@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { fieldForceService } from "../services";
 import type { MRListFilterParams } from "../types";
 
@@ -30,3 +30,20 @@ export function useManagers() {
     queryFn: () => fieldForceService.getManagers(),
   });
 }
+
+export function useCreateUser() {
+  return useMutation({
+    mutationFn: (data: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      password?: string;
+      phone?: string;
+      role: string;
+      organizationId?: string;
+      territoryId?: string;
+      managerId?: string;
+    }) => fieldForceService.createUser(data),
+  });
+}
+

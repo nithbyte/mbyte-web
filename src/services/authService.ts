@@ -1,8 +1,8 @@
 import { apiClient, tokenStorage } from "../lib/api-client";
 import { mockUsers } from "../mock";
-import type { User } from "../types";
+import { normalizeRole, getRoleLabel, type User } from "../types";
 
-// Maintain active user state in memory, defaulted to the regional sales manager
+// Maintain active user state in memory
 let activeUserId = "usr_mgr_001";
 
 function formatUser(rawUser: any): User {
@@ -12,24 +12,26 @@ function formatUser(rawUser: any): User {
     rawUser.email?.split("@")[0] ||
     "User";
 
-  const role = Array.isArray(rawUser.roles)
+  const rawRole = Array.isArray(rawUser.roles)
     ? rawUser.roles[0]
     : rawUser.role || "MANAGER";
 
+  const role = normalizeRole(rawRole);
+
   return {
     id: rawUser.id,
-    organizationId: rawUser.organizationId || "org_novis_001",
+    organizationId: rawUser.organizationId || null,
     name: computedName,
     firstName: rawUser.firstName,
     lastName: rawUser.lastName,
     email: rawUser.email,
     phone: rawUser.phone || "+91 98400 22222",
     role,
-    employeeId: rawUser.medicalRepresentative?.employeeCode || rawUser.employeeId || "MGR-001",
+    employeeId: rawUser.medicalRepresentative?.employeeCode || rawUser.employeeId || "EMP-001",
     designation:
       rawUser.designation ||
       rawUser.medicalRepresentative?.designation ||
-      (role === "MANAGER" ? "Area Sales Manager" : "Administrator"),
+      getRoleLabel(role),
     territoryId: rawUser.medicalRepresentative?.territoryId || rawUser.territoryId,
     status: rawUser.status === "ACTIVE" ? "ACTIVE" : "INACTIVE",
     createdAt: rawUser.createdAt,
@@ -41,39 +43,45 @@ let cachedUsers: User[] = [];
 export const authService = {
   /**
    * Retrieves the currently active authenticated session user.
-   * Drop-in replaceable with: GET /api/v1/auth/me
+   * Calls: GET /api/v1/auth/me
    */
-  async getCurrentUser(): Promise<User> {
+  async getCurrentUser(): Promise<User | null> {
+    const token = tokenStorage.getAccessToken();
+    if (!token) {
+      return null;
+    }
+
     try {
       const res = await apiClient.get<any>("/auth/me");
       if (res && res.id) {
         return formatUser(res);
       }
     } catch (err) {
-      console.warn("Real /auth/me call failed, falling back to mock user:", err);
+      console.warn("Backend /auth/me call failed:", err);
     }
 
-    const rawUser =
-      mockUsers.find((u) => u.id === activeUserId) ||
-      mockUsers.find((u) => u.role === "MANAGER") ||
-      mockUsers[0];
+    if (activeUserId) {
+      const rawUser = mockUsers.find((u) => u.id === activeUserId);
+      if (rawUser) return formatUser(rawUser);
+    }
 
-    return Promise.resolve(formatUser(rawUser));
+    return null;
   },
 
   /**
    * Retrieves all users for directory and persona switching.
-   * Drop-in replaceable with: GET /api/v1/users
+   * Calls: GET /api/v1/users
    */
   async getAllUsers(): Promise<User[]> {
     try {
-      const res = await apiClient.get<any[]>("/users", { params: { limit: 50 } });
-      if (Array.isArray(res) && res.length > 0) {
-        cachedUsers = res.map(formatUser);
+      const res = await apiClient.get<any>("/users", { params: { limit: 100 } });
+      const items = Array.isArray(res) ? res : res?.items || [];
+      if (Array.isArray(items) && items.length > 0) {
+        cachedUsers = items.map(formatUser);
         return cachedUsers;
       }
     } catch {
-      // fallback
+      // fallback to mock users if offline
     }
 
     cachedUsers = mockUsers.map(formatUser);
@@ -81,7 +89,7 @@ export const authService = {
   },
 
   /**
-   * Switches the active persona session (for demo, multi-role testing, or manager delegation).
+   * Switches the active persona session.
    */
   async switchUser(userId: string): Promise<User> {
     const targetUser =
@@ -95,8 +103,8 @@ export const authService = {
   },
 
   /**
-   * Authenticates user with credentials.
-   * Drop-in replaceable with: POST /api/v1/auth/login
+   * Authenticates user with credentials via backend API.
+   * Calls: POST /api/v1/auth/login
    */
   async login(credentials: { email: string; password?: string }): Promise<{ user: User; token: string }> {
     try {
@@ -114,37 +122,39 @@ export const authService = {
           token: res.accessToken,
         };
       }
-    } catch (err) {
-      console.warn("Real /auth/login call failed, checking mock credentials:", err);
+    } catch (err: any) {
+      // Check if fallback to mock user for offline test credentials
+      const matched = mockUsers.find(
+        (u) => u.email.toLowerCase() === credentials.email.trim().toLowerCase()
+      );
+      if (matched) {
+        const mockToken = `mock_jwt_token_${matched.id}`;
+        tokenStorage.setTokens(mockToken);
+        activeUserId = matched.id;
+        const user = formatUser(matched);
+        return {
+          user,
+          token: mockToken,
+        };
+      }
+      throw err;
     }
 
-    const matched = mockUsers.find(
-      (u) => u.email.toLowerCase() === credentials.email.trim().toLowerCase()
-    );
-
-    if (!matched) {
-      throw new Error("Invalid credentials. Please verify your email.");
-    }
-
-    activeUserId = matched.id;
-    return Promise.resolve({
-      user: formatUser(matched),
-      token: `mock_jwt_token_${matched.id}_${Date.now()}`,
-    });
+    throw new Error("Invalid email or password");
   },
 
   /**
    * Ends current authenticated session.
-   * Drop-in replaceable with: POST /api/v1/auth/logout
+   * Calls: POST /api/v1/auth/logout
    */
   async logout(): Promise<void> {
     try {
       await apiClient.post("/auth/logout");
     } catch {
-      // keep
+      // ignore
     }
     tokenStorage.clearTokens();
-    activeUserId = "usr_mgr_001";
+    activeUserId = "";
     return Promise.resolve();
   },
 };

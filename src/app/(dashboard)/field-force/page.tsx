@@ -17,8 +17,10 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import { useMRList, useManagers, useTerritories } from "@/hooks";
+import { useMRList, useManagers, useTerritories, useCurrentUser, useCreateUser, useOrganizations } from "@/hooks";
 import { formatCurrency } from "@/lib/utils";
+import { normalizeRole } from "@/types";
+import { Modal } from "@/components/ui/dialog";
 import {
   Users,
   Search,
@@ -29,27 +31,95 @@ import {
   ArrowRight,
   Filter,
   RotateCcw,
+  Plus,
+  Building,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 
 export default function FieldForcePage() {
+  const { data: currentUser } = useCurrentUser();
+  const canonicalRole = normalizeRole(currentUser?.role);
+  const createUserMutation = useCreateUser();
+  const { data: organizations } = useOrganizations();
+
   const [search, setSearch] = useState("");
+  const [selectedOrgId, setSelectedOrgId] = useState("ALL");
   const [territoryId, setTerritoryId] = useState("ALL");
   const [managerId, setManagerId] = useState("ALL");
   const [status, setStatus] = useState("ALL");
   const [performance, setPerformance] = useState<"ALL" | "ON_TRACK" | "BELOW_TARGET" | "AHEAD">("ALL");
 
+  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+  const [userForm, setUserForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "Password123!",
+    phone: "",
+    role: "MR",
+    organizationId: "",
+    territoryId: "",
+    managerId: "",
+  });
+  const [formError, setFormError] = useState<string | null>(null);
+  const [formSuccess, setFormSuccess] = useState<string | null>(null);
+
   const { data: territories } = useTerritories();
   const { data: managers } = useManagers();
-  const { data: mrList, isLoading } = useMRList({
+  const { data: mrList, isLoading, refetch } = useMRList({
     search,
-    territoryId,
+    territoryId: canonicalRole === "TERRITORY_MANAGER" && currentUser?.territoryId ? currentUser.territoryId : territoryId,
     managerId,
     status,
     performance,
   });
 
+  const handleOpenAddUser = () => {
+    setUserForm({
+      firstName: "",
+      lastName: "",
+      email: "",
+      password: "Password123!",
+      phone: "",
+      role: canonicalRole === "SUPER_ADMIN" ? "ADMIN" : "MR",
+      organizationId: canonicalRole === "SUPER_ADMIN" ? (organizations?.[0]?.id || "") : (currentUser?.organizationId || ""),
+      territoryId: territories?.[0]?.id || "",
+      managerId: managers?.[0]?.id || "",
+    });
+    setFormError(null);
+    setFormSuccess(null);
+    setIsAddUserOpen(true);
+  };
+
+  const handleCreateUserSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError(null);
+    setFormSuccess(null);
+
+    if (!userForm.firstName || !userForm.lastName || !userForm.email) {
+      setFormError("First Name, Last Name, and Email are required.");
+      return;
+    }
+
+    try {
+      await createUserMutation.mutateAsync({
+        ...userForm,
+        organizationId: canonicalRole === "SUPER_ADMIN" ? userForm.organizationId : currentUser?.organizationId || undefined,
+      });
+      setFormSuccess(`User ${userForm.firstName} ${userForm.lastName} (${userForm.role}) provisioned successfully!`);
+      refetch();
+      setTimeout(() => {
+        setIsAddUserOpen(false);
+      }, 1200);
+    } catch (err: any) {
+      setFormError(err?.message || "Failed to provision user. Please try again.");
+    }
+  };
+
   const handleResetFilters = () => {
     setSearch("");
+    setSelectedOrgId("ALL");
     setTerritoryId("ALL");
     setManagerId("ALL");
     setStatus("ALL");
@@ -68,6 +138,19 @@ export default function FieldForcePage() {
         title="Field Force Directory & Performance Management"
         description="Monitor representative territory deployment, daily call compliance, sales quota pacing, and live operational status."
         badge={<Badge variant="default">{totalReps} Representatives Active</Badge>}
+        actions={
+          (canonicalRole === "SUPER_ADMIN" || canonicalRole === "ADMIN") ? (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleOpenAddUser}
+              className="gap-1.5 h-8 text-xs cursor-pointer"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Provision User / Rep</span>
+            </Button>
+          ) : undefined
+        }
       />
 
       {/* Quick Performance Summary Strip */}
@@ -390,6 +473,193 @@ export default function FieldForcePage() {
           )}
         </CardContent>
       </Card>
+
+      {/* PROVISION USER / REP MODAL */}
+      <Modal
+        isOpen={isAddUserOpen}
+        onClose={() => setIsAddUserOpen(false)}
+        title={canonicalRole === "SUPER_ADMIN" ? "Provision Company User / Representative" : "Provision Territory Manager or MR"}
+        description={canonicalRole === "SUPER_ADMIN" ? "Create an administrator, territory manager, or field representative with company assignment." : "Create a new territory manager or medical representative for your company."}
+        maxWidth="lg"
+      >
+        <form onSubmit={handleCreateUserSubmit} className="space-y-4">
+          {formError && (
+            <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-400 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{formError}</span>
+            </div>
+          )}
+
+          {formSuccess && (
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              <span>{formSuccess}</span>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* If SUPER_ADMIN, allow choosing Organization */}
+            {canonicalRole === "SUPER_ADMIN" && (
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Target Company Organization *
+                </label>
+                <select
+                  required
+                  value={userForm.organizationId}
+                  onChange={(e) => setUserForm({ ...userForm, organizationId: e.target.value })}
+                  className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 font-semibold"
+                >
+                  {organizations?.map((org) => (
+                    <option key={org.id} value={org.id}>
+                      {org.name} ({org.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                First Name *
+              </label>
+              <input
+                type="text"
+                required
+                value={userForm.firstName}
+                onChange={(e) => setUserForm({ ...userForm, firstName: e.target.value })}
+                placeholder="e.g. Anand"
+                className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Last Name *
+              </label>
+              <input
+                type="text"
+                required
+                value={userForm.lastName}
+                onChange={(e) => setUserForm({ ...userForm, lastName: e.target.value })}
+                placeholder="e.g. Krishnan"
+                className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Corporate Email Address *
+              </label>
+              <input
+                type="email"
+                required
+                value={userForm.email}
+                onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                placeholder="anand.k@novispharma.com"
+                className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Contact Phone
+              </label>
+              <input
+                type="text"
+                value={userForm.phone}
+                onChange={(e) => setUserForm({ ...userForm, phone: e.target.value })}
+                placeholder="+91 98400 12345"
+                className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                System Role *
+              </label>
+              <select
+                required
+                value={userForm.role}
+                onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
+                className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 font-semibold"
+              >
+                {canonicalRole === "SUPER_ADMIN" && (
+                  <option value="ADMIN">ADMIN (Company Administrator)</option>
+                )}
+                <option value="TERRITORY_MANAGER">TERRITORY_MANAGER (Area Sales Manager)</option>
+                <option value="MR">MR (Medical Representative)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Initial Password
+              </label>
+              <input
+                type="text"
+                required
+                value={userForm.password}
+                onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+                className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Assigned Territory
+              </label>
+              <select
+                value={userForm.territoryId}
+                onChange={(e) => setUserForm({ ...userForm, territoryId: e.target.value })}
+                className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+              >
+                <option value="">Select Territory…</option>
+                {territories?.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name} ({t.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Reporting Manager
+              </label>
+              <select
+                value={userForm.managerId}
+                onChange={(e) => setUserForm({ ...userForm, managerId: e.target.value })}
+                className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+              >
+                <option value="">Select Reporting Manager…</option>
+                {managers?.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setIsAddUserOpen(false)}
+              className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={createUserMutation.isPending}
+              className="rounded-xl bg-sky-600 px-4 py-2 text-xs font-semibold text-white hover:bg-sky-500 disabled:opacity-50 transition-colors cursor-pointer"
+            >
+              {createUserMutation.isPending ? "Creating Account..." : "Provision User"}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

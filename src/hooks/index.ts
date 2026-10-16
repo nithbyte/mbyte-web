@@ -15,3 +15,4 @@ export * from "./useAuth";
 export * from "./useTargets";
 export * from "./useNotifications";
 export * from "./useIsMounted";
+export * from "./useOrganizations";

@@ -1,7 +1,32 @@
 import { Visit } from "./visit";
 import { Order, Collection } from "./order";
 
-export type UserRole = "SUPER_ADMIN" | "COMPANY_ADMIN" | "ADMIN" | "MANAGER" | "MR";
+export type CanonicalRole = "SUPER_ADMIN" | "ADMIN" | "TERRITORY_MANAGER" | "MR";
+export type UserRole = "SUPER_ADMIN" | "COMPANY_ADMIN" | "ADMIN" | "MANAGER" | "TERRITORY_MANAGER" | "MR";
+
+export function normalizeRole(role?: string | null): CanonicalRole {
+  if (!role) return "ADMIN";
+  const upper = role.toUpperCase();
+  if (upper === "SUPER_ADMIN") return "SUPER_ADMIN";
+  if (upper === "ADMIN" || upper === "COMPANY_ADMIN") return "ADMIN";
+  if (upper === "TERRITORY_MANAGER" || upper === "MANAGER" || upper === "AREA_MANAGER") return "TERRITORY_MANAGER";
+  if (upper === "MR" || upper === "FIELD_REP") return "MR";
+  return "ADMIN";
+}
+
+export function getRoleLabel(role?: string | null): string {
+  const norm = normalizeRole(role);
+  switch (norm) {
+    case "SUPER_ADMIN":
+      return "Super Administrator";
+    case "ADMIN":
+      return "Company Administrator";
+    case "TERRITORY_MANAGER":
+      return "Territory Manager";
+    case "MR":
+      return "Medical Representative";
+  }
+}
 
 export interface Territory {
   id: string;

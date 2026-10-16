@@ -7,7 +7,7 @@ import type { User } from "@/types";
 export function useCurrentUser() {
   const { setUser } = useAuthStore();
 
-  const query = useQuery<User>({
+  const query = useQuery<User | null>({
     queryKey: ["currentUser"],
     queryFn: () => authService.getCurrentUser(),
     staleTime: 1000 * 60 * 10,
