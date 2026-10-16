@@ -1,6 +1,7 @@
 import { apiClient } from "../lib/api-client";
 import { mockCollections } from "../mock";
 import { authService } from "./authService";
+import { isOrgMatch } from "../lib/utils";
 import type { Collection, CollectionQueryParams, PaymentMode } from "../types";
 
 export interface CollectionKPIs {
@@ -64,8 +65,8 @@ export const collectionService = {
       if (params?.organizationId) queryParams.organizationId = params.organizationId;
 
       const raw = await apiClient.get<any>("/collections", { params: queryParams });
-      const list = Array.isArray(raw) ? raw : (raw as any)?.data || (raw as any)?.items || [];
-      if (list && list.length > 0) {
+      const list = Array.isArray(raw) ? raw : (raw as any)?.data || (raw as any)?.items || null;
+      if (list !== null) {
         let mapped: Collection[] = list.map(mapApiCollection);
 
         if (params?.search) {
@@ -107,7 +108,7 @@ export const collectionService = {
     const currentUser = await authService.getCurrentUser();
     const effectiveOrgId = params?.organizationId || (currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined);
     if (effectiveOrgId) {
-      list = list.filter((c) => c.organizationId === effectiveOrgId);
+      list = list.filter((c) => isOrgMatch(c.organizationId, effectiveOrgId));
     }
     if (params?.mode && params.mode !== "ALL") {
       list = list.filter((c) => c.paymentMode === params.mode);

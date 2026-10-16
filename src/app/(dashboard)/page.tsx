@@ -8,7 +8,7 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <PageHeader
         title="Field Operations Command Center"
-        description="Comprehensive real-time telemetry, representative call compliance, order booking, and stock analytics for Novis Pharma."
+        description="Comprehensive real-time telemetry, representative call compliance, order booking, and stock analytics across authorized territories."
         badge={
           <Badge variant="success" className="gap-1 px-2.5 py-0.5">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />

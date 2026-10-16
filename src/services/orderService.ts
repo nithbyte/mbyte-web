@@ -1,6 +1,7 @@
 import { apiClient } from "../lib/api-client";
 import { mockOrders } from "../mock";
 import { authService } from "./authService";
+import { isOrgMatch } from "../lib/utils";
 import type { Order, OrderQueryParams } from "../types";
 
 export interface OrderKPIs {
@@ -67,7 +68,7 @@ export const orderService = {
 
       const res = await apiClient.get<any>("/orders", { params: queryParams });
       const items = Array.isArray(res) ? res : (Array.isArray(res?.items) ? res.items : null);
-      if (items && items.length > 0) {
+      if (items !== null) {
         let list = items.map(mapApiOrder);
 
         if (params?.territoryId && params.territoryId !== "ALL") {
@@ -104,7 +105,7 @@ export const orderService = {
     const currentUser = await authService.getCurrentUser();
     const effectiveOrgId = params?.organizationId || (currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined);
     if (effectiveOrgId) {
-      list = list.filter((o) => o.organizationId === effectiveOrgId);
+      list = list.filter((o) => isOrgMatch(o.organizationId, effectiveOrgId));
     }
 
     if (params?.status && params.status !== "ALL") {

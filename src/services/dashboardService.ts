@@ -26,6 +26,8 @@ import { visitService } from "./visitService";
 import { orderService } from "./orderService";
 import { collectionService } from "./collectionService";
 import { territoryService } from "./territoryService";
+import { authService } from "./authService";
+import { isOrgMatch } from "../lib/utils";
 
 interface MockTargetItem {
   id: string;
@@ -192,10 +194,15 @@ export const dashboardService = {
     }
 
     // Fallback to mock
-    const filteredMRs =
-      territoryId && territoryId !== "ALL"
-        ? mockMRs.filter((m) => m.territoryId === territoryId)
-        : mockMRs;
+    const currentUser = await authService.getCurrentUser();
+    const effectiveOrgId = currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined;
+    let filteredMRs = [...mockMRs];
+    if (effectiveOrgId) {
+      filteredMRs = filteredMRs.filter((m) => isOrgMatch(m.organizationId, effectiveOrgId));
+    }
+    if (territoryId && territoryId !== "ALL") {
+      filteredMRs = filteredMRs.filter((m) => m.territoryId === territoryId);
+    }
 
     const mrIds = new Set(filteredMRs.map((m) => m.id));
     const rawVisits = mockVisits as unknown as MockVisitItem[];
@@ -460,11 +467,16 @@ export const dashboardService = {
       // Fallback
     }
 
+    const currentUser = await authService.getCurrentUser();
+    const effectiveOrgId = currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined;
     const today = "2026-10-08";
-    const filteredMRs =
-      territoryId && territoryId !== "ALL"
-        ? mockMRs.filter((m) => m.territoryId === territoryId)
-        : mockMRs;
+    let filteredMRs = [...mockMRs];
+    if (effectiveOrgId) {
+      filteredMRs = filteredMRs.filter((m) => isOrgMatch(m.organizationId, effectiveOrgId));
+    }
+    if (territoryId && territoryId !== "ALL") {
+      filteredMRs = filteredMRs.filter((m) => m.territoryId === territoryId);
+    }
 
     const mrIds = new Set(filteredMRs.map((m) => m.id));
 
@@ -622,13 +634,22 @@ export const dashboardService = {
       // Fallback
     }
 
+    const currentUser = await authService.getCurrentUser();
+    const effectiveOrgId = currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined;
+    let availableTerritories = [...mockTerritories];
+    let availableMRs = [...mockMRs];
+    if (effectiveOrgId) {
+      availableTerritories = availableTerritories.filter((t) => isOrgMatch(t.organizationId, effectiveOrgId));
+      availableMRs = availableMRs.filter((m) => isOrgMatch(m.organizationId, effectiveOrgId));
+    }
+
     const today = "2026-10-08";
     const rawVisits = mockVisits as unknown as MockVisitItem[];
     const rawPresence = mockProductPresence as unknown as MockPresenceItem[];
 
     return Promise.resolve(
-      mockTerritories.map((territory) => {
-        const territoryMRs = mockMRs.filter((m) => m.territoryId === territory.id);
+      availableTerritories.map((territory) => {
+        const territoryMRs = availableMRs.filter((m) => m.territoryId === territory.id);
         const mrIds = new Set(territoryMRs.map((m) => m.id));
 
         const territoryVisits = rawVisits.filter(

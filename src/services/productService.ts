@@ -15,6 +15,7 @@ import type {
   ProductPresenceSummary,
 } from "../types";
 import { authService } from "./authService";
+import { isOrgMatch } from "../lib/utils";
 
 export interface ProductQueryParams {
   search?: string;
@@ -76,7 +77,7 @@ function calculatePresenceSummary(productId: string, realAudits?: any[]): Produc
 function mapApiProduct(p: any): Product {
   return {
     id: p.id,
-    organizationId: p.organizationId || "org_novis_001",
+    organizationId: p.organizationId || p.organization?.id || "",
     name: p.brandName || p.name,
     genericName: p.genericName || "",
     sku: p.sku || "",
@@ -115,7 +116,7 @@ export const productService = {
       const prodsData = prodsRes.status === "fulfilled" ? prodsRes.value : null;
       const prodsList = Array.isArray(prodsData) ? prodsData : (Array.isArray(prodsData?.items) ? prodsData.items : null);
 
-      if (prodsList && prodsList.length > 0) {
+      if (prodsList !== null) {
         const vasData = vasRes.status === "fulfilled" ? vasRes.value : [];
         const vasList = Array.isArray(vasData) ? vasData : (Array.isArray(vasData?.items) ? vasData.items : []);
         const auditsData = auditsRes.status === "fulfilled" ? auditsRes.value : [];
@@ -142,7 +143,7 @@ export const productService = {
     const currentUser = await authService.getCurrentUser();
     const effectiveOrgId = params?.organizationId || (currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined);
     if (effectiveOrgId) {
-      list = list.filter((p) => p.organizationId === effectiveOrgId);
+      list = list.filter((p) => isOrgMatch(p.organizationId, effectiveOrgId));
     }
 
     if (params?.search) {
@@ -232,9 +233,10 @@ export const productService = {
       if (params?.productId) queryParams.productId = params.productId;
       if (params?.search) queryParams.search = params.search;
 
-      const res = await apiClient.get<any[]>("/visual-aids", { params: queryParams });
-      if (Array.isArray(res) && res.length > 0) {
-        return res.map((v) => ({
+      const res = await apiClient.get<any>("/visual-aids", { params: queryParams });
+      const list = Array.isArray(res) ? res : (Array.isArray(res?.items) ? res.items : null);
+      if (list !== null) {
+        return list.map((v: any) => ({
           id: v.id,
           productId: v.productId,
           productName: v.product?.brandName || "Product",
@@ -270,8 +272,9 @@ export const productService = {
 
   async getProductPresenceSummary(productId: string): Promise<ProductPresenceSummary> {
     try {
-      const audits = await apiClient.get<any[]>("/product-presence", { params: { productId } });
-      if (Array.isArray(audits)) {
+      const res = await apiClient.get<any>("/product-presence", { params: { productId } });
+      const audits = Array.isArray(res) ? res : (Array.isArray(res?.items) ? res.items : null);
+      if (audits !== null) {
         return calculatePresenceSummary(productId, audits);
       }
     } catch {
@@ -282,30 +285,34 @@ export const productService = {
 
   async getLowStockAlerts(limit: number = 6): Promise<StockAlert[]> {
     try {
-      const audits = await apiClient.get<any[]>("/product-presence", { params: { limit: 50 } });
-      if (Array.isArray(audits) && audits.length > 0) {
-        const issues = audits.filter((a) => a.status === "OUT_OF_STOCK" || a.status === "LOW_STOCK");
-        if (issues.length > 0) {
-          return issues.slice(0, limit).map((audit) => ({
-            id: audit.id,
-            pharmacyName: audit.customer?.name || audit.pharmacyName || "Pharmacy",
-            territoryName: audit.territory?.name || "Central District",
-            productName: audit.product?.brandName || audit.productName || "Product",
-            status: audit.status as "LOW_STOCK" | "OUT_OF_STOCK",
-            reportedQuantity: audit.quantity,
-            auditedBy: audit.mr?.name || "Field MR",
-            auditedAt: audit.checkedAt || audit.createdAt,
-          }));
-        }
+      const res = await apiClient.get<any>("/product-presence", { params: { limit: 50 } });
+      const audits = Array.isArray(res) ? res : (Array.isArray(res?.items) ? res.items : null);
+      if (audits !== null) {
+        const issues = audits.filter((a: any) => a.status === "OUT_OF_STOCK" || a.status === "LOW_STOCK");
+        return issues.slice(0, limit).map((audit: any) => ({
+          id: audit.id,
+          pharmacyName: audit.customer?.name || audit.pharmacyName || "Pharmacy",
+          territoryName: audit.territory?.name || "Central District",
+          productName: audit.product?.brandName || audit.productName || "Product",
+          status: audit.status as "LOW_STOCK" | "OUT_OF_STOCK",
+          reportedQuantity: audit.quantity,
+          auditedBy: audit.mr?.name || "Field MR",
+          auditedAt: audit.checkedAt || audit.createdAt,
+        }));
       }
     } catch {
       // fallback
     }
 
+    const currentUser = await authService.getCurrentUser();
+    const effectiveOrgId = currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined;
     const alerts: StockAlert[] = [];
-    const stockIssues = mockProductPresence.filter(
+    let stockIssues = mockProductPresence.filter(
       (p) => p.status === "OUT_OF_STOCK" || p.status === "LOW_STOCK"
     );
+    if (effectiveOrgId) {
+      stockIssues = stockIssues.filter((p) => isOrgMatch(p.organizationId, effectiveOrgId));
+    }
 
     for (const audit of stockIssues) {
       const phm = mockPharmacies.find((p) => p.id === audit.pharmacyId);
@@ -357,9 +364,10 @@ export const productService = {
       console.warn('Real POST /products failed, using mock:', err);
     }
     // Mock fallback: add to in-memory state
+    const currentUser = await authService.getCurrentUser();
     const newProd: Product = {
       id: `prod_${Date.now()}`,
-      organizationId: 'org_novis_001',
+      organizationId: currentUser?.organizationId || '',
       name: input.name,
       genericName: input.genericName,
       sku: input.sku,

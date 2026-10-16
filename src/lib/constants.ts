@@ -1,11 +1,12 @@
 export const APP_CONFIG = {
   name: "MByte FieldOps",
   version: "1.0.0",
-  organization: "Novis Pharma",
-  tenantId: "org_novis_001",
-  region: "Tamil Nadu",
-  headquarters: "Madurai & Trichy Operations Hub",
+  organization: "Pharmaceutical Operations",
+  tenantId: "tenant_auto",
+  region: "Operational Territory",
+  headquarters: "Regional Operations Hub",
 } as const;
+
 
 export const ROUTES = {
   dashboard: "/",

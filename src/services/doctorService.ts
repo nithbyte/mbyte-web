@@ -11,13 +11,15 @@ export interface DoctorQueryParams {
   organizationId?: string;
 }
 
+import { isOrgMatch } from "../lib/utils";
+
 // In-memory state for mock CRUD fallback
 const doctorsState: Doctor[] = [...mockDoctors];
 
 function mapApiDoctor(d: any): Doctor {
   return {
     id: d.id,
-    organizationId: d.organizationId || "org_novis_001",
+    organizationId: d.organizationId || d.organization?.id || "",
     name: d.name,
     specialty: d.specialty || "General Medicine",
     qualification: d.qualification || "MBBS, MD",
@@ -48,7 +50,7 @@ export const doctorService = {
 
       const res = await apiClient.get<any>("/doctors", { params: queryParams });
       const items = Array.isArray(res) ? res : (Array.isArray(res?.items) ? res.items : null);
-      if (items && items.length > 0) {
+      if (items !== null) {
         return items.map(mapApiDoctor);
       }
     } catch (err) {
@@ -61,7 +63,7 @@ export const doctorService = {
     const currentUser = await authService.getCurrentUser();
     const effectiveOrgId = params?.organizationId || (currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined);
     if (effectiveOrgId) {
-      list = list.filter((d) => d.organizationId === effectiveOrgId);
+      list = list.filter((d) => isOrgMatch(d.organizationId, effectiveOrgId));
     }
 
     if (params?.search) {
@@ -106,7 +108,7 @@ export const doctorService = {
 
   async createDoctor(input: DoctorInput): Promise<Doctor> {
     const currentUser = await authService.getCurrentUser();
-    const effectiveOrgId = (input as any).organizationId || currentUser?.organizationId || "org_novis_001";
+    const effectiveOrgId = (input as any).organizationId || currentUser?.organizationId || "";
 
     try {
       const payload: Record<string, any> = {

@@ -24,6 +24,8 @@ import { visitService } from "./visitService";
 import { orderService } from "./orderService";
 import { collectionService } from "./collectionService";
 import { presenceService } from "./presenceService";
+import { authService } from "./authService";
+import { isOrgMatch } from "../lib/utils";
 
 interface RawVisitItem extends Visit {
   scheduledDate?: string;
@@ -70,8 +72,8 @@ export const fieldForceService = {
       const raw = await apiClient.get<any>("/mrs", {
         params: { territoryId: territoryId !== "ALL" ? territoryId : undefined, limit: 100 },
       });
-      const list = Array.isArray(raw) ? raw : (raw as any)?.data || [];
-      if (list && list.length > 0) {
+      const list = Array.isArray(raw) ? raw : (Array.isArray(raw?.items) ? raw.items : null);
+      if (list !== null) {
         const [visits, orders, collections] = await Promise.all([
           visitService.getVisits({ limit: 200 }),
           orderService.getOrders({ limit: 200 }),
@@ -134,6 +136,11 @@ export const fieldForceService = {
 
     // Fallback to mock
     let mrs = [...mockMRs];
+    const currentUser = await authService.getCurrentUser();
+    const effectiveOrgId = currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined;
+    if (effectiveOrgId) {
+      mrs = mrs.filter((m: any) => isOrgMatch(m.organizationId, effectiveOrgId));
+    }
     if (territoryId && territoryId !== "ALL") {
       mrs = mrs.filter((m) => m.territoryId === territoryId);
     }
@@ -196,7 +203,10 @@ export const fieldForceService = {
     return Promise.resolve(summaries);
   },
 
-  async getMRList(filters?: MRListFilterParams): Promise<MRListItem[]> {
+  async getMRList(filtersInput?: MRListFilterParams | string): Promise<MRListItem[]> {
+    const filters: MRListFilterParams | undefined =
+      typeof filtersInput === "string" ? { territoryId: filtersInput } : filtersInput;
+
     try {
       const raw = await apiClient.get<any>("/mrs", {
         params: {
@@ -206,11 +216,12 @@ export const fieldForceService = {
           limit: 100,
         },
       });
-      let list = Array.isArray(raw) ? raw : (raw as any)?.data || [];
-      if (filters?.organizationId && filters.organizationId !== "ALL") {
-        list = list.filter((mr: any) => !mr.organizationId || mr.organizationId === filters.organizationId);
-      }
-      if (list && list.length > 0) {
+      let list = Array.isArray(raw) ? raw : (Array.isArray(raw?.items) ? raw.items : null);
+      if (list !== null) {
+        if (filters?.organizationId && filters.organizationId !== "ALL") {
+          list = list.filter((mr: any) => !mr.organizationId || isOrgMatch(mr.organizationId, filters.organizationId!));
+        }
+
         const [rawTargets, visits, orders, collections] = await Promise.all([
           apiClient.get<any>("/targets", { params: { limit: 100 } }).catch(() => []),
           visitService.getVisits({ limit: 200 }),
@@ -218,7 +229,7 @@ export const fieldForceService = {
           collectionService.getCollections({ limit: 100 }),
         ]);
 
-        const targetsList = Array.isArray(rawTargets) ? rawTargets : (rawTargets as any)?.data || [];
+        const targetsList = Array.isArray(rawTargets) ? rawTargets : (Array.isArray(rawTargets?.items) ? rawTargets.items : (rawTargets?.data || []));
 
         let mappedList: MRListItem[] = list.map((mr: any) => {
           const mrName = mr.user
@@ -335,8 +346,12 @@ export const fieldForceService = {
     const rawTargets = mockTargets as unknown as RawTargetItem[];
 
     let sourceMRs = [...mockMRs];
-    if (filters?.organizationId && filters.organizationId !== "ALL") {
-      sourceMRs = sourceMRs.filter((m) => !m.organizationId || m.organizationId === filters.organizationId);
+    const currentUser = await authService.getCurrentUser();
+    const effectiveOrgId = (filters?.organizationId && filters.organizationId !== "ALL")
+      ? filters.organizationId
+      : (currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined);
+    if (effectiveOrgId) {
+      sourceMRs = sourceMRs.filter((m: any) => isOrgMatch(m.organizationId, effectiveOrgId));
     }
 
     let list: MRListItem[] = sourceMRs.map((mr) => {
@@ -646,8 +661,8 @@ export const fieldForceService = {
           organizationId: organizationId !== "ALL" ? organizationId : undefined,
         },
       });
-      const list = Array.isArray(raw) ? raw : (raw as any)?.data || [];
-      if (list && list.length > 0) {
+      const list = Array.isArray(raw) ? raw : (Array.isArray(raw?.items) ? raw.items : null);
+      if (list !== null) {
         return list.map((u: any) => ({
           id: u.id,
           name: `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email,
@@ -657,9 +672,14 @@ export const fieldForceService = {
       // Fallback
     }
 
+    const currentUser = await authService.getCurrentUser();
+    const effectiveOrgId = (organizationId && organizationId !== "ALL")
+      ? organizationId
+      : (currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined);
+
     let managers = mockUsers.filter((u) => u.role === "MANAGER" || u.role === "COMPANY_ADMIN");
-    if (organizationId && organizationId !== "ALL") {
-      managers = managers.filter((u) => !u.organizationId || u.organizationId === organizationId);
+    if (effectiveOrgId) {
+      managers = managers.filter((u) => isOrgMatch(u.organizationId, effectiveOrgId));
     }
     return Promise.resolve(
       managers.map((u) => ({
@@ -749,9 +769,10 @@ export const fieldForceService = {
     } catch (err: any) {
       console.warn("Backend user creation failed, falling back to mock creation:", err);
       // Create in mock users
+      const currentUser = await authService.getCurrentUser();
       const newMockUser = {
         id: `usr_${Date.now()}`,
-        organizationId: data.organizationId || "org_novis_001",
+        organizationId: data.organizationId || currentUser?.organizationId || "",
         firstName: data.firstName,
         lastName: data.lastName,
         name: `${data.firstName} ${data.lastName}`,

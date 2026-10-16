@@ -5,23 +5,23 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { APP_CONFIG } from "@/lib/constants";
-import { useCurrentUser, useUserList, useSwitchUser } from "@/hooks";
-import { Shield, MapPin, UserCheck, Key } from "lucide-react";
+import { useCurrentUser } from "@/hooks";
+import { Shield, MapPin, UserCheck, Key, Lock } from "lucide-react";
 
 export default function SettingsPage() {
   const { data: currentUser } = useCurrentUser();
-  const { data: userList } = useUserList();
-  const switchUserMutation = useSwitchUser();
 
   const userName = currentUser?.name || "Field Operations Manager";
   const userRole = currentUser?.designation || currentUser?.role || "Area Sales Manager";
+  const orgName = (currentUser as any)?.organization?.name || currentUser?.organizationId || APP_CONFIG.organization;
+  const tenantId = currentUser?.organizationId || APP_CONFIG.tenantId;
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Organization Settings & Governance"
         description="Tenant configuration, GPS geofencing radius parameters, centralized authentication session, and data governance controls."
-        badge={<Badge variant="default">Tenant: {APP_CONFIG.organization}</Badge>}
+        badge={<Badge variant="default">Tenant: {orgName}</Badge>}
       />
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -56,7 +56,11 @@ export default function SettingsPage() {
             </div>
             <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
               <span className="text-slate-500">Employee Code</span>
-              <span className="font-mono text-slate-700 dark:text-slate-300">{currentUser?.employeeCode || "NP-HQ-01"}</span>
+              <span className="font-mono text-slate-700 dark:text-slate-300">{currentUser?.employeeCode || "EMP-SEC-01"}</span>
+            </div>
+            <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
+              <span className="text-slate-500">Assigned Organization</span>
+              <span className="font-semibold text-slate-900 dark:text-slate-100">{orgName}</span>
             </div>
             <div className="flex justify-between py-1.5">
               <span className="text-slate-500">Security Clearance</span>
@@ -67,27 +71,6 @@ export default function SettingsPage() {
                   ? "Level 4 - Commercial & Finance"
                   : "Level 3 - Territory & Field Operations"}
               </span>
-            </div>
-
-            {/* Quick Switch Persona for Audit Testing */}
-            <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
-              <div className="text-[11px] font-semibold text-slate-500 mb-2">Switch Active Persona:</div>
-              <div className="flex flex-wrap gap-2">
-                {userList?.slice(0, 4).map((u) => (
-                  <button
-                    key={u.id}
-                    onClick={() => switchUserMutation.mutate(u.id)}
-                    disabled={u.id === currentUser?.id || switchUserMutation.isPending}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors ${
-                      u.id === currentUser?.id
-                        ? "bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-950 dark:text-sky-300 dark:border-sky-800"
-                        : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-800"
-                    }`}
-                  >
-                    {u.name?.split(" ")[0]} ({u.role.substring(0, 3)})
-                  </button>
-                ))}
-              </div>
             </div>
           </CardContent>
         </Card>
@@ -137,11 +120,11 @@ export default function SettingsPage() {
           <CardContent className="space-y-3 text-xs">
             <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
               <span className="text-slate-500">Organization Name</span>
-              <span className="font-semibold text-slate-900 dark:text-slate-100">{APP_CONFIG.organization}</span>
+              <span className="font-semibold text-slate-900 dark:text-slate-100">{orgName}</span>
             </div>
             <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
               <span className="text-slate-500">Tenant Identifier</span>
-              <span className="font-mono text-slate-700 dark:text-slate-300">{APP_CONFIG.tenantId}</span>
+              <span className="font-mono text-slate-700 dark:text-slate-300">{tenantId}</span>
             </div>
             <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
               <span className="text-slate-500">Operating Region</span>

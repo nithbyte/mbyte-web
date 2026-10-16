@@ -1,5 +1,6 @@
 import { apiClient } from "../lib/api-client";
 import { mockNotifications } from "../mock";
+import { authService } from "./authService";
 
 export interface AppNotification {
   id: string;
@@ -87,10 +88,12 @@ export const notificationService = {
       item.isRead = true;
       return mapNotification(item);
     }
+
+    const currentUser = await authService.getCurrentUser();
     return {
       id,
-      organizationId: "org_novis_001",
-      userId: "usr_mgr_001",
+      organizationId: currentUser?.organizationId || "",
+      userId: currentUser?.id || "user",
       title: "Notification",
       message: "Notification marked read",
       isRead: true,

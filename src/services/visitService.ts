@@ -1,6 +1,7 @@
 import { apiClient } from "../lib/api-client";
 import { mockVisits } from "../mock";
 import { authService } from "./authService";
+import { isOrgMatch } from "../lib/utils";
 import type { Visit, VisitQueryParams, VisitCounts } from "../types";
 
 function mapApiVisit(v: any): Visit {
@@ -59,7 +60,7 @@ export const visitService = {
 
       const res = await apiClient.get<any>("/visits", { params: queryParams });
       const items = Array.isArray(res) ? res : (Array.isArray(res?.items) ? res.items : null);
-      if (items && items.length > 0) {
+      if (items !== null) {
         let list = items.map(mapApiVisit);
 
         if (params?.territoryId && params.territoryId !== "ALL") {
@@ -96,7 +97,7 @@ export const visitService = {
     const currentUser = await authService.getCurrentUser();
     const effectiveOrgId = params?.organizationId || (currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined);
     if (effectiveOrgId) {
-      list = list.filter((v) => v.organizationId === effectiveOrgId);
+      list = list.filter((v) => isOrgMatch(v.organizationId, effectiveOrgId));
     }
 
     if (params?.date && params.date !== "ALL") {
@@ -290,9 +291,10 @@ export const visitService = {
       console.warn('Real POST /visits failed, using mock:', err);
     }
     // Mock fallback
+    const currentUser = await authService.getCurrentUser();
     const newVisit: Visit = {
       id: `visit_${Date.now()}`,
-      organizationId: 'org_novis_001',
+      organizationId: currentUser?.organizationId || '',
       mrId: input.mrId,
       mrName: 'Medical Representative',
       customerId: input.customerId,

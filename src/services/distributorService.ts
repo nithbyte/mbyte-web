@@ -9,12 +9,14 @@ export interface DistributorQueryParams {
   organizationId?: string;
 }
 
+import { isOrgMatch } from "../lib/utils";
+
 const distributorsState: Distributor[] = [...mockDistributors];
 
 function mapApiDistributor(d: any): Distributor {
   return {
     id: d.id,
-    organizationId: d.organizationId || "org_novis_001",
+    organizationId: d.organizationId || d.organization?.id || "",
     name: d.name,
     contactPerson: d.contactPerson || "Proprietor",
     phone: d.phone || "+91 44 2829 1122",
@@ -40,7 +42,7 @@ export const distributorService = {
 
       const res = await apiClient.get<any>("/distributors", { params: queryParams });
       const items = Array.isArray(res) ? res : (Array.isArray(res?.items) ? res.items : null);
-      if (items && items.length > 0) {
+      if (items !== null) {
         return items.map(mapApiDistributor);
       }
     } catch (err) {
@@ -53,7 +55,7 @@ export const distributorService = {
     const currentUser = await authService.getCurrentUser();
     const effectiveOrgId = params?.organizationId || (currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined);
     if (effectiveOrgId) {
-      list = list.filter((d) => d.organizationId === effectiveOrgId);
+      list = list.filter((d) => isOrgMatch(d.organizationId, effectiveOrgId));
     }
 
     if (params?.search) {
@@ -91,7 +93,7 @@ export const distributorService = {
 
   async createDistributor(input: DistributorInput): Promise<Distributor> {
     const currentUser = await authService.getCurrentUser();
-    const effectiveOrgId = (input as any).organizationId || currentUser?.organizationId || "org_novis_001";
+    const effectiveOrgId = (input as any).organizationId || currentUser?.organizationId || "";
 
     try {
       const payload: Record<string, any> = {
@@ -251,9 +253,10 @@ export const distributorService = {
     const dst = distributorsState.find((d) => d.id === input.distributorId);
     const prod = mockProducts.find((p) => p.id === input.productId);
 
+    const currentUser = await authService.getCurrentUser();
     const newAudit = {
       id: `audit_${Date.now()}`,
-      organizationId: "org_novis_001",
+      organizationId: dst?.organizationId || currentUser?.organizationId || "",
       pharmacyId: input.distributorId,
       pharmacyName: dst?.name || "Stockist Warehouse",
       territoryId: dst?.territoryId || "ter_001",

@@ -364,7 +364,12 @@ export function Sidebar() {
                   {APP_CONFIG.name}
                 </span>
                 <span className="text-[11px] font-medium text-sky-600 dark:text-sky-400 truncate">
-                  {canonicalRole === "SUPER_ADMIN" ? "Platform Control" : APP_CONFIG.organization}
+                  {canonicalRole === "SUPER_ADMIN"
+                    ? "Platform Control"
+                    : currentUser?.organizationId === "org_apex_002" ||
+                      currentUser?.organizationId === "31524081-7b14-4925-a331-e4cd05a62e04"
+                    ? "Apex Healthcare"
+                    : "Novis Pharma"}
                 </span>
               </div>
             )}

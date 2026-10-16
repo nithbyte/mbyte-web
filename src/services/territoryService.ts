@@ -1,5 +1,7 @@
 import { apiClient } from "../lib/api-client";
 import { mockTerritories } from "../mock";
+import { authService } from "./authService";
+import { isOrgMatch } from "../lib/utils";
 import type { Territory, CreateTerritoryInput } from "../types";
 
 function mapApiTerritory(t: any): Territory {
@@ -8,11 +10,11 @@ function mapApiTerritory(t: any): Territory {
     organizationId: t.organizationId,
     name: t.name,
     code: t.code,
-    region: t.region || t.zone || "Tamil Nadu",
-    zone: t.zone || "South",
+    region: t.region || t.zone || "Operational Region",
+    zone: t.zone || "Zone",
     headquarters: t.headquarters || t.area || t.name,
     area: t.area,
-    state: "Tamil Nadu",
+    state: t.state || t.region || "Operational State",
     activeMRsCount: t.activeMRsCount || t.mrs?.length || 0,
   };
 }
@@ -20,22 +22,28 @@ function mapApiTerritory(t: any): Territory {
 export const territoryService = {
   async getTerritories(organizationId?: string): Promise<Territory[]> {
     try {
-      const res = await apiClient.get<any[]>("/territories", {
+      const res = await apiClient.get<any>("/territories", {
         params: {
           limit: 100,
           organizationId: organizationId !== "ALL" ? organizationId : undefined,
         },
       });
-      if (Array.isArray(res) && res.length > 0) {
-        return res.map(mapApiTerritory);
+      const items = Array.isArray(res) ? res : (Array.isArray(res?.items) ? res.items : null);
+      if (items !== null) {
+        return items.map(mapApiTerritory);
       }
     } catch (err) {
       console.warn("Real /territories API call failed, falling back to mock:", err);
     }
 
     let list = [...mockTerritories];
-    if (organizationId && organizationId !== "ALL") {
-      list = list.filter((t: any) => !t.organizationId || t.organizationId === organizationId);
+    const currentUser = await authService.getCurrentUser();
+    const effectiveOrgId = (organizationId && organizationId !== "ALL")
+      ? organizationId
+      : (currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined);
+
+    if (effectiveOrgId) {
+      list = list.filter((t: any) => isOrgMatch(t.organizationId, effectiveOrgId));
     }
     return Promise.resolve(list.map(mapApiTerritory));
   },
@@ -55,15 +63,18 @@ export const territoryService = {
   },
 
   async createTerritory(data: CreateTerritoryInput): Promise<Territory> {
+    const currentUser = await authService.getCurrentUser();
+    const effectiveOrgId = data.organizationId || currentUser?.organizationId || "";
+
     try {
       const res = await apiClient.post<any>("/territories", {
         code: data.code,
         name: data.name,
-        zone: data.zone || "South",
-        region: data.region || "Tamil Nadu",
+        zone: data.zone || "Zone",
+        region: data.region || "Operational Region",
         area: data.area || data.name,
         description: data.description || `${data.name} operational coverage territory`,
-        organizationId: data.organizationId,
+        organizationId: effectiveOrgId,
       });
       if (res && res.id) {
         return mapApiTerritory(res);
@@ -74,11 +85,11 @@ export const territoryService = {
 
     const newMockTerritory = {
       id: `ter_${Date.now()}`,
-      organizationId: data.organizationId || "org_novis_001",
+      organizationId: effectiveOrgId,
       code: data.code,
       name: data.name,
-      zone: data.zone || "South",
-      region: data.region || "Tamil Nadu",
+      zone: data.zone || "Zone",
+      region: data.region || "Operational Region",
       area: data.area || data.name,
       headquarters: data.headquarters || data.name,
       isActive: true,
@@ -88,4 +99,3 @@ export const territoryService = {
     return mapApiTerritory(newMockTerritory);
   },
 };
-

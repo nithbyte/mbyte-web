@@ -4,88 +4,33 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Shield,
+  Building,
+  MapPin,
+  Stethoscope,
   Lock,
   Mail,
   Eye,
   EyeOff,
-  Building,
+  Sparkles,
   CheckCircle2,
   AlertCircle,
   ArrowRight,
-  Sparkles,
-  MapPin,
-  Stethoscope,
-  Briefcase,
+  Database,
+  Smartphone,
+  BarChart3,
 } from "lucide-react";
 import { useLogin } from "@/hooks";
-import { normalizeRole, type CanonicalRole } from "@/types";
-
-interface DemoPersona {
-  role: CanonicalRole;
-  title: string;
-  desc: string;
-  email: string;
-  icon: React.ComponentType<{ className?: string }>;
-  badgeColor: string;
-  defaultDestination: string;
-}
-
-const DEMO_PERSONAS: DemoPersona[] = [
-  {
-    role: "SUPER_ADMIN",
-    title: "Super Admin",
-    desc: "Platform & Multi-Company Oversight",
-    email: "superadmin@mbyte.app",
-    icon: Shield,
-    badgeColor: "bg-purple-500/10 text-purple-600 border-purple-200 dark:border-purple-800 dark:text-purple-300",
-    defaultDestination: "/companies",
-  },
-  {
-    role: "ADMIN",
-    title: "Company Admin",
-    desc: "Novis Pharma Full Enterprise Ops",
-    email: "admin@novispharma.com",
-    icon: Building,
-    badgeColor: "bg-sky-500/10 text-sky-600 border-sky-200 dark:border-sky-800 dark:text-sky-300",
-    defaultDestination: "/",
-  },
-  {
-    role: "TERRITORY_MANAGER",
-    title: "Territory Manager",
-    desc: "Chennai Central Field Operations",
-    email: "manager.chennai@novispharma.com",
-    icon: MapPin,
-    badgeColor: "bg-emerald-500/10 text-emerald-600 border-emerald-200 dark:border-emerald-800 dark:text-emerald-300",
-    defaultDestination: "/",
-  },
-  {
-    role: "MR",
-    title: "Medical Rep",
-    desc: "Field Rep Visits & Visual Aids",
-    email: "mr.chennai1@novispharma.com",
-    icon: Stethoscope,
-    badgeColor: "bg-amber-500/10 text-amber-600 border-amber-200 dark:border-amber-800 dark:text-amber-300",
-    defaultDestination: "/visits",
-  },
-];
+import { normalizeRole } from "@/types";
 
 export default function LoginPage() {
   const router = useRouter();
   const loginMutation = useLogin();
 
-  const [email, setEmail] = useState("admin@novispharma.com");
-  const [password, setPassword] = useState("Password123!");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
-  const [selectedRole, setSelectedRole] = useState<CanonicalRole>("ADMIN");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  const handleSelectPersona = (persona: DemoPersona) => {
-    setEmail(persona.email);
-    setPassword("Password123!");
-    setSelectedRole(persona.role);
-    setErrorMsg(null);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,7 +85,7 @@ export default function LoginPage() {
       />
 
       <div className="relative w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-center z-10">
-        {/* Left Side: Brand & Role Presets */}
+        {/* Left Side: Enterprise Platform Overview */}
         <div className="lg:col-span-5 space-y-6">
           <div className="space-y-3">
             <div className="inline-flex items-center gap-2 rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-1 text-xs font-semibold text-sky-400">
@@ -151,56 +96,56 @@ export default function LoginPage() {
               Pharma Field-Force Access & Management
             </h1>
             <p className="text-sm text-slate-400 leading-relaxed">
-              Enterprise role-based control platform for medical representatives, territory managers, and executive administrators.
+              Enterprise role-based management platform for pharmaceutical field forces, territory managers, and executive administrators.
             </p>
           </div>
 
-          {/* Quick Demo Persona Switcher */}
+          {/* Enterprise Capabilities Showcase */}
           <div className="space-y-3 pt-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                Quick Role Selection (Demo)
-              </span>
-              <span className="text-[11px] text-slate-500">Click to autofill</span>
-            </div>
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              Enterprise Security & Architecture
+            </span>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2.5">
-              {DEMO_PERSONAS.map((persona) => {
-                const Icon = persona.icon;
-                const isSelected = email.toLowerCase() === persona.email.toLowerCase();
+            <div className="space-y-2.5">
+              <div className="flex items-start gap-3 p-3 rounded-xl border border-slate-800 bg-slate-900/60">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-purple-500/20 bg-purple-500/10 text-purple-400">
+                  <Database className="h-4 w-4" />
+                </div>
+                <div>
+                  <h2 className="text-xs font-semibold text-white">Multi-Tenant Isolation</h2>
+                  <p className="text-[11px] text-slate-400">Independent company business data, catalogs, and quotas.</p>
+                </div>
+              </div>
 
-                return (
-                  <button
-                    key={persona.role}
-                    type="button"
-                    onClick={() => handleSelectPersona(persona)}
-                    className={`flex items-center gap-3.5 p-3 rounded-xl border text-left transition-all ${
-                      isSelected
-                        ? "border-sky-500 bg-sky-500/15 shadow-md shadow-sky-500/10 ring-1 ring-sky-500/30"
-                        : "border-slate-800 bg-slate-900/60 hover:bg-slate-900 hover:border-slate-700"
-                    }`}
-                  >
-                    <div
-                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${persona.badgeColor}`}
-                    >
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-white truncate">
-                          {persona.title}
-                        </span>
-                        {isSelected && (
-                          <span className="flex h-2 w-2 rounded-full bg-sky-400" />
-                        )}
-                      </div>
-                      <p className="text-[11px] text-slate-400 truncate">
-                        {persona.desc}
-                      </p>
-                    </div>
-                  </button>
-                );
-              })}
+              <div className="flex items-start gap-3 p-3 rounded-xl border border-slate-800 bg-slate-900/60">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-400">
+                  <MapPin className="h-4 w-4" />
+                </div>
+                <div>
+                  <h2 className="text-xs font-semibold text-white">200m PostGIS GPS Geo-Fencing</h2>
+                  <p className="text-[11px] text-slate-400">Verified doctor and chemist field visits with tamper detection.</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-3 rounded-xl border border-slate-800 bg-slate-900/60">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-sky-500/20 bg-sky-500/10 text-sky-400">
+                  <Smartphone className="h-4 w-4" />
+                </div>
+                <div>
+                  <h2 className="text-xs font-semibold text-white">Offline-First Mobile Sync</h2>
+                  <p className="text-[11px] text-slate-400">Field orders and e-Detailing visual aids with automatic conflict resolution.</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-3 rounded-xl border border-slate-800 bg-slate-900/60">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-amber-500/20 bg-amber-500/10 text-amber-400">
+                  <BarChart3 className="h-4 w-4" />
+                </div>
+                <div>
+                  <h2 className="text-xs font-semibold text-white">Commercial Sales Telemetry</h2>
+                  <p className="text-[11px] text-slate-400">Real-time secondary orders, stockist collections, and pacing alerts.</p>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -238,7 +183,7 @@ export default function LoginPage() {
                   </div>
                 </div>
                 <span className="hidden sm:inline-flex items-center rounded-full bg-slate-800 px-2.5 py-1 text-[11px] font-medium text-slate-300">
-                  Secure SSO
+                  Secure Enterprise SSO
                 </span>
               </div>
             </div>
@@ -259,16 +204,16 @@ export default function LoginPage() {
                   Corporate Email
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+                  <Mail className="absolute left-3.5 top-3 h-4 w-4 text-slate-500" />
                   <input
                     id="login-email"
                     type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@novispharma.com"
                     autoComplete="email"
                     required
-                    className="h-10 w-full rounded-xl border border-slate-700 bg-slate-800/80 pl-9 pr-3 text-xs text-white placeholder:text-slate-500 focus:border-sky-500 focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500 transition-all"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@company.com"
+                    className="w-full rounded-xl border border-slate-800 bg-slate-950/80 px-3.5 py-2.5 pl-10 text-xs text-white placeholder-slate-500 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 transition-colors"
                   />
                 </div>
               </div>
@@ -279,28 +224,36 @@ export default function LoginPage() {
                     htmlFor="login-password"
                     className="block text-xs font-semibold text-slate-300"
                   >
-                    Password
+                    Account Password
                   </label>
-                  <span className="text-[11px] text-sky-400 hover:text-sky-300 cursor-pointer">
+                  <a
+                    href="#forgot-password"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      alert("Please contact your Company Administrator or IT support to reset your credentials.");
+                    }}
+                    className="text-[11px] text-sky-400 hover:text-sky-300 transition-colors"
+                  >
                     Forgot password?
-                  </span>
+                  </a>
                 </div>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+                  <Lock className="absolute left-3.5 top-3 h-4 w-4 text-slate-500" />
                   <input
                     id="login-password"
                     type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••••••"
-                    autoComplete="current-password"
-                    required
-                    className="h-10 w-full rounded-xl border border-slate-700 bg-slate-800/80 pl-9 pr-10 text-xs text-white placeholder:text-slate-500 focus:border-sky-500 focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500 transition-all"
+                    className="w-full rounded-xl border border-slate-800 bg-slate-950/80 px-3.5 py-2.5 pl-10 pr-10 text-xs text-white placeholder-slate-500 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 transition-colors"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-200"
+                    className="absolute right-3 top-2.5 p-0.5 text-slate-500 hover:text-slate-300 focus:outline-none"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4" />
@@ -312,26 +265,26 @@ export default function LoginPage() {
               </div>
 
               <div className="flex items-center justify-between pt-1">
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
                   <input
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="rounded border-slate-700 bg-slate-800 text-sky-500 focus:ring-sky-500 h-3.5 w-3.5"
+                    className="h-3.5 w-3.5 rounded border-slate-700 bg-slate-950 text-sky-600 focus:ring-sky-500/20"
                   />
-                  <span className="text-xs text-slate-400">Remember session for 30 days</span>
+                  <span className="text-xs text-slate-400">Remember session</span>
                 </label>
               </div>
 
               <button
                 type="submit"
                 disabled={loginMutation.isPending}
-                className="w-full flex items-center justify-center gap-2 h-11 rounded-xl bg-gradient-to-r from-sky-500 to-emerald-500 hover:from-sky-400 hover:to-emerald-400 text-white font-semibold text-xs tracking-wide shadow-lg shadow-sky-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 px-4 py-3 text-xs font-bold text-white shadow-lg shadow-sky-600/25 hover:from-sky-500 hover:to-indigo-500 focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loginMutation.isPending ? (
                   <>
-                    <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                    <span>Authenticating & Verifying Role...</span>
+                    <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Authenticating Identity...</span>
                   </>
                 ) : (
                   <>
@@ -342,9 +295,10 @@ export default function LoginPage() {
               </button>
             </form>
 
-            <div className="mt-6 pt-5 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500">
-              <span>Protected by Enterprise TLS 1.3</span>
-              <span>Novis Pharma Tenant Gateway</span>
+            <div className="mt-6 pt-5 border-t border-slate-800 text-center">
+              <p className="text-[11px] text-slate-400">
+                Unauthorized access to MByte FieldOps is strictly prohibited. Activity is logged under pharmaceutical audit compliance policies.
+              </p>
             </div>
           </div>
         </div>

@@ -1,6 +1,8 @@
 import { apiClient } from "../lib/api-client";
 import { mockProductPresence } from "../mock";
 import type { ProductPresenceAudit, PresenceQueryParams, PresenceCounts } from "../types";
+import { authService } from "./authService";
+import { isOrgMatch } from "../lib/utils";
 
 const presenceState: ProductPresenceAudit[] = [...mockProductPresence];
 
@@ -38,14 +40,15 @@ export const presenceService = {
       if (params?.pharmacyId && params.pharmacyId !== "ALL") queryParams.customerId = params.pharmacyId;
       if (params?.status && params.status !== "ALL") queryParams.status = params.status;
 
-      const res = await apiClient.get<any[]>("/product-presence", { params: queryParams });
-      if (Array.isArray(res) && res.length > 0) {
-        let list = res.map(mapApiPresenceAudit);
+      const res = await apiClient.get<any>("/product-presence", { params: queryParams });
+      const apiItems = Array.isArray(res) ? res : (Array.isArray(res?.items) ? res.items : null);
+      if (apiItems !== null) {
+        let list = apiItems.map(mapApiPresenceAudit);
 
         if (params?.search) {
           const q = params.search.toLowerCase();
           list = list.filter(
-            (a) =>
+            (a: ProductPresenceAudit) =>
               a.pharmacyName.toLowerCase().includes(q) ||
               a.productName.toLowerCase().includes(q) ||
               (a.mrName && a.mrName.toLowerCase().includes(q))
@@ -58,7 +61,12 @@ export const presenceService = {
       console.warn("Real /product-presence API failed, falling back to mock:", err);
     }
 
+    const currentUser = await authService.getCurrentUser();
+    const effectiveOrgId = (params as any)?.organizationId || (currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined);
     let list = [...presenceState];
+    if (effectiveOrgId) {
+      list = list.filter((a) => isOrgMatch(a.organizationId, effectiveOrgId));
+    }
 
     if (params?.productId && params.productId !== "ALL") {
       list = list.filter((a) => a.productId === params.productId);

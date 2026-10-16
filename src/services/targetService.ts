@@ -1,6 +1,7 @@
 import { apiClient } from "../lib/api-client";
 import { mockTargets, mockMRs, mockTerritories } from "../mock";
 import { authService } from "./authService";
+import { isOrgMatch } from "../lib/utils";
 
 export interface TargetItem {
   id: string;
@@ -86,8 +87,8 @@ export const targetService = {
   }): Promise<TargetItem[]> {
     try {
       const raw = await apiClient.get<any>("/targets", { params: { limit: params?.limit || 100, ...params } });
-      const list = Array.isArray(raw) ? raw : (raw as any)?.data || (raw as any)?.items || [];
-      if (list && list.length > 0) {
+      const list = Array.isArray(raw) ? raw : (raw as any)?.data || (raw as any)?.items || null;
+      if (list !== null) {
         return list.map(mapTargetItem);
       }
     } catch (err) {
@@ -101,7 +102,7 @@ export const targetService = {
     const currentUser = await authService.getCurrentUser();
     const effectiveOrgId = (params as any)?.organizationId || (currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined);
     if (effectiveOrgId) {
-      list = list.filter((t) => t.organizationId === effectiveOrgId);
+      list = list.filter((t) => isOrgMatch(t.organizationId, effectiveOrgId));
     }
 
     if (params?.mrId && params.mrId !== "ALL") list = list.filter((t) => t.mrId === params.mrId);

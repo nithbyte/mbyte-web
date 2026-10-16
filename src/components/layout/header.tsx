@@ -6,15 +6,17 @@ import {
   Bell,
   Search,
   MapPin,
-  Calendar,
   Building,
   ChevronDown,
-  Check,
+  User as UserIcon,
+  Mail,
+  Shield,
+  Briefcase,
+  IdCard,
 } from "lucide-react";
 import { useSidebarStore, useFilterStore } from "@/store";
-import { useTerritories, useCurrentUser, useUserList, useSwitchUser, useLogout, useIsMounted } from "@/hooks";
+import { useTerritories, useCurrentUser, useLogout, useIsMounted } from "@/hooks";
 import { normalizeRole, getRoleLabel, type CanonicalRole } from "@/types";
-import { APP_CONFIG } from "@/lib/constants";
 import { Modal } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useRouter } from "next/navigation";
@@ -27,33 +29,35 @@ export function Header() {
   const { selectedTerritoryId, setSelectedTerritoryId } = useFilterStore();
   const { data: territories } = useTerritories();
   const { data: currentUser } = useCurrentUser();
-  const { data: userList } = useUserList();
-  const switchUserMutation = useSwitchUser();
   const logoutMutation = useLogout();
 
-  const [isUserSwitcherOpen, setIsUserSwitcherOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   const canonicalRole = normalizeRole(currentUser?.role);
   const userName = currentUser?.name || "Field User";
   const userRole = getRoleLabel(canonicalRole);
-  const initials = userName
-    .split(" ")
-    .map((part) => part[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase() || "MB";
+  const initials =
+    userName
+      .split(" ")
+      .map((part) => part[0])
+      .filter(Boolean)
+      .slice(0, 2)
+      .join("")
+      .toUpperCase() || "MB";
 
-  const handleSelectUser = async (userId: string) => {
-    await switchUserMutation.mutateAsync(userId);
-    setIsUserSwitcherOpen(false);
-  };
+  const tenantCompanyName =
+    canonicalRole === "SUPER_ADMIN"
+      ? "Platform Control"
+      : currentUser?.organizationId === "org_apex_002" ||
+        currentUser?.organizationId === "31524081-7b14-4925-a331-e4cd05a62e04"
+      ? "Apex Healthcare"
+      : "Novis Pharma";
 
   const handleLogout = async () => {
     try {
       await logoutMutation.mutateAsync();
     } finally {
-      setIsUserSwitcherOpen(false);
+      setIsProfileModalOpen(false);
       router.push("/login");
     }
   };
@@ -99,7 +103,7 @@ export function Header() {
               className="bg-transparent font-medium text-slate-900 focus:outline-none dark:text-slate-100 cursor-pointer text-xs max-w-[150px] md:max-w-[180px] lg:max-w-[220px] truncate"
             >
               <option value="ALL" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
-                All Territories (All Tamil Nadu)
+                All Authorized Territories
               </option>
               {isMounted &&
                 territories?.map((t) => (
@@ -110,7 +114,7 @@ export function Header() {
             </select>
           </div>
 
-          {/* Date Context Badge - High Contrast, Never Wraps, Perfectly Aligned */}
+          {/* Date Context Badge */}
           <div className="hidden md:inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-100/90 px-3 py-1.5 text-xs text-slate-700 shadow-xs dark:border-slate-700/80 dark:bg-slate-800/95 dark:text-slate-200 shrink-0 whitespace-nowrap">
             <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
             <span className="font-bold text-slate-900 dark:text-slate-100">Oct 2026</span>
@@ -135,7 +139,7 @@ export function Header() {
           {/* Tenant Organization Tag */}
           <div className="hidden lg:flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-800 dark:border-sky-800/80 dark:bg-sky-950/70 dark:text-sky-300 shrink-0">
             <Building className="h-3.5 w-3.5 text-sky-600 dark:text-sky-400" aria-hidden="true" />
-            <span>{APP_CONFIG.organization}</span>
+            <span>{tenantCompanyName}</span>
           </div>
 
           {/* Notification Bell */}
@@ -150,12 +154,12 @@ export function Header() {
             </span>
           </button>
 
-          {/* User Profile Pill & Switcher Trigger */}
+          {/* User Profile Pill */}
           <button
-            onClick={() => setIsUserSwitcherOpen(true)}
-            aria-label="User Profile and Persona Switcher"
+            onClick={() => setIsProfileModalOpen(true)}
+            aria-label="User Profile and Account Details"
             suppressHydrationWarning
-            className="flex items-center gap-2.5 pl-2 border-l border-slate-200/80 dark:border-slate-800 hover:opacity-85 transition-opacity text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 rounded-lg py-1 px-1.5 shrink-0"
+            className="flex items-center gap-2.5 pl-2 border-l border-slate-200/80 dark:border-slate-800 hover:opacity-85 transition-opacity text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 rounded-lg py-1 px-1.5 shrink-0 cursor-pointer"
           >
             <div suppressHydrationWarning className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-sky-600 to-indigo-600 text-xs font-bold text-white shadow-xs shrink-0">
               {initials}
@@ -175,71 +179,83 @@ export function Header() {
         </div>
       </header>
 
-      {/* User Switcher Persona Modal */}
+      {/* Production User Profile & Account Modal */}
       <Modal
-        isOpen={isUserSwitcherOpen}
-        onClose={() => setIsUserSwitcherOpen(false)}
-        title="Active User Persona"
-        description="Switch between field managers and regional administrators to audit role privileges."
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        title="Corporate Account & Profile"
+        description="Authenticated corporate field-force identity and tenant session details."
         maxWidth="md"
       >
         <div className="space-y-4">
-          <div className="rounded-xl border border-sky-100 bg-sky-50/60 p-3 text-xs text-sky-900 dark:border-sky-900/50 dark:bg-sky-950/30 dark:text-sky-200">
-            <span className="font-semibold">Active Session:</span> {userName} ({userRole})
+          {/* User Identity Card */}
+          <div className="flex items-center gap-3.5 p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-sky-600 to-indigo-600 font-bold text-sm text-white shadow-xs">
+              {initials}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                  {userName}
+                </span>
+                <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${getBadgeStyle(canonicalRole)}`}>
+                  {userRole}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                <Mail className="h-3 w-3 shrink-0" />
+                <span className="truncate">{currentUser?.email || "user@pharma.com"}</span>
+              </div>
+            </div>
           </div>
 
-          <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
-            {userList?.map((user) => {
-              const isSelected = user.id === currentUser?.id;
-              const uRole = normalizeRole(user.role);
-              const itemInitials = (user.name || `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email)
-                .split(" ")
-                .map((part) => part[0])
-                .filter(Boolean)
-                .slice(0, 2)
-                .join("")
-                .toUpperCase();
+          {/* Details Table */}
+          <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 dark:divide-slate-800 dark:border-slate-800 text-xs">
+            <div className="flex items-center justify-between px-3.5 py-2.5">
+              <span className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                <Building className="h-3.5 w-3.5" />
+                <span>Pharmaceutical Company:</span>
+              </span>
+              <span className="font-semibold text-slate-900 dark:text-white">{tenantCompanyName}</span>
+            </div>
 
-              return (
-                <button
-                  key={user.id}
-                  onClick={() => handleSelectUser(user.id)}
-                  disabled={switchUserMutation.isPending}
-                  className={`w-full flex items-center justify-between rounded-xl border p-3 text-left transition-all ${
-                    isSelected
-                      ? "border-sky-500 bg-sky-50/70 shadow-xs dark:bg-sky-950/40"
-                      : "border-slate-200 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 font-bold text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                      {itemInitials}
-                    </div>
-                    <div>
-                      <div className="text-xs font-semibold text-slate-900 dark:text-slate-100">
-                        {user.name}
-                      </div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                        {getRoleLabel(uRole)} • {user.email}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${getBadgeStyle(uRole)}`}>
-                      {uRole}
-                    </span>
-                    {isSelected && <Check className="h-4 w-4 text-sky-600" aria-hidden="true" />}
-                  </div>
-                </button>
-              );
-            })}
+            <div className="flex items-center justify-between px-3.5 py-2.5">
+              <span className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                <Shield className="h-3.5 w-3.5" />
+                <span>Tenant Isolation Boundary:</span>
+              </span>
+              <span className="font-mono text-[11px] text-sky-600 dark:text-sky-400">
+                {currentUser?.organizationId || "System Global"}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between px-3.5 py-2.5">
+              <span className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                <Briefcase className="h-3.5 w-3.5" />
+                <span>Designation:</span>
+              </span>
+              <span className="font-medium text-slate-900 dark:text-white">
+                {currentUser?.designation || userRole}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between px-3.5 py-2.5">
+              <span className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                <IdCard className="h-3.5 w-3.5" />
+                <span>Employee Identification:</span>
+              </span>
+              <span className="font-mono font-medium text-slate-900 dark:text-white">
+                {currentUser?.employeeId || "EMP-001"}
+              </span>
+            </div>
           </div>
 
+          {/* Actions */}
           <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
             <button
               type="button"
               onClick={handleLogout}
-              className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-100 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-400 dark:hover:bg-rose-950/70 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-100 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-400 dark:hover:bg-rose-950/70 transition-colors cursor-pointer"
             >
               <LogOut className="h-4 w-4" />
               <span>Sign Out of Portal</span>
@@ -247,8 +263,8 @@ export function Header() {
 
             <button
               type="button"
-              onClick={() => setIsUserSwitcherOpen(false)}
-              className="rounded-xl border border-slate-200 px-3.5 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 cursor-pointer"
+              onClick={() => setIsProfileModalOpen(false)}
+              className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 cursor-pointer"
             >
               Close
             </button>

@@ -11,6 +11,7 @@ import {
   mockTerritories,
 } from "../mock";
 import { authService } from "./authService";
+import { isOrgMatch } from "../lib/utils";
 import type {
   ReportFilterParams,
   VisitReportData,
@@ -129,7 +130,7 @@ export const reportService = {
     const currentUser = await authService.getCurrentUser();
     const effectiveOrgId = (filters as any)?.organizationId || (currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined);
     if (effectiveOrgId) {
-      list = list.filter((v) => v.organizationId === effectiveOrgId);
+      list = list.filter((v) => isOrgMatch(v.organizationId, effectiveOrgId));
     }
 
     if (filters?.date && filters.date !== "ALL") {
@@ -218,7 +219,7 @@ export const reportService = {
       if (filters?.mrId && filters.mrId !== "ALL") queryParams.mrId = filters.mrId;
 
       const raw = await apiClient.get<any>("/reports/mr-performance", { params: queryParams });
-      const apiList = Array.isArray(raw) ? raw : (raw as any)?.data || [];
+      const apiList = Array.isArray(raw) ? raw : (Array.isArray(raw?.items) ? raw.items : ((raw as any)?.data || []));
 
       if (apiList && apiList.length > 0) {
         const items: MRPerformanceReportItem[] = apiList.map((m: any) => ({
@@ -275,7 +276,7 @@ export const reportService = {
     const currentUser = await authService.getCurrentUser();
     const effectiveOrgId = (filters as any)?.organizationId || (currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined);
     if (effectiveOrgId) {
-      filteredMrs = filteredMrs.filter((m: any) => m.organizationId === effectiveOrgId);
+      filteredMrs = filteredMrs.filter((m: any) => isOrgMatch(m.organizationId, effectiveOrgId));
     }
 
     if (filters?.territoryId && filters.territoryId !== "ALL") {
@@ -436,6 +437,11 @@ export const reportService = {
 
     // Fallback to mock
     let list = [...mockProductPresence];
+    const currentUser = await authService.getCurrentUser();
+    const effectiveOrgId = (filters as any)?.organizationId || (currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined);
+    if (effectiveOrgId) {
+      list = list.filter((p: any) => isOrgMatch(p.organizationId, effectiveOrgId));
+    }
 
     if (filters?.productId && filters.productId !== "ALL") {
       list = list.filter((p) => p.productId === filters.productId);
@@ -572,6 +578,11 @@ export const reportService = {
 
     // Fallback to mock
     let list = [...mockOrders];
+    const currentUser = await authService.getCurrentUser();
+    const effectiveOrgId = (filters as any)?.organizationId || (currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined);
+    if (effectiveOrgId) {
+      list = list.filter((o) => isOrgMatch(o.organizationId, effectiveOrgId));
+    }
 
     if (filters?.date && filters.date !== "ALL") {
       list = list.filter((o) => o.orderDate === filters.date);
@@ -719,6 +730,11 @@ export const reportService = {
 
     // Fallback to mock
     let list = [...mockCollections];
+    const currentUser = await authService.getCurrentUser();
+    const effectiveOrgId = (filters as any)?.organizationId || (currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined);
+    if (effectiveOrgId) {
+      list = list.filter((c) => isOrgMatch(c.organizationId, effectiveOrgId));
+    }
 
     if (filters?.date && filters.date !== "ALL") {
       list = list.filter((c) => c.paymentDate === filters.date);
@@ -872,6 +888,11 @@ export const reportService = {
     const rawMrs = mockMRs as unknown as RawMRItem[];
 
     let list = rawTgts.filter((t) => t.month === 10);
+    const currentUser = await authService.getCurrentUser();
+    const effectiveOrgId = (filters as any)?.organizationId || (currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined);
+    if (effectiveOrgId) {
+      list = list.filter((t: any) => isOrgMatch(t.organizationId, effectiveOrgId));
+    }
 
     if (filters?.territoryId && filters.territoryId !== "ALL") {
       list = list.filter((t) => t.territoryId === filters.territoryId);

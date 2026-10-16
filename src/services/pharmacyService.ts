@@ -15,12 +15,14 @@ export interface PharmacyQueryParams {
   organizationId?: string;
 }
 
+import { isOrgMatch } from "../lib/utils";
+
 const pharmaciesState: Pharmacy[] = [...mockPharmacies];
 
 function mapApiPharmacy(p: any): Pharmacy {
   return {
     id: p.id,
-    organizationId: p.organizationId || "org_novis_001",
+    organizationId: p.organizationId || p.organization?.id || "",
     name: p.name,
     contactPerson: p.proprietorName || p.contactPerson || "Chemist In-Charge",
     phone: p.phone || "+91 44 2829 4455",
@@ -46,7 +48,7 @@ export const pharmacyService = {
 
       const res = await apiClient.get<any>("/pharmacies", { params: queryParams });
       const items = Array.isArray(res) ? res : (Array.isArray(res?.items) ? res.items : null);
-      if (items && items.length > 0) {
+      if (items !== null) {
         return items.map(mapApiPharmacy);
       }
     } catch (err) {
@@ -59,7 +61,7 @@ export const pharmacyService = {
     const currentUser = await authService.getCurrentUser();
     const effectiveOrgId = params?.organizationId || (currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined);
     if (effectiveOrgId) {
-      list = list.filter((p) => p.organizationId === effectiveOrgId);
+      list = list.filter((p) => isOrgMatch(p.organizationId, effectiveOrgId));
     }
 
     if (params?.search) {
@@ -97,7 +99,7 @@ export const pharmacyService = {
 
   async createPharmacy(input: PharmacyInput): Promise<Pharmacy> {
     const currentUser = await authService.getCurrentUser();
-    const effectiveOrgId = (input as any).organizationId || currentUser?.organizationId || "org_novis_001";
+    const effectiveOrgId = (input as any).organizationId || currentUser?.organizationId || "";
 
     try {
       const payload: Record<string, any> = {
