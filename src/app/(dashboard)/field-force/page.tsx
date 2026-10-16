@@ -26,6 +26,7 @@ import {
   useOrganizations,
   useUserList,
   useUpdateMRTerritory,
+  useCreateTerritory,
 } from "@/hooks";
 import { formatCurrency } from "@/lib/utils";
 import { normalizeRole, getRoleLabel } from "@/types";
@@ -87,10 +88,27 @@ export default function FieldForcePage() {
   const [territoryAssignSuccess, setTerritoryAssignSuccess] = useState<string | null>(null);
   const [territoryAssignError, setTerritoryAssignError] = useState<string | null>(null);
 
-  const { data: territories } = useTerritories();
-  const { data: managers } = useManagers();
+  // Add Territory Modal state (Company Admin)
+  const createTerritoryMutation = useCreateTerritory();
+  const [isAddTerritoryOpen, setIsAddTerritoryOpen] = useState(false);
+  const [territoryForm, setTerritoryForm] = useState({
+    name: "",
+    code: "",
+    zone: "South",
+    region: "",
+    headquarters: "",
+    area: "",
+    description: "",
+  });
+  const [territoryFormError, setTerritoryFormError] = useState<string | null>(null);
+  const [territoryFormSuccess, setTerritoryFormSuccess] = useState<string | null>(null);
+
+  const companyOrgId = canonicalRole === "SUPER_ADMIN" ? undefined : currentUser?.organizationId || undefined;
+  const { data: territories, refetch: refetchTerritories } = useTerritories(companyOrgId);
+  const { data: managers } = useManagers(companyOrgId);
   const { data: mrList, isLoading: isMRLoading, refetch: refetchMRs } = useMRList({
     search,
+    organizationId: companyOrgId,
     territoryId: canonicalRole === "TERRITORY_MANAGER" && currentUser?.territoryId ? currentUser.territoryId : territoryId,
     managerId,
     status,
@@ -170,6 +188,46 @@ export default function FieldForcePage() {
     }
   };
 
+  const handleOpenAddTerritory = () => {
+    setTerritoryForm({
+      name: "",
+      code: "",
+      zone: "South",
+      region: "",
+      headquarters: "",
+      area: "",
+      description: "",
+    });
+    setTerritoryFormError(null);
+    setTerritoryFormSuccess(null);
+    setIsAddTerritoryOpen(true);
+  };
+
+  const handleCreateTerritorySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTerritoryFormError(null);
+    setTerritoryFormSuccess(null);
+
+    if (!territoryForm.name || !territoryForm.code) {
+      setTerritoryFormError("Territory Name and Code are required.");
+      return;
+    }
+
+    try {
+      await createTerritoryMutation.mutateAsync({
+        ...territoryForm,
+        organizationId: currentUser?.organizationId || "org_novis_001",
+      });
+      setTerritoryFormSuccess(`Territory "${territoryForm.name}" created successfully!`);
+      refetchTerritories();
+      setTimeout(() => {
+        setIsAddTerritoryOpen(false);
+      }, 1100);
+    } catch (err: any) {
+      setTerritoryFormError(err?.message || "Failed to create territory.");
+    }
+  };
+
   const handleResetFilters = () => {
     setSearch("");
     setSelectedOrgId("ALL");
@@ -221,13 +279,31 @@ export default function FieldForcePage() {
         actions={
           (canonicalRole === "SUPER_ADMIN" || canonicalRole === "ADMIN") ? (
             <div className="flex items-center gap-2">
-              {canonicalRole === "SUPER_ADMIN" && (
+              {canonicalRole === "SUPER_ADMIN" ? (
                 <Link href="/companies">
                   <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs cursor-pointer">
                     <Building className="h-3.5 w-3.5" />
                     <span>Manage Companies</span>
                   </Button>
                 </Link>
+              ) : (
+                <>
+                  <Link href="/territories">
+                    <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs cursor-pointer">
+                      <MapPin className="h-3.5 w-3.5 text-sky-600" />
+                      <span>Territories Master</span>
+                    </Button>
+                  </Link>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleOpenAddTerritory}
+                    className="gap-1.5 h-8 text-xs cursor-pointer"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>Add Territory</span>
+                  </Button>
+                </>
               )}
               <Button
                 variant="primary"
@@ -1039,6 +1115,147 @@ export default function FieldForcePage() {
               className="rounded-xl bg-sky-600 px-4 py-2 text-xs font-semibold text-white hover:bg-sky-500 disabled:opacity-50 transition-colors cursor-pointer"
             >
               {updateTerritoryMutation.isPending ? "Assigning..." : "Save Territory Assignment"}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ADD TERRITORY MODAL (Company Admin) */}
+      <Modal
+        isOpen={isAddTerritoryOpen}
+        onClose={() => setIsAddTerritoryOpen(false)}
+        title="Add New Coverage Territory"
+        description="Create an authorized operational sales territory for your company to assign to field representatives."
+        maxWidth="md"
+      >
+        <form onSubmit={handleCreateTerritorySubmit} className="space-y-4">
+          {territoryFormError && (
+            <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-400 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{territoryFormError}</span>
+            </div>
+          )}
+
+          {territoryFormSuccess && (
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              <span>{territoryFormSuccess}</span>
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Territory Name *
+              </label>
+              <input
+                type="text"
+                required
+                value={territoryForm.name}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const autoCode = `TN-${val.slice(0, 3).toUpperCase()}-${Math.floor(10 + Math.random() * 90)}`;
+                  setTerritoryForm((prev) => ({
+                    ...prev,
+                    name: val,
+                    code: prev.code ? prev.code : autoCode,
+                    headquarters: prev.headquarters ? prev.headquarters : val,
+                    region: prev.region ? prev.region : `${val} District`,
+                  }));
+                }}
+                placeholder="e.g. Salem Central"
+                className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 font-semibold"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Territory Code *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={territoryForm.code}
+                  onChange={(e) => setTerritoryForm({ ...territoryForm, code: e.target.value })}
+                  placeholder="e.g. TN-SLM-C"
+                  className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Zone
+                </label>
+                <select
+                  value={territoryForm.zone}
+                  onChange={(e) => setTerritoryForm({ ...territoryForm, zone: e.target.value })}
+                  className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                >
+                  <option value="South">South Zone</option>
+                  <option value="West">West Zone</option>
+                  <option value="Central">Central Zone</option>
+                  <option value="North">North Zone</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Region / District
+                </label>
+                <input
+                  type="text"
+                  value={territoryForm.region}
+                  onChange={(e) => setTerritoryForm({ ...territoryForm, region: e.target.value })}
+                  placeholder="e.g. Salem District"
+                  className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Headquarters / Hub City
+                </label>
+                <input
+                  type="text"
+                  value={territoryForm.headquarters}
+                  onChange={(e) => setTerritoryForm({ ...territoryForm, headquarters: e.target.value })}
+                  placeholder="e.g. Salem"
+                  className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Area / Key Prescriber Cluster
+              </label>
+              <input
+                type="text"
+                value={territoryForm.area}
+                onChange={(e) => setTerritoryForm({ ...territoryForm, area: e.target.value })}
+                placeholder="e.g. Fort - Fairlands - Alagapuram"
+                className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setIsAddTerritoryOpen(false)}
+              className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={createTerritoryMutation.isPending}
+              className="rounded-xl bg-sky-600 px-4 py-2 text-xs font-semibold text-white hover:bg-sky-500 disabled:opacity-50 transition-colors cursor-pointer"
+            >
+              {createTerritoryMutation.isPending ? "Creating Territory..." : "Save Territory"}
             </button>
           </div>
         </form>

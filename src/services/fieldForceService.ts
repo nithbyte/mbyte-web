@@ -202,10 +202,14 @@ export const fieldForceService = {
         params: {
           territoryId: filters?.territoryId !== "ALL" ? filters?.territoryId : undefined,
           search: filters?.search,
+          organizationId: filters?.organizationId !== "ALL" ? filters?.organizationId : undefined,
           limit: 100,
         },
       });
-      const list = Array.isArray(raw) ? raw : (raw as any)?.data || [];
+      let list = Array.isArray(raw) ? raw : (raw as any)?.data || [];
+      if (filters?.organizationId && filters.organizationId !== "ALL") {
+        list = list.filter((mr: any) => !mr.organizationId || mr.organizationId === filters.organizationId);
+      }
       if (list && list.length > 0) {
         const [rawTargets, visits, orders, collections] = await Promise.all([
           apiClient.get<any>("/targets", { params: { limit: 100 } }).catch(() => []),
@@ -330,7 +334,12 @@ export const fieldForceService = {
     const rawVisits = mockVisits as unknown as RawVisitItem[];
     const rawTargets = mockTargets as unknown as RawTargetItem[];
 
-    let list: MRListItem[] = mockMRs.map((mr) => {
+    let sourceMRs = [...mockMRs];
+    if (filters?.organizationId && filters.organizationId !== "ALL") {
+      sourceMRs = sourceMRs.filter((m) => !m.organizationId || m.organizationId === filters.organizationId);
+    }
+
+    let list: MRListItem[] = sourceMRs.map((mr) => {
       const territory = mockTerritories.find((t) => t.id === mr.territoryId);
       const territoryName = territory?.name || mr.territoryId;
 
@@ -629,9 +638,14 @@ export const fieldForceService = {
     });
   },
 
-  async getManagers(): Promise<Array<{ id: string; name: string }>> {
+  async getManagers(organizationId?: string): Promise<Array<{ id: string; name: string }>> {
     try {
-      const raw = await apiClient.get<any>("/users", { params: { role: "MANAGER" } });
+      const raw = await apiClient.get<any>("/users", {
+        params: {
+          role: "MANAGER",
+          organizationId: organizationId !== "ALL" ? organizationId : undefined,
+        },
+      });
       const list = Array.isArray(raw) ? raw : (raw as any)?.data || [];
       if (list && list.length > 0) {
         return list.map((u: any) => ({
@@ -643,13 +657,16 @@ export const fieldForceService = {
       // Fallback
     }
 
-    const managers = mockUsers
-      .filter((u) => u.role === "MANAGER" || u.role === "COMPANY_ADMIN")
-      .map((u) => ({
+    let managers = mockUsers.filter((u) => u.role === "MANAGER" || u.role === "COMPANY_ADMIN");
+    if (organizationId && organizationId !== "ALL") {
+      managers = managers.filter((u) => !u.organizationId || u.organizationId === organizationId);
+    }
+    return Promise.resolve(
+      managers.map((u) => ({
         id: u.id,
         name: `${u.firstName} ${u.lastName}`,
-      }));
-    return Promise.resolve(managers);
+      }))
+    );
   },
 
   async getMRById(id: string): Promise<User | null> {

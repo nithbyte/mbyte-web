@@ -24,10 +24,10 @@ export function useMRDetails(id: string) {
   });
 }
 
-export function useManagers() {
+export function useManagers(organizationId?: string) {
   return useQuery({
-    queryKey: ["managers"],
-    queryFn: () => fieldForceService.getManagers(),
+    queryKey: ["managers", organizationId || "ALL"],
+    queryFn: () => fieldForceService.getManagers(organizationId),
   });
 }
 

@@ -30,11 +30,26 @@ export function getRoleLabel(role?: string | null): string {
 
 export interface Territory {
   id: string;
+  organizationId?: string;
   name: string;
   code: string;
   region: string;
+  zone?: string;
+  headquarters?: string;
+  area?: string;
   state: string;
   activeMRsCount?: number;
+}
+
+export interface CreateTerritoryInput {
+  name: string;
+  code: string;
+  region?: string;
+  zone?: string;
+  headquarters?: string;
+  area?: string;
+  description?: string;
+  organizationId?: string;
 }
 
 export interface User {
@@ -147,6 +162,7 @@ export interface MRListFilterParams {
   search?: string;
   territoryId?: string;
   managerId?: string;
+  organizationId?: string;
   status?: string;
   performance?: "ALL" | "ON_TRACK" | "BELOW_TARGET" | "AHEAD";
 }

@@ -104,6 +104,11 @@ function getNavSections(role: CanonicalRole): NavSection[] {
               href: "/field-force",
               icon: Users,
             },
+            {
+              title: "Territories & Coverage",
+              href: "/territories",
+              icon: MapPin,
+            },
           ],
         },
         {
