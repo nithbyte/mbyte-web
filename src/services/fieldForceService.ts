@@ -749,5 +749,23 @@ export const fieldForceService = {
       return newMockUser;
     }
   },
+
+  async updateMRTerritory(mrId: string, territoryId: string): Promise<any> {
+    try {
+      const res = await apiClient.put<any>(`/mrs/${mrId}`, { territoryId });
+      return res;
+    } catch (err: any) {
+      console.warn("Backend MR territory update failed, updating mock data:", err);
+      const targetMockMR = mockMRs.find((m) => m.id === mrId);
+      if (targetMockMR) {
+        targetMockMR.territoryId = territoryId;
+      }
+      const targetUser = mockUsers.find((u) => u.id === mrId);
+      if (targetUser) {
+        targetUser.territoryId = territoryId;
+      }
+      return { success: true };
+    }
+  },
 };
 

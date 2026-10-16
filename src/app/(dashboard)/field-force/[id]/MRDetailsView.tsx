@@ -15,8 +15,9 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
-import { useMRDetails } from "@/hooks";
+import { useMRDetails, useCurrentUser } from "@/hooks";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { normalizeRole } from "@/types";
 import {
   ArrowLeft,
   CalendarCheck,
@@ -33,14 +34,59 @@ import {
   UserCheck,
   TrendingUp,
   TrendingDown,
+  ShieldAlert,
 } from "lucide-react";
 
 export function MRDetailsView({ id }: { id: string }) {
+  const { data: currentUser } = useCurrentUser();
+  const canonicalRole = normalizeRole(currentUser?.role);
   const { data, isLoading } = useMRDetails(id);
 
   const [activeTab, setActiveTab] = useState<
     "VISITS" | "ORDERS" | "COLLECTIONS" | "TARGET" | "PRODUCTS"
   >("VISITS");
+
+  if (canonicalRole === "SUPER_ADMIN") {
+    return (
+      <div className="space-y-6">
+        <div>
+          <Link
+            href="/field-force"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 mb-2 transition-colors"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span>Back to Personnel Directory</span>
+          </Link>
+        </div>
+
+        <div className="rounded-2xl border border-amber-200/80 bg-amber-50/50 p-8 text-center dark:border-amber-900/40 dark:bg-amber-950/20 max-w-2xl mx-auto my-12">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400 mb-4">
+            <ShieldAlert className="h-7 w-7" />
+          </div>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">
+            Personnel Operational Details Protected
+          </h2>
+          <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed max-w-lg mx-auto mb-6">
+            Under tenant privacy governance, Super Administrators can view who all are in the company roster, but cannot view detailed operational call logs, doctor visit notes, sales orders, quota attainment, or field GPS tracking. This operational data is strictly governed by the Company Administrator.
+          </p>
+          <div className="flex justify-center gap-3">
+            <Link
+              href="/field-force"
+              className="inline-flex items-center justify-center rounded-xl bg-sky-600 px-4 py-2 text-xs font-semibold text-white hover:bg-sky-500 transition-colors"
+            >
+              Return to Personnel Directory
+            </Link>
+            <Link
+              href="/companies"
+              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 transition-colors"
+            >
+              Manage Companies
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading || !data) {
     return (
