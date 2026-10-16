@@ -104,12 +104,32 @@ export const authService = {
    * Switches the active persona session.
    */
   async switchUser(userId: string): Promise<User> {
-    const targetUser =
+    let targetUser =
       cachedUsers.find((u) => u.id === userId) ||
       mockUsers.find((u) => u.id === userId);
+
+    if (!targetUser) {
+      try {
+        const remoteUser = await apiClient.get<any>(`/users/${userId}`);
+        if (remoteUser && remoteUser.id) {
+          targetUser = formatUser(remoteUser);
+          cachedUsers.push(targetUser);
+        }
+      } catch {
+        // Fallback: try refreshing user list from backend
+        try {
+          const all = await this.getAllUsers();
+          targetUser = all.find((u) => u.id === userId);
+        } catch {
+          // ignore
+        }
+      }
+    }
+
     if (!targetUser) {
       throw new Error(`User with ID ${userId} not found.`);
     }
+
     activeUserId = userId;
     return Promise.resolve(formatUser(targetUser));
   },

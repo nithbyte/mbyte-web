@@ -421,7 +421,7 @@ export function Sidebar() {
           {navSections.map((section) => (
             <div key={section.title} className="space-y-1">
               {!isCollapsed && (
-                <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                <p suppressHydrationWarning className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                   {section.title}
                 </p>
               )}

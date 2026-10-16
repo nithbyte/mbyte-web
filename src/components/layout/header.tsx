@@ -153,7 +153,8 @@ export function Header() {
           {/* User Profile Pill & Switcher Trigger */}
           <button
             onClick={() => setIsUserSwitcherOpen(true)}
-            aria-label={`Current user: ${userName}. Click to switch persona`}
+            aria-label="User Profile and Persona Switcher"
+            suppressHydrationWarning
             className="flex items-center gap-2.5 pl-2 border-l border-slate-200/80 dark:border-slate-800 hover:opacity-85 transition-opacity text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 rounded-lg py-1 px-1.5 shrink-0"
           >
             <div suppressHydrationWarning className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-sky-600 to-indigo-600 text-xs font-bold text-white shadow-xs shrink-0">
