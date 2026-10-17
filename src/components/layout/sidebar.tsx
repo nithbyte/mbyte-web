@@ -30,6 +30,8 @@ import { useSidebarStore } from "@/store";
 import { useCurrentUser, useLogout } from "@/hooks";
 import { normalizeRole, getRoleLabel, type CanonicalRole } from "@/types";
 import { APP_CONFIG } from "@/lib/constants";
+import { MByteLogo } from "@/components/ui/mbyte-logo";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 interface NavItem {
   title: string;
@@ -354,16 +356,21 @@ export function Sidebar() {
             href={canonicalRole === "SUPER_ADMIN" ? "/companies" : canonicalRole === "MR" ? "/visits" : "/"}
             className="flex items-center gap-3 overflow-hidden transition-opacity hover:opacity-90"
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-sky-600 to-cyan-500 shadow-md shadow-sky-500/20">
-              <Shield className="h-5 w-5 text-white" />
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl overflow-hidden shadow-xs">
+              <MByteLogo variant="icon" width={38} height={38} />
             </div>
 
             {!isCollapsed && (
               <div className="flex flex-col truncate">
-                <span className="text-sm font-bold tracking-tight text-slate-900 dark:text-slate-100">
-                  {APP_CONFIG.name}
-                </span>
-                <span className="text-[11px] font-medium text-sky-600 dark:text-sky-400 truncate">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm font-extrabold tracking-tight text-slate-900 dark:text-white">
+                    M<span className="text-blue-600 dark:text-cyan-400">Byte</span>
+                  </span>
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-cyan-950/60 dark:text-cyan-300 border border-blue-200 dark:border-cyan-800/80">
+                    FieldOps
+                  </span>
+                </div>
+                <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">
                   {canonicalRole === "SUPER_ADMIN"
                     ? "Platform Control"
                     : currentUser?.organizationId === "org_apex_002" ||
@@ -470,6 +477,17 @@ export function Sidebar() {
             </div>
           </div>
         )}
+
+        {/* Theme Mode Toggle */}
+        <div className="mb-1">
+          <ThemeToggle
+            showLabel={!isCollapsed}
+            className={cn(
+              "w-full text-xs font-semibold py-2 px-3 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 rounded-lg transition-colors",
+              isCollapsed ? "justify-center px-0" : "justify-start gap-2.5"
+            )}
+          />
+        </div>
 
         {/* Sign Out Button */}
         <button

@@ -19,6 +19,7 @@ import { useTerritories, useCurrentUser, useLogout, useIsMounted } from "@/hooks
 import { normalizeRole, getRoleLabel, type CanonicalRole } from "@/types";
 import { Modal } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 
@@ -149,6 +150,9 @@ export function Header() {
             <Building className="h-3.5 w-3.5 text-sky-600 dark:text-sky-400" aria-hidden="true" />
             <span>{tenantCompanyName}</span>
           </div>
+
+          {/* Light / Dark Theme Mode Toggle */}
+          <ThemeToggle />
 
           {/* Notification Bell */}
           <button

@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 import { useLogin } from "@/hooks";
 import { normalizeRole } from "@/types";
+import { MByteLogo } from "@/components/ui/mbyte-logo";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -70,6 +72,11 @@ export default function LoginPage() {
 
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-slate-950 text-slate-100 overflow-hidden px-4 py-8 sm:px-6 lg:px-8">
+      {/* Top right Theme Toggle */}
+      <div className="absolute top-4 right-4 z-20">
+        <ThemeToggle className="bg-slate-900/60 border border-slate-800 text-slate-300 hover:bg-slate-800" />
+      </div>
+
       {/* Background glowing gradients */}
       <div className="absolute top-[-20%] left-[-10%] h-[500px] w-[500px] rounded-full bg-sky-600/20 blur-[130px] pointer-events-none" />
       <div className="absolute bottom-[-15%] right-[-10%] h-[600px] w-[600px] rounded-full bg-emerald-600/15 blur-[150px] pointer-events-none" />
@@ -87,11 +94,8 @@ export default function LoginPage() {
       <div className="relative w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-center z-10">
         {/* Left Side: Enterprise Platform Overview */}
         <div className="lg:col-span-5 space-y-6">
-          <div className="space-y-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-1 text-xs font-semibold text-sky-400">
-              <Sparkles className="h-3.5 w-3.5" />
-              <span>MByte FieldOps Platform v2.4</span>
-            </div>
+          <div className="space-y-4">
+            <MByteLogo variant="full" theme="dark" width={320} height={133} priority />
             <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
               Pharma Field-Force Access & Management
             </h1>
@@ -171,9 +175,9 @@ export default function LoginPage() {
           <div className="relative rounded-2xl border border-slate-800 bg-slate-900/90 p-6 sm:p-8 backdrop-blur-xl shadow-2xl shadow-black/60">
             <div className="mb-6">
               <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2.5">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-sky-600 to-emerald-500 text-white shadow-md shadow-sky-500/20">
-                    <Shield className="h-5 w-5" />
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl overflow-hidden shadow-md shadow-blue-500/20">
+                    <MByteLogo variant="icon" theme="dark" width={44} height={44} />
                   </div>
                   <div>
                     <h2 className="text-lg font-bold text-white">Sign In to MByte</h2>

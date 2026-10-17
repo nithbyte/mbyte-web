@@ -1,48 +1,82 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #f8fafc;
-  --foreground: #0f172a;
+  --foreground: #091124;
   --card: #ffffff;
-  --card-foreground: #0f172a;
+  --card-foreground: #091124;
   --popover: #ffffff;
-  --popover-foreground: #0f172a;
-  --primary: #0284c7;
+  --popover-foreground: #091124;
+  --primary: #0052ff;
   --primary-foreground: #ffffff;
   --secondary: #f1f5f9;
-  --secondary-foreground: #0f172a;
+  --secondary-foreground: #091124;
   --muted: #f1f5f9;
   --muted-foreground: #64748b;
-  --accent: #f8fafc;
-  --accent-foreground: #0f172a;
+  --accent: #eff6ff;
+  --accent-foreground: #0052ff;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
   --border: #e2e8f0;
   --input: #e2e8f0;
-  --ring: #0284c7;
+  --ring: #0052ff;
+
+  /* Official MByte Brand Tokens */
+  --mbyte-navy: #011126;
+  --mbyte-blue: #0052ff;
+  --mbyte-azure: #0a66c2;
+  --mbyte-cyan: #00dfd8;
+  --mbyte-electric: #00f2fe;
+  --mbyte-mint: #00e676;
+}
+
+.dark,
+:root[class~="dark"],
+[data-theme="dark"] {
+  --background: #011126;
+  --foreground: #f8fafc;
+  --card: #071936;
+  --card-foreground: #f8fafc;
+  --popover: #071936;
+  --popover-foreground: #f8fafc;
+  --primary: #00dfd8;
+  --primary-foreground: #011126;
+  --secondary: #0b2247;
+  --secondary-foreground: #f8fafc;
+  --muted: #0b2247;
+  --muted-foreground: #94a3b8;
+  --accent: #0f2b58;
+  --accent-foreground: #00dfd8;
+  --destructive: #7f1d1d;
+  --destructive-foreground: #f8fafc;
+  --border: #123261;
+  --input: #123261;
+  --ring: #00dfd8;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #090d16;
+  :root:not(.light) {
+    --background: #011126;
     --foreground: #f8fafc;
-    --card: #0f172a;
+    --card: #071936;
     --card-foreground: #f8fafc;
-    --popover: #0f172a;
+    --popover: #071936;
     --popover-foreground: #f8fafc;
-    --primary: #38bdf8;
-    --primary-foreground: #0f172a;
-    --secondary: #1e293b;
+    --primary: #00dfd8;
+    --primary-foreground: #011126;
+    --secondary: #0b2247;
     --secondary-foreground: #f8fafc;
-    --muted: #1e293b;
+    --muted: #0b2247;
     --muted-foreground: #94a3b8;
-    --accent: #1e293b;
-    --accent-foreground: #f8fafc;
+    --accent: #0f2b58;
+    --accent-foreground: #00dfd8;
     --destructive: #7f1d1d;
     --destructive-foreground: #f8fafc;
-    --border: #1e293b;
-    --input: #1e293b;
-    --ring: #38bdf8;
+    --border: #123261;
+    --input: #123261;
+    --ring: #00dfd8;
   }
 }
 
