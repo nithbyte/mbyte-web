@@ -395,6 +395,70 @@ export const productService = {
     return Promise.resolve(newProd);
   },
 
+  async updateProduct(id: string, input: Partial<import('../types').ProductInput>): Promise<Product> {
+    try {
+      const payload: Record<string, any> = {};
+      if (input.name !== undefined) payload.brandName = input.name.trim();
+      if (input.genericName !== undefined) payload.genericName = input.genericName.trim();
+      if (input.sku !== undefined) payload.sku = input.sku.trim();
+      if (input.categoryId !== undefined) payload.categoryId = input.categoryId;
+      if (input.dosageForm !== undefined) payload.dosageForm = input.dosageForm.trim();
+      if (input.packSize !== undefined) payload.packSize = input.packSize.trim();
+      if (input.mrp !== undefined) payload.mrp = Number(input.mrp);
+      if (input.ptr !== undefined) payload.ptr = Number(input.ptr);
+      if (input.pts !== undefined) payload.pts = Number(input.pts);
+      if (input.gstPercent !== undefined) payload.gstRate = Number(input.gstPercent);
+      if (input.isActive !== undefined) payload.isActive = Boolean(input.isActive);
+      if (input.imageUrl !== undefined) payload.imageUrl = input.imageUrl;
+
+      const res = await apiClient.put<any>(`/products/${id}`, payload);
+      if (res && res.id) {
+        const updated = mapApiProduct(res);
+        const idx = productsState.findIndex((p) => p.id === id);
+        if (idx !== -1) {
+          productsState[idx] = updated;
+        }
+        return updated;
+      }
+    } catch (err) {
+      console.warn('Real PUT /products/:id failed, using mock:', err);
+    }
+
+    // Mock fallback: update in-memory state
+    const idx = productsState.findIndex((p) => p.id === id);
+    const existing = idx !== -1 ? productsState[idx] : null;
+    const updated: Product = {
+      id,
+      organizationId: existing?.organizationId || '',
+      name: input.name !== undefined ? input.name : (existing?.name || 'Product'),
+      genericName: input.genericName !== undefined ? input.genericName : (existing?.genericName || ''),
+      sku: input.sku !== undefined ? input.sku : (existing?.sku || 'SKU'),
+      categoryId: input.categoryId !== undefined ? input.categoryId : (existing?.categoryId || ''),
+      categoryName: input.categoryId
+        ? (mockProductCategories.find((c) => c.id === input.categoryId)?.name || existing?.categoryName || 'General')
+        : (existing?.categoryName || 'General'),
+      dosageForm: input.dosageForm !== undefined ? input.dosageForm : (existing?.dosageForm || 'Tablet'),
+      strength: input.strength !== undefined ? input.strength : (existing?.strength || '500mg'),
+      packSize: input.packSize !== undefined ? input.packSize : (existing?.packSize || '10x10'),
+      mrp: input.mrp !== undefined ? Number(input.mrp) : (existing?.mrp || 0),
+      ptr: input.ptr !== undefined ? Number(input.ptr) : (existing?.ptr || 0),
+      pts: input.pts !== undefined ? Number(input.pts) : (existing?.pts || 0),
+      gstPercent: input.gstPercent !== undefined ? Number(input.gstPercent) : (existing?.gstPercent || 12),
+      description: input.description !== undefined ? input.description : existing?.description,
+      imageUrl: input.imageUrl !== undefined ? input.imageUrl : existing?.imageUrl,
+      isActive: input.isActive !== undefined ? Boolean(input.isActive) : (existing?.isActive ?? true),
+      visualAids: existing?.visualAids || [],
+      visualAidsCount: existing?.visualAidsCount || 0,
+      presenceSummary: existing?.presenceSummary || { totalAudits: 0, availableCount: 0, lowStockCount: 0, outOfStockCount: 0, unknownCount: 0, availabilityRate: 0, recentAudits: [] },
+    };
+    if (idx !== -1) {
+      productsState[idx] = updated;
+    } else {
+      productsState.unshift(updated);
+    }
+    return Promise.resolve(updated);
+  },
+
   async createVisualAid(input: {
     productId: string;
     title: string;

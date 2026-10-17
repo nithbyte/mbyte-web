@@ -24,6 +24,7 @@ import {
   useProductCategories,
   useVisualAids,
   useCreateProduct,
+  useUpdateProduct,
   useCreateVisualAid,
 } from "@/hooks";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -47,6 +48,7 @@ import {
   Plus,
   Upload,
   AlertCircle,
+  Pencil,
 } from "lucide-react";
 
 export default function ProductsPage() {
@@ -65,10 +67,12 @@ export default function ProductsPage() {
 
   // Mutations
   const createProductMutation = useCreateProduct();
+  const updateProductMutation = useUpdateProduct();
   const createVisualAidMutation = useCreateVisualAid();
 
   // Modals state
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [visualAidsModalProduct, setVisualAidsModalProduct] = useState<Product | null>(null);
   const [presenceModalProduct, setPresenceModalProduct] = useState<Product | null>(null);
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
@@ -82,6 +86,69 @@ export default function ProductsPage() {
   };
   const [productForm, setProductForm] = useState<ProductInput>(initialProductForm);
   const [productFormErrors, setProductFormErrors] = useState<Record<string, string>>({});
+
+  // Edit Product Form state
+  const [editProductForm, setEditProductForm] = useState<ProductInput>(initialProductForm);
+  const [editProductFormErrors, setEditProductFormErrors] = useState<Record<string, string>>({});
+
+  const handleOpenEditProduct = (p: Product) => {
+    setEditingProduct(p);
+    setEditProductForm({
+      name: p.name || "",
+      sku: p.sku || "",
+      categoryId: p.categoryId || (categories?.[0]?.id || ""),
+      genericName: p.genericName || "",
+      description: p.description || "",
+      dosageForm: p.dosageForm || "Tablet",
+      strength: p.strength || "",
+      packSize: p.packSize || "10x10",
+      mrp: p.mrp || 0,
+      ptr: p.ptr || 0,
+      pts: p.pts || 0,
+      gstPercent: p.gstPercent || p.gstRate || 12,
+      imageUrl: p.imageUrl || "",
+      isActive: p.isActive ?? true,
+    });
+    setEditProductFormErrors({});
+  };
+
+  const validateEditProductForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    if (!editProductForm.name.trim() || editProductForm.name.trim().length < 2)
+      errors.name = "Brand name must be at least 2 characters.";
+    if (!editProductForm.genericName.trim())
+      errors.genericName = "Generic (molecule) name is required.";
+    if (!editProductForm.sku.trim())
+      errors.sku = "SKU code is required.";
+    if (!editProductForm.categoryId)
+      errors.categoryId = "Please select a therapeutic category.";
+    if (!editProductForm.dosageForm.trim())
+      errors.dosageForm = "Dosage form is required (e.g. Tablet, Syrup).";
+    if (!editProductForm.mrp || editProductForm.mrp <= 0)
+      errors.mrp = "MRP must be greater than 0.";
+    if (!editProductForm.ptr || editProductForm.ptr <= 0)
+      errors.ptr = "PTR must be greater than 0.";
+    if (!editProductForm.pts || editProductForm.pts <= 0)
+      errors.pts = "PTS must be greater than 0.";
+    setEditProductFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSaveEditProduct = async () => {
+    if (!editingProduct) return;
+    if (!validateEditProductForm()) return;
+    try {
+      await updateProductMutation.mutateAsync({
+        id: editingProduct.id,
+        input: editProductForm,
+      });
+      setEditingProduct(null);
+      setEditProductFormErrors({});
+    } catch (err: any) {
+      console.error('Failed to update product:', err);
+      setEditProductFormErrors({ submit: err?.message || 'Failed to update product formulation.' });
+    }
+  };
 
   // Upload Visual Aid Form state
   const initialVAForm = {
@@ -541,6 +608,16 @@ export default function ProductsPage() {
                             <Button
                               variant="outline"
                               size="sm"
+                              className="h-8 px-2 text-xs text-sky-700 hover:text-sky-800 border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-950/30 hover:bg-sky-100"
+                              onClick={() => handleOpenEditProduct(p)}
+                              title="Edit Formulation & Commercial Pricing"
+                            >
+                              <Pencil className="h-3.5 w-3.5 mr-1" />
+                              Edit
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
                               className="h-8 px-2 text-xs text-amber-700 hover:text-amber-800 border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100"
                               onClick={() => setUploadVAProduct(p)}
                               title="Upload Visual Aid for this product"
@@ -753,6 +830,19 @@ export default function ProductsPage() {
 
             {/* Quick action footer */}
             <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-sky-700 hover:text-sky-800 border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-950/30"
+                onClick={() => {
+                  const prod = selectedProduct;
+                  setSelectedProduct(null);
+                  handleOpenEditProduct(prod);
+                }}
+              >
+                <Pencil className="h-3.5 w-3.5 mr-1" />
+                Edit Formulation
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -1184,6 +1274,222 @@ export default function ProductsPage() {
               id="btn-save-product"
             >
               {createProductMutation.isPending ? "Saving…" : "Save Product to Catalog"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* MODAL 4B: EDIT EXISTING PRODUCT */}
+      <Modal
+        isOpen={Boolean(editingProduct)}
+        onClose={() => { setEditingProduct(null); setEditProductFormErrors({}); }}
+        title={`Edit Product: ${editingProduct?.name || ""}`}
+        description="Update brand details, molecule composition, trade pricing, and market status for this formulation."
+      >
+        <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
+          {/* Section: Identity */}
+          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-3">
+            <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 uppercase tracking-wider">
+              <Package className="h-3.5 w-3.5 text-sky-600" />
+              Product Identity
+            </h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Brand Name *</label>
+                <Input
+                  id="edit-product-brand-name"
+                  placeholder="e.g. Noviscard 5mg"
+                  value={editProductForm.name}
+                  onChange={(e) => setEditProductForm(f => ({ ...f, name: e.target.value }))}
+                  className={`h-9 text-xs ${editProductFormErrors.name ? "border-rose-400" : ""}`}
+                />
+                {editProductFormErrors.name && <p className="text-[11px] text-rose-500 mt-0.5 flex items-center gap-1"><AlertCircle className="h-3 w-3" />{editProductFormErrors.name}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Generic Name / Molecule *</label>
+                <Input
+                  id="edit-product-generic-name"
+                  placeholder="e.g. Amlodipine"
+                  value={editProductForm.genericName}
+                  onChange={(e) => setEditProductForm(f => ({ ...f, genericName: e.target.value }))}
+                  className={`h-9 text-xs ${editProductFormErrors.genericName ? "border-rose-400" : ""}`}
+                />
+                {editProductFormErrors.genericName && <p className="text-[11px] text-rose-500 mt-0.5 flex items-center gap-1"><AlertCircle className="h-3 w-3" />{editProductFormErrors.genericName}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">SKU Code *</label>
+                <Input
+                  id="edit-product-sku"
+                  placeholder="e.g. NVC-5MG-10X10"
+                  value={editProductForm.sku}
+                  onChange={(e) => setEditProductForm(f => ({ ...f, sku: e.target.value.toUpperCase() }))}
+                  className={`h-9 text-xs font-mono ${editProductFormErrors.sku ? "border-rose-400" : ""}`}
+                />
+                {editProductFormErrors.sku && <p className="text-[11px] text-rose-500 mt-0.5 flex items-center gap-1"><AlertCircle className="h-3 w-3" />{editProductFormErrors.sku}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Therapeutic Category *</label>
+                <select
+                  id="edit-product-category"
+                  value={editProductForm.categoryId}
+                  onChange={(e) => setEditProductForm(f => ({ ...f, categoryId: e.target.value }))}
+                  className={`w-full h-9 px-3 rounded-md border bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500 ${editProductFormErrors.categoryId ? "border-rose-400" : "border-slate-200 dark:border-slate-800"}`}
+                >
+                  <option value="">Select Category…</option>
+                  {categories?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+                {editProductFormErrors.categoryId && <p className="text-[11px] text-rose-500 mt-0.5 flex items-center gap-1"><AlertCircle className="h-3 w-3" />{editProductFormErrors.categoryId}</p>}
+              </div>
+            </div>
+          </div>
+
+          {/* Section: Formulation Details */}
+          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-3">
+            <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 uppercase tracking-wider">
+              <FileText className="h-3.5 w-3.5 text-indigo-600" />
+              Formulation Details
+            </h4>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Dosage Form *</label>
+                <select
+                  id="edit-product-dosage-form"
+                  value={editProductForm.dosageForm}
+                  onChange={(e) => setEditProductForm(f => ({ ...f, dosageForm: e.target.value }))}
+                  className="w-full h-9 px-3 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                >
+                  {["Tablet", "Capsule", "Syrup", "Injection", "Cream", "Ointment", "Drops", "Inhaler", "Powder", "Gel", "Suppository"].map(f => <option key={f} value={f}>{f}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Strength</label>
+                <Input
+                  id="edit-product-strength"
+                  placeholder="e.g. 500mg"
+                  value={editProductForm.strength}
+                  onChange={(e) => setEditProductForm(f => ({ ...f, strength: e.target.value }))}
+                  className="h-9 text-xs"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Pack Size</label>
+                <Input
+                  id="edit-product-pack-size"
+                  placeholder="e.g. 10x10"
+                  value={editProductForm.packSize}
+                  onChange={(e) => setEditProductForm(f => ({ ...f, packSize: e.target.value }))}
+                  className="h-9 text-xs"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Description / Clinical Profile</label>
+              <textarea
+                id="edit-product-description"
+                placeholder="Brief clinical description, indications, and usage..."
+                value={editProductForm.description || ""}
+                onChange={(e) => setEditProductForm(f => ({ ...f, description: e.target.value }))}
+                rows={2}
+                className="w-full px-3 py-2 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500 resize-none"
+              />
+            </div>
+          </div>
+
+          {/* Section: Pricing */}
+          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-3">
+            <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 uppercase tracking-wider">
+              <Percent className="h-3.5 w-3.5 text-emerald-600" />
+              Commercial Pricing Architecture
+            </h4>
+            <div className="grid grid-cols-4 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">MRP (₹) *</label>
+                <Input
+                  id="edit-product-mrp"
+                  type="number" min="0" step="0.01"
+                  placeholder="0.00"
+                  value={editProductForm.mrp || ""}
+                  onChange={(e) => setEditProductForm(f => ({ ...f, mrp: parseFloat(e.target.value) || 0 }))}
+                  className={`h-9 text-xs font-mono ${editProductFormErrors.mrp ? "border-rose-400" : ""}`}
+                />
+                {editProductFormErrors.mrp && <p className="text-[11px] text-rose-500 mt-0.5">{editProductFormErrors.mrp}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-sky-700 dark:text-sky-400 mb-1">PTR (₹) *</label>
+                <Input
+                  id="edit-product-ptr"
+                  type="number" min="0" step="0.01"
+                  placeholder="0.00"
+                  value={editProductForm.ptr || ""}
+                  onChange={(e) => setEditProductForm(f => ({ ...f, ptr: parseFloat(e.target.value) || 0 }))}
+                  className={`h-9 text-xs font-mono ${editProductFormErrors.ptr ? "border-rose-400" : ""}`}
+                />
+                {editProductFormErrors.ptr && <p className="text-[11px] text-rose-500 mt-0.5">{editProductFormErrors.ptr}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-indigo-700 dark:text-indigo-400 mb-1">PTS (₹) *</label>
+                <Input
+                  id="edit-product-pts"
+                  type="number" min="0" step="0.01"
+                  placeholder="0.00"
+                  value={editProductForm.pts || ""}
+                  onChange={(e) => setEditProductForm(f => ({ ...f, pts: parseFloat(e.target.value) || 0 }))}
+                  className={`h-9 text-xs font-mono ${editProductFormErrors.pts ? "border-rose-400" : ""}`}
+                />
+                {editProductFormErrors.pts && <p className="text-[11px] text-rose-500 mt-0.5">{editProductFormErrors.pts}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-amber-700 dark:text-amber-400 mb-1">GST %</label>
+                <select
+                  id="edit-product-gst"
+                  value={editProductForm.gstPercent}
+                  onChange={(e) => setEditProductForm(f => ({ ...f, gstPercent: parseInt(e.target.value) }))}
+                  className="w-full h-9 px-3 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                >
+                  {[0, 5, 12, 18, 28].map(r => <option key={r} value={r}>{r}%</option>)}
+                </select>
+              </div>
+            </div>
+            {editProductForm.mrp > 0 && editProductForm.ptr > 0 && (
+              <div className="text-[11px] text-slate-500 p-2 bg-white dark:bg-slate-950 rounded border border-slate-200 dark:border-slate-800">
+                Chemist margin: <span className="font-bold text-emerald-600">{Math.round(((editProductForm.mrp - editProductForm.ptr) / editProductForm.mrp) * 100)}%</span>
+                {" "} • Stockist margin: <span className="font-bold text-indigo-600">{Math.round(((editProductForm.ptr - editProductForm.pts) / editProductForm.ptr) * 100)}%</span>
+              </div>
+            )}
+          </div>
+
+          {/* Active Toggle */}
+          <div className="flex items-center gap-3 px-1">
+            <label className="flex items-center gap-2.5 cursor-pointer">
+              <div
+                onClick={() => setEditProductForm(f => ({ ...f, isActive: !f.isActive }))}
+                className={`relative w-10 h-5 rounded-full transition-colors cursor-pointer ${editProductForm.isActive ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-700"}`}
+              >
+                <div className={`absolute top-0.5 h-4 w-4 bg-white rounded-full shadow transition-transform ${editProductForm.isActive ? "translate-x-5" : "translate-x-0.5"}`} />
+              </div>
+              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                {editProductForm.isActive ? "Active in Distribution" : "Inactive / On Hold"}
+              </span>
+            </label>
+          </div>
+
+          {/* Footer Buttons */}
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setEditingProduct(null); setEditProductFormErrors({}); }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleSaveEditProduct}
+              disabled={updateProductMutation.isPending}
+              id="btn-update-product"
+            >
+              {updateProductMutation.isPending ? "Updating Formulation…" : "Save Changes"}
             </Button>
           </div>
         </div>

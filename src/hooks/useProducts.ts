@@ -57,6 +57,19 @@ export function useCreateProduct() {
   });
 }
 
+export function useUpdateProduct() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: Partial<ProductInput> }) =>
+      productService.updateProduct(id, input),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["products", "detail", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["product-categories"] });
+    },
+  });
+}
+
 export function useCreateVisualAid() {
   const queryClient = useQueryClient();
   return useMutation({
