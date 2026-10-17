@@ -106,8 +106,10 @@ export const distributorService = {
         territoryId: input.territoryId,
         creditLimit: 3000000,
         paymentTerms: "Net 30 Days",
-        organizationId: effectiveOrgId,
       };
+      if (currentUser?.role === "SUPER_ADMIN" && effectiveOrgId) {
+        payload.organizationId = effectiveOrgId;
+      }
       if (input.email) payload.email = input.email.trim();
 
       const res = await apiClient.post<any>("/distributors", payload);

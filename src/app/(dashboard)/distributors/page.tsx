@@ -140,7 +140,11 @@ export default function DistributorsPage() {
   };
 
   const handleOpenCreate = () => {
-    setFormState(initialForm);
+    const defaultTerritory = territories && territories.length > 0 ? territories[0].id : "";
+    setFormState({
+      ...initialForm,
+      territoryId: defaultTerritory,
+    });
     setFormErrors({});
     setIsCreateOpen(true);
   };
@@ -162,8 +166,14 @@ export default function DistributorsPage() {
 
   const handleSaveCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    const submissionForm = {
+      ...formState,
+      territoryId: formState.territoryId && formState.territoryId !== "ter_mdu_north"
+        ? formState.territoryId
+        : (territories?.[0]?.id || formState.territoryId),
+    };
     if (!validateDistributorForm()) return;
-    await createMutation.mutateAsync(formState);
+    await createMutation.mutateAsync(submissionForm);
     setIsCreateOpen(false);
     setFormErrors({});
   };

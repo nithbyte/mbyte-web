@@ -6,11 +6,31 @@ import { normalizeRole, getRoleLabel, type User } from "../types";
 let activeUserId = "usr_mgr_001";
 
 function formatUser(rawUser: any): User {
+  let firstName = rawUser.firstName;
+  let lastName = rawUser.lastName;
+
+  if (
+    rawUser.email?.toLowerCase() === "superadmin@mbyte.app" ||
+    firstName === "Antigravity" ||
+    firstName === "Platform" && lastName === "Admin" ||
+    rawUser.role === "SUPER_ADMIN" ||
+    rawUser.roles?.includes("SUPER_ADMIN") ||
+    rawUser.userRoles?.some((ur: any) => ur.role?.type === "SUPER_ADMIN" || ur.role === "SUPER_ADMIN")
+  ) {
+    firstName = "Super";
+    lastName = "Admin";
+  }
+
   const computedName =
-    rawUser.name ||
-    [rawUser.firstName, rawUser.lastName].filter(Boolean).join(" ").trim() ||
-    rawUser.email?.split("@")[0] ||
-    "User";
+    (firstName === "Super" && lastName === "Admin")
+      ? "Super Admin"
+      : rawUser.name
+          ?.replace(/Antigravity\s*(SuperAdmin|PlatformAdmin|Super\s*Admin)/gi, "Super Admin")
+          .replace(/Antigravity/gi, "")
+          .trim() ||
+        [firstName, lastName].filter(Boolean).join(" ").trim() ||
+        rawUser.email?.split("@")[0] ||
+        "User";
 
   let extractedRole = rawUser.role;
   if (!extractedRole && Array.isArray(rawUser.roles) && rawUser.roles.length > 0) {

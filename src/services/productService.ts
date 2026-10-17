@@ -210,14 +210,15 @@ export const productService = {
 
   async getProductCategories(): Promise<ProductCategory[]> {
     try {
-      const res = await apiClient.get<any[]>("/product-categories");
-      if (Array.isArray(res) && res.length > 0) {
-        return res.map((c) => ({
+      const res = await apiClient.get<any>("/product-categories", { params: { limit: 100 } });
+      const items = Array.isArray(res) ? res : (Array.isArray(res?.items) ? res.items : null);
+      if (items !== null && items.length > 0) {
+        return items.map((c: any) => ({
           id: c.id,
           name: c.name,
           slug: c.slug || c.name.toLowerCase().replace(/\s+/g, "-"),
           description: c.description,
-          productCount: c.products?.length || c._count?.products || 3,
+          productCount: c.products?.length || c._count?.products || 0,
         }));
       }
     } catch {
@@ -338,14 +339,15 @@ export const productService = {
   },
 
   async createProduct(input: import('../types').ProductInput): Promise<Product> {
+    const currentUser = await authService.getCurrentUser();
     try {
       const payload: Record<string, any> = {
         categoryId: input.categoryId,
-        sku: input.sku,
-        brandName: input.name,
-        genericName: input.genericName,
-        dosageForm: input.dosageForm,
-        packSize: input.packSize,
+        sku: input.sku.trim(),
+        brandName: input.name.trim(),
+        genericName: input.genericName.trim(),
+        dosageForm: input.dosageForm.trim(),
+        packSize: input.packSize.trim(),
         mrp: Number(input.mrp),
         ptr: Number(input.ptr),
         pts: Number(input.pts),
@@ -354,17 +356,19 @@ export const productService = {
       if (input.imageUrl) {
         payload.imageUrl = input.imageUrl;
       }
+      if (currentUser?.role === "SUPER_ADMIN" && (input as any).organizationId) {
+        payload.organizationId = (input as any).organizationId;
+      }
       const res = await apiClient.post<any>('/products', payload);
       if (res && res.id) {
         const newProduct = mapApiProduct(res);
-        productsState.push(newProduct);
+        productsState.unshift(newProduct);
         return newProduct;
       }
     } catch (err) {
       console.warn('Real POST /products failed, using mock:', err);
     }
     // Mock fallback: add to in-memory state
-    const currentUser = await authService.getCurrentUser();
     const newProd: Product = {
       id: `prod_${Date.now()}`,
       organizationId: currentUser?.organizationId || '',

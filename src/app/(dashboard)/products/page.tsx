@@ -115,8 +115,15 @@ export default function ProductsPage() {
   };
 
   const handleAddProduct = async () => {
+    const submissionForm = {
+      ...productForm,
+      categoryId: productForm.categoryId || (categories?.[0]?.id || ""),
+    };
+    if (!productForm.categoryId && categories?.[0]?.id) {
+      setProductForm((prev) => ({ ...prev, categoryId: categories[0].id }));
+    }
     if (!validateProductForm()) return;
-    await createProductMutation.mutateAsync(productForm);
+    await createProductMutation.mutateAsync(submissionForm);
     setProductForm(initialProductForm);
     setProductFormErrors({});
     setIsAddProductOpen(false);

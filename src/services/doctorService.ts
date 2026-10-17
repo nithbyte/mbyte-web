@@ -121,10 +121,12 @@ export const doctorService = {
         territoryId: input.territoryId,
         tier: input.tier || "B",
         visitFrequency: input.visitFrequency || 2,
-        latitude: input.latitude || 13.0569,
-        longitude: input.longitude || 80.2520,
-        organizationId: effectiveOrgId,
+        latitude: Number(input.latitude) || 13.0569,
+        longitude: Number(input.longitude) || 80.2520,
       };
+      if (currentUser?.role === "SUPER_ADMIN" && effectiveOrgId) {
+        payload.organizationId = effectiveOrgId;
+      }
       if (input.email) payload.email = input.email.trim();
 
       const res = await apiClient.post<any>("/doctors", payload);
