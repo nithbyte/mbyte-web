@@ -9,8 +9,31 @@ export type VisitStatus =
 export type VerificationStatus =
   | "VERIFIED"
   | "OUTSIDE_RADIUS"
+  | "EXCEPTION_REQUESTED"
+  | "EXCEPTION_APPROVED"
+  | "BYPASSED"
   | "MANUAL_EXCEPTION"
   | "UNVERIFIED";
+
+export interface VisitAccompaniment {
+  id: string;
+  organizationId: string;
+  visitId: string;
+  managerId: string;
+  mrId: string;
+  accompaniedDate: string;
+  startTime?: string;
+  endTime?: string;
+  durationMinutes?: number;
+  jointObjectives?: string;
+  coachingFeedback?: string | null;
+  isPrivateCoaching: boolean;
+  strengthsObserved?: string | null;
+  areasOfImprovement?: string | null;
+  rating?: number | null;
+  manager?: { employeeCode?: string; user?: { firstName?: string; lastName?: string; email?: string } };
+  mr?: { employeeCode?: string; user?: { firstName?: string; lastName?: string; email?: string } };
+}
 
 export interface VisitProductDiscussion {
   productId: string;
@@ -45,6 +68,11 @@ export interface Visit {
   durationSeconds?: number;
   status: VisitStatus;
   verificationStatus: VerificationStatus;
+  exceptionReason?: string | null;
+  exceptionRequestedAt?: string | null;
+  exceptionReviewedAt?: string | null;
+  exceptionReviewedById?: string | null;
+  exceptionReviewComments?: string | null;
   distanceMeters?: number;
   verifiedDistance?: number;
   distanceFromRegisteredMeters?: number;
@@ -58,6 +86,7 @@ export interface Visit {
   outcomeNotes?: string;
   nextFollowUpDate?: string;
   priority?: string;
+  accompaniments?: VisitAccompaniment[];
   visitProducts?: VisitProductDiscussion[];
   productsDiscussed?: string[];
   samplesDistributed?: Array<{

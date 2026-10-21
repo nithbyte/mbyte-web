@@ -966,4 +966,134 @@ export const reportService = {
       chartData,
     });
   },
+
+  // 7. REPORT EXPORT & DOWNLOAD (CSV, EXCEL, PDF)
+  async downloadReportExport(params: {
+    reportType: string;
+    format: "csv" | "xlsx" | "pdf";
+    filters?: ReportFilterParams;
+  }): Promise<{ success: boolean; filename: string }> {
+    const queryParams: Record<string, any> = {
+      format: params.format,
+    };
+    if (params.filters?.territoryId && params.filters.territoryId !== "ALL") {
+      queryParams.territoryId = params.filters.territoryId;
+    }
+    if (params.filters?.mrId && params.filters.mrId !== "ALL") {
+      queryParams.mrId = params.filters.mrId;
+    }
+    if (params.filters?.date && params.filters.date !== "ALL") {
+      queryParams.startDate = params.filters.date;
+      queryParams.endDate = params.filters.date;
+    }
+    if (params.filters?.productId && params.filters.productId !== "ALL") {
+      queryParams.productId = params.filters.productId;
+    }
+
+    let typeSlug = params.reportType.toLowerCase().replace(/_/g, "-");
+    if (typeSlug === "sales") typeSlug = "orders";
+    if (typeSlug === "targets") typeSlug = "target-achievement";
+    if (typeSlug.includes("visit")) typeSlug = "visits";
+    if (typeSlug.includes("presence")) typeSlug = "product-presence";
+    if (typeSlug.includes("collection")) typeSlug = "collections";
+    if (typeSlug.includes("performance")) typeSlug = "mr-performance";
+
+    try {
+      const response = await apiClient.axios.get(`/reports/export/${typeSlug}`, {
+        params: queryParams,
+        responseType: "blob",
+      });
+
+      let filename = `mbyte_${typeSlug}_${new Date().toISOString().split("T")[0]}.${params.format}`;
+      const disposition = response.headers?.["content-disposition"];
+      if (disposition && disposition.includes("filename=")) {
+        const matches = disposition.match(/filename="?([^"]+)"?/);
+        if (matches && matches[1]) {
+          filename = matches[1];
+        }
+      }
+
+      if (typeof window !== "undefined") {
+        const contentType =
+          params.format === "csv"
+            ? "text/csv;charset=utf-8;"
+            : params.format === "xlsx"
+            ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            : "application/pdf";
+
+        const blob = new Blob([response.data], { type: contentType });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", filename);
+        document.body.appendChild(link);
+        link.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(link);
+      }
+
+      return { success: true, filename };
+    } catch (err) {
+      console.warn("Backend report export call failed, generating client-side fallback export:", err);
+
+      // Client-side fallback if backend API is offline/mock
+      const timestamp = new Date().toISOString().split("T")[0];
+      const filename = `mbyte_${typeSlug}_${timestamp}.${params.format === "xlsx" ? "csv" : params.format}`;
+
+      if (typeof window !== "undefined") {
+        // Build fallback CSV content
+        let csvContent = `\uFEFF# MByte Field Intelligence Export (Offline / Local Mode)\r\n# Report: ${typeSlug.toUpperCase()}\r\n# Date: ${timestamp}\r\n\r\n`;
+
+        if (typeSlug === "visits") {
+          const report = await this.getVisitReport(params.filters);
+          csvContent += "Date,Time,MR Code,Representative,Customer,Type,Territory,Status,Verification\r\n";
+          for (const item of report.items) {
+            csvContent += `"${item.date}","${item.time}","${item.mrEmployeeCode}","${item.mrName}","${item.customerName}","${item.customerType}","${item.territoryName}","${item.status}","${item.verificationStatus}"\r\n`;
+          }
+        } else if (typeSlug === "orders") {
+          const report = await this.getSalesReport(params.filters);
+          csvContent += "Order Number,Date,MR Code,Representative,Customer,Distributor,Total Amount,Status\r\n";
+          for (const item of report.items) {
+            csvContent += `"${item.orderNumber}","${item.orderDate}","${item.mrEmployeeCode}","${item.mrName}","${item.customerName}","${item.distributorName}","${item.totalAmount}","${item.status}"\r\n`;
+          }
+        } else if (typeSlug === "collections") {
+          const report = await this.getCollectionReport(params.filters);
+          csvContent += "Receipt Number,Date,MR Code,Representative,Customer,Payment Mode,Amount,Reference\r\n";
+          for (const item of report.items) {
+            csvContent += `"${item.receiptNumber}","${item.paymentDate}","${item.mrEmployeeCode}","${item.mrName}","${item.customerName}","${item.paymentMode}","${item.amount}","${item.referenceNumber}"\r\n`;
+          }
+        } else if (typeSlug === "product-presence") {
+          const report = await this.getProductPresenceReport(params.filters);
+          csvContent += "Audit Date,Representative,Pharmacy,SKU,Brand Name,Status,Quantity\r\n";
+          for (const item of report.items) {
+            csvContent += `"${item.auditedAt}","${item.auditedByMrName}","${item.pharmacyName}","${item.productSku}","${item.productName}","${item.status}","${item.quantity}"\r\n`;
+          }
+        } else if (typeSlug === "target-achievement") {
+          const report = await this.getTargetAchievementReport(params.filters);
+          csvContent += "Period,MR Code,Representative,Territory,Target Amount,Achieved Amount,Achievement %\r\n";
+          for (const item of report.items) {
+            csvContent += `"${item.monthYear}","${item.employeeCode}","${item.mrName}","${item.territoryName}","${item.targetAmount}","${item.achievedAmount}","${item.valueAchievementPercent}%"\r\n`;
+          }
+        } else {
+          const report = await this.getMRPerformanceReport(params.filters);
+          csvContent += "MR Code,Representative,Territory,Planned Calls,Completed Calls,Sales Value,Collections Value\r\n";
+          for (const item of report.items) {
+            csvContent += `"${item.employeeCode}","${item.mrName}","${item.territoryName}","${item.plannedCalls}","${item.completedCalls}","${item.ordersBookedValue}","${item.collectionsRealizedValue}"\r\n`;
+          }
+        }
+
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", filename);
+        document.body.appendChild(link);
+        link.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(link);
+      }
+
+      return { success: true, filename };
+    }
+  },
 };

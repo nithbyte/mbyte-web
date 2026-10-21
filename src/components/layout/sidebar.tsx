@@ -24,6 +24,15 @@ import {
   TrendingUp,
   LogOut,
   FolderLock,
+  CalendarDays,
+  FileCheck,
+  FlaskConical,
+  Wallet,
+  FileSpreadsheet,
+  Clock,
+  Flag,
+  GraduationCap,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebarStore } from "@/store";
@@ -96,6 +105,16 @@ function getNavSections(role: CanonicalRole): NavSection[] {
               badge: "LIVE",
               badgeVariant: "live",
             },
+            {
+              title: "Tour Plans (MTP)",
+              href: "/tour-plans",
+              icon: CalendarDays,
+            },
+            {
+              title: "Daily Call Reports (DCR)",
+              href: "/dcr",
+              icon: FileCheck,
+            },
           ],
         },
         {
@@ -151,6 +170,16 @@ function getNavSections(role: CanonicalRole): NavSection[] {
               href: "/collections",
               icon: Receipt,
             },
+            {
+              title: "Expense Claims",
+              href: "/expenses",
+              icon: Wallet,
+            },
+            {
+              title: "Accounts Receivable",
+              href: "/receivables",
+              icon: FileSpreadsheet,
+            },
           ],
         },
         {
@@ -162,11 +191,41 @@ function getNavSections(role: CanonicalRole): NavSection[] {
               icon: Package,
             },
             {
+              title: "Sample Inventory & Ledger",
+              href: "/samples",
+              icon: FlaskConical,
+            },
+            {
               title: "Product Presence Intel",
               href: "/product-presence",
               icon: MapPin,
               badge: "LIVE",
               badgeVariant: "live",
+            },
+          ],
+        },
+        {
+          title: "Field & Engagement",
+          items: [
+            {
+              title: "Shift Attendance",
+              href: "/attendance",
+              icon: Clock,
+            },
+            {
+              title: "Company Campaigns",
+              href: "/campaigns",
+              icon: Flag,
+            },
+            {
+              title: "Training & Quizzes",
+              href: "/training",
+              icon: GraduationCap,
+            },
+            {
+              title: "Surveys & Feedback",
+              href: "/surveys",
+              icon: ClipboardList,
             },
           ],
         },
@@ -203,6 +262,16 @@ function getNavSections(role: CanonicalRole): NavSection[] {
               icon: CalendarCheck,
               badge: "LIVE",
               badgeVariant: "live",
+            },
+            {
+              title: "Tour Plans (MTP)",
+              href: "/tour-plans",
+              icon: CalendarDays,
+            },
+            {
+              title: "Daily Call Reports (DCR)",
+              href: "/dcr",
+              icon: FileCheck,
             },
           ],
         },
@@ -249,6 +318,16 @@ function getNavSections(role: CanonicalRole): NavSection[] {
               href: "/collections",
               icon: Receipt,
             },
+            {
+              title: "Expense Claims",
+              href: "/expenses",
+              icon: Wallet,
+            },
+            {
+              title: "Accounts Receivable",
+              href: "/receivables",
+              icon: FileSpreadsheet,
+            },
           ],
         },
         {
@@ -260,11 +339,41 @@ function getNavSections(role: CanonicalRole): NavSection[] {
               icon: Package,
             },
             {
+              title: "Sample Inventory & Ledger",
+              href: "/samples",
+              icon: FlaskConical,
+            },
+            {
               title: "Product Presence",
               href: "/product-presence",
               icon: MapPin,
               badge: "LIVE",
               badgeVariant: "live",
+            },
+          ],
+        },
+        {
+          title: "Field & Engagement",
+          items: [
+            {
+              title: "Shift Attendance",
+              href: "/attendance",
+              icon: Clock,
+            },
+            {
+              title: "Company Campaigns",
+              href: "/campaigns",
+              icon: Flag,
+            },
+            {
+              title: "Training & Quizzes",
+              href: "/training",
+              icon: GraduationCap,
+            },
+            {
+              title: "Surveys & Feedback",
+              href: "/surveys",
+              icon: ClipboardList,
             },
           ],
         },

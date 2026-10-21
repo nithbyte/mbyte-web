@@ -37,6 +37,12 @@ function mapApiVisit(v: any): Visit {
     scheduledEndTime: v.scheduledEndTime || "10:30 AM",
     status: v.status || "PLANNED",
     verificationStatus: v.verificationStatus || "OUTSIDE_RADIUS",
+    exceptionReason: v.exceptionReason,
+    exceptionRequestedAt: v.exceptionRequestedAt,
+    exceptionReviewedAt: v.exceptionReviewedAt,
+    exceptionReviewedById: v.exceptionReviewedById,
+    exceptionReviewComments: v.exceptionReviewComments,
+    accompaniments: v.accompaniments,
     verifiedDistance: typeof v.distanceMeters === "number" ? v.distanceMeters : (typeof v.verifiedDistance === "number" ? v.verifiedDistance : 0),
     distanceMeters: typeof v.distanceMeters === "number" ? v.distanceMeters : (typeof v.verifiedDistance === "number" ? v.verifiedDistance : 0),
     actualStartTime: v.actualStartTime,
@@ -314,5 +320,55 @@ export const visitService = {
     mockVisits.unshift(newVisit as any);
     return Promise.resolve(newVisit);
   },
+
+  async reviewGeofenceException(visitId: string, approved: boolean, comments?: string): Promise<Visit> {
+    try {
+      const res = await apiClient.post<any>(`/visits/${visitId}/review-exception`, {
+        approved,
+        comments,
+      });
+      return mapApiVisit(res);
+    } catch (err) {
+      console.warn("POST /visits/:id/review-exception failed, using mock:", err);
+      const visit = mockVisits.find((v) => v.id === visitId);
+      if (visit) {
+        visit.verificationStatus = approved ? ("EXCEPTION_APPROVED" as any) : ("OUTSIDE_RADIUS" as any);
+        visit.status = approved ? ("LOCATION_VERIFIED" as any) : ("PLANNED" as any);
+        (visit as any).exceptionReviewedAt = new Date().toISOString();
+        (visit as any).exceptionReviewComments = comments || null;
+        return visit as any;
+      }
+      throw err;
+    }
+  },
+
+  async recordAccompaniment(visitId: string, data: {
+    durationMinutes?: number;
+    jointObjectives?: string;
+    coachingFeedback?: string;
+    isPrivateCoaching?: boolean;
+    strengthsObserved?: string;
+    areasOfImprovement?: string;
+    rating?: number;
+  }) {
+    return apiClient.post<any>(`/visits/${visitId}/accompaniment`, data);
+  },
+
+  async getAccompaniments(visitId: string) {
+    try {
+      return await apiClient.get<any[]>(`/visits/${visitId}/accompaniments`);
+    } catch {
+      return [];
+    }
+  },
+
+  async getJointVisits(params?: any) {
+    try {
+      return await apiClient.get<any[]>('/visits/joint-visits', { params });
+    } catch {
+      return [];
+    }
+  },
 };
 export type { VisitQueryParams };
+

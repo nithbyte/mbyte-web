@@ -21,6 +21,8 @@ import {
   dashboardService,
   targetService,
   notificationService,
+  tourPlanService,
+  dcrService,
 } from "../src/services";
 
 console.log("=====================================================");
@@ -270,6 +272,12 @@ async function runTestSuite() {
     const targetRep = await reportService.getTargetAchievementReport();
     assert(Array.isArray(targetRep.items) && typeof targetRep.overallAchievementPercent === "number", "Target Achievement Report calculates team quota attainment");
 
+    const exportCsv = await reportService.downloadReportExport({ reportType: "visits", format: "csv" });
+    assert(exportCsv.success === true && typeof exportCsv.filename === "string", "downloadReportExport generates valid CSV export");
+
+    const exportXlsx = await reportService.downloadReportExport({ reportType: "orders", format: "xlsx" });
+    assert(exportXlsx.success === true && typeof exportXlsx.filename === "string", "downloadReportExport generates valid Excel export");
+
     // 14. Executive Dashboard Service
     console.log("\n--- [14] Executive Dashboard Service ---");
     const dashboardKPIs = await dashboardService.getKPIs();
@@ -316,6 +324,18 @@ async function runTestSuite() {
 
     const unreadCount = await notificationService.getUnreadCount();
     assert(typeof unreadCount === "number", "getUnreadCount returns unread badge integer");
+
+    // 17. Tour Plan Service (MTP)
+    console.log("\n--- [17] Tour Plan Service (MTP) ---");
+    const tourPlansRes = await tourPlanService.getTourPlans({ year: 2026, month: 10 });
+    assert(Array.isArray(tourPlansRes.items), "getTourPlans returns tour plan items array");
+    assert(typeof tourPlansRes.total === "number", "getTourPlans returns pagination total count");
+
+    // 18. Daily Call Report Service (DCR)
+    console.log("\n--- [18] Daily Call Report Service (DCR) ---");
+    const dcrRes = await dcrService.getDcrs();
+    assert(Array.isArray(dcrRes.items), "getDcrs returns DCR items array");
+    assert(typeof dcrRes.total === "number", "getDcrs returns pagination total count");
 
     // Final Report
     console.log("\n=====================================================");

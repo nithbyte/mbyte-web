@@ -29,6 +29,7 @@ import {
   useCreateVisit,
   useCurrentUser,
 } from "@/hooks";
+import { visitService } from "@/services/visitService";
 import { formatDate } from "@/lib/utils";
 import { normalizeRole, type Visit, type VisitStatus, type VerificationStatus, type VisitQueryParams } from "@/types";
 import {
@@ -53,6 +54,9 @@ import {
   CalendarCheck,
   Plus,
   AlertCircle,
+  Star,
+  UserCheck,
+  Award,
 } from "lucide-react";
 
 const INITIAL_VISIT_FORM = {
@@ -79,6 +83,58 @@ export default function VisitsPage() {
 
   // Details Modal State
   const [selectedVisit, setSelectedVisit] = useState<Visit | null>(null);
+
+  // Geofence Exception Review State
+  const [exceptionComment, setExceptionComment] = useState("");
+  const [isReviewingException, setIsReviewingException] = useState(false);
+
+  // Manager Joint Visit Accompaniment State
+  const [isAccompanimentOpen, setIsAccompanimentOpen] = useState(false);
+  const [accompanimentForm, setAccompanimentForm] = useState({
+    durationMinutes: 30,
+    jointObjectives: "",
+    coachingFeedback: "",
+    isPrivateCoaching: true,
+    strengthsObserved: "",
+    areasOfImprovement: "",
+    rating: 4,
+  });
+  const [isSavingAccompaniment, setIsSavingAccompaniment] = useState(false);
+
+  const handleReviewException = async (approved: boolean) => {
+    if (!selectedVisit) return;
+    setIsReviewingException(true);
+    try {
+      const updated = await visitService.reviewGeofenceException(
+        selectedVisit.id,
+        approved,
+        exceptionComment
+      );
+      setSelectedVisit(updated);
+      setExceptionComment("");
+    } catch (err: any) {
+      alert(err.response?.data?.message || err.message || "Failed to review exception");
+    } finally {
+      setIsReviewingException(false);
+    }
+  };
+
+  const handleSaveAccompaniment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedVisit) return;
+    setIsSavingAccompaniment(true);
+    try {
+      await visitService.recordAccompaniment(selectedVisit.id, accompanimentForm);
+      setIsAccompanimentOpen(false);
+      const accs = await visitService.getAccompaniments(selectedVisit.id);
+      setSelectedVisit({ ...selectedVisit, accompaniments: accs });
+      alert("Joint visit accompaniment recorded successfully!");
+    } catch (err: any) {
+      alert(err.response?.data?.message || err.message || "Failed to record accompaniment");
+    } finally {
+      setIsSavingAccompaniment(false);
+    }
+  };
 
   // Query Params
   const queryParams: VisitQueryParams = useMemo(
@@ -854,20 +910,158 @@ export default function VisitsPage() {
                     {selectedVisit.distanceMeters ?? 18.5} meters
                   </div>
                   <div className="text-[10px] text-emerald-600 mt-0.5">
-                    Within allowable 50-meter clinic geofence
+                    {selectedVisit.verificationStatus === "EXCEPTION_APPROVED"
+                      ? "Approved by Manager as Geofence Exception"
+                      : "Within allowable clinic geofence"}
                   </div>
                 </div>
 
                 <div className="p-2.5 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                  <div className="text-[10px] text-slate-500 font-semibold">Verified Coordinates</div>
-                  <div className="text-xs font-mono font-bold text-slate-900 dark:text-white mt-0.5">
-                    ({selectedVisit.verifiedLatitude?.toFixed(6)}, {selectedVisit.verifiedLongitude?.toFixed(6)})
-                  </div>
-                  <div className="text-[10px] text-slate-400 mt-0.5">
-                    GPS Accuracy: ±{selectedVisit.gpsAccuracy || 12}m
+                  <div className="text-[10px] text-slate-500 font-semibold">Verification Status</div>
+                  <div className="mt-1">
+                    {selectedVisit.verificationStatus === "EXCEPTION_REQUESTED" ? (
+                      <Badge variant="outline" className="border-amber-500 text-amber-500 text-[10px]">
+                        <Clock className="w-2.5 h-2.5 mr-1" /> Exception Pending Review
+                      </Badge>
+                    ) : selectedVisit.verificationStatus === "EXCEPTION_APPROVED" ? (
+                      <Badge variant="default" className="bg-emerald-600 text-white text-[10px]">
+                        <CheckCircle className="w-2.5 h-2.5 mr-1" /> Exception Approved
+                      </Badge>
+                    ) : selectedVisit.verificationStatus === "VERIFIED" ? (
+                      <Badge variant="default" className="bg-emerald-600 text-white text-[10px]">
+                        <CheckCircle className="w-2.5 h-2.5 mr-1" /> Verified Within Radius
+                      </Badge>
+                    ) : (
+                      <Badge variant="destructive" className="text-[10px]">
+                        <XCircle className="w-2.5 h-2.5 mr-1" /> Outside Radius
+                      </Badge>
+                    )}
                   </div>
                 </div>
               </div>
+
+              {/* GEOFENCE EXCEPTION REVIEW PANEL */}
+              {selectedVisit.verificationStatus === "EXCEPTION_REQUESTED" && (
+                <div className="mt-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg space-y-2">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
+                    <AlertTriangle className="w-4 h-4" />
+                    MR Requested Geofence Exception
+                  </div>
+                  <p className="text-xs text-foreground italic">
+                    &ldquo;{selectedVisit.exceptionReason || "Reason not specified"}&rdquo;
+                  </p>
+                  <div className="text-[11px] text-muted-foreground">
+                    Requested on: {selectedVisit.exceptionRequestedAt ? new Date(selectedVisit.exceptionRequestedAt).toLocaleString() : "Recently"}
+                  </div>
+
+                  {!isMR && (
+                    <div className="pt-2 border-t border-amber-500/20 space-y-2">
+                      <label className="text-[11px] font-medium text-foreground">Reviewer Feedback Notes:</label>
+                      <input
+                        type="text"
+                        className="w-full text-xs p-1.5 rounded border border-border bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                        placeholder="e.g. Verified doctor clinic relocated to 2nd floor over call..."
+                        value={exceptionComment}
+                        onChange={(e) => setExceptionComment(e.target.value)}
+                      />
+                      <div className="flex justify-end gap-2 pt-1">
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          disabled={isReviewingException}
+                          onClick={() => handleReviewException(false)}
+                          className="h-7 text-xs"
+                        >
+                          Reject Exception
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                          disabled={isReviewingException}
+                          onClick={() => handleReviewException(true)}
+                        >
+                          Authorize Exception Approval
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {selectedVisit.verificationStatus === "EXCEPTION_APPROVED" && selectedVisit.exceptionReviewComments && (
+                <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded-md text-xs text-emerald-800 dark:text-emerald-300">
+                  <span className="font-semibold">Manager Review Comment:</span> {selectedVisit.exceptionReviewComments}
+                </div>
+              )}
+            </div>
+
+            {/* JOINT FIELD VISIT ACCOMPANIMENTS */}
+            <div className="p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400 font-semibold uppercase text-[10px] flex items-center gap-1">
+                  <UserCheck className="h-3.5 w-3.5 text-blue-600" />
+                  Manager Joint Field Visit & Coaching
+                </span>
+                {!isMR && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs flex items-center gap-1 text-blue-600 border-blue-600/40 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+                    onClick={() => setIsAccompanimentOpen(true)}
+                  >
+                    <Plus className="w-3 h-3" />
+                    Record Accompaniment
+                  </Button>
+                )}
+              </div>
+
+              {selectedVisit.accompaniments && selectedVisit.accompaniments.length > 0 ? (
+                <div className="space-y-2 pt-1">
+                  {selectedVisit.accompaniments.map((acc: any) => (
+                    <div key={acc.id} className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-border/50 text-xs space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-foreground">
+                          Accompanied by {acc.manager?.user?.firstName || "Manager"} {acc.manager?.user?.lastName || ""}
+                          <span className="font-normal text-muted-foreground ml-1.5">({acc.manager?.employeeCode || "MGR"})</span>
+                        </span>
+                        {acc.rating && (
+                          <div className="flex items-center text-amber-500 font-bold text-xs gap-0.5">
+                            <Star className="w-3.5 h-3.5 fill-current" /> {acc.rating} / 5
+                          </div>
+                        )}
+                      </div>
+
+                      {acc.jointObjectives && (
+                        <p className="text-slate-600 dark:text-slate-300">
+                          <strong>Objectives:</strong> {acc.jointObjectives}
+                        </p>
+                      )}
+
+                      {acc.strengthsObserved && (
+                        <p className="text-emerald-700 dark:text-emerald-400">
+                          <strong>Strengths:</strong> {acc.strengthsObserved}
+                        </p>
+                      )}
+
+                      {acc.areasOfImprovement && (
+                        <p className="text-amber-700 dark:text-amber-400">
+                          <strong>Areas for Improvement:</strong> {acc.areasOfImprovement}
+                        </p>
+                      )}
+
+                      {acc.coachingFeedback && (
+                        <div className="p-2 rounded bg-blue-50/60 dark:bg-blue-950/40 border border-blue-500/20 text-blue-900 dark:text-blue-200 mt-1">
+                          <strong>Manager Coaching Feedback:</strong> {acc.coachingFeedback}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground italic pt-1">
+                  No manager joint accompaniment recorded for this call.
+                </p>
+              )}
             </div>
 
             {/* Outcome and Representative Notes */}
@@ -938,6 +1132,110 @@ export default function VisitsPage() {
           </div>
         )}
       </Modal>
+
+      {/* RECORD JOINT FIELD VISIT ACCOMPANIMENT MODAL */}
+      <Modal
+        isOpen={isAccompanimentOpen}
+        onClose={() => setIsAccompanimentOpen(false)}
+        title="Record Joint Field Visit Accompaniment"
+        description="Log supervisory coaching, performance evaluation, and field coaching observations for this visit."
+      >
+        <form onSubmit={handleSaveAccompaniment} className="space-y-3">
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs font-medium">Accompaniment Duration (Minutes)</label>
+              <Input
+                type="number"
+                min={5}
+                max={240}
+                value={accompanimentForm.durationMinutes}
+                onChange={(e) => setAccompanimentForm({ ...accompanimentForm, durationMinutes: Number(e.target.value) })}
+                className="mt-1 text-xs"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium">Performance Rating (1-5)</label>
+              <select
+                className="w-full text-xs p-2 rounded-md border border-input bg-background mt-1"
+                value={accompanimentForm.rating}
+                onChange={(e) => setAccompanimentForm({ ...accompanimentForm, rating: Number(e.target.value) })}
+              >
+                <option value={5}>5 - Outstanding (Role Model)</option>
+                <option value={4}>4 - Exceeds Expectations</option>
+                <option value={3}>3 - Meets Standard Expectations</option>
+                <option value={2}>2 - Needs Coaching & Improvement</option>
+                <option value={1}>1 - Unsatisfactory Call Delivery</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium">Joint Visit Call Objectives</label>
+            <Input
+              placeholder="e.g. Coach MR on objection handling for CardioVas 10mg..."
+              value={accompanimentForm.jointObjectives}
+              onChange={(e) => setAccompanimentForm({ ...accompanimentForm, jointObjectives: e.target.value })}
+              className="mt-1 text-xs"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-medium">Strengths Observed</label>
+            <textarea
+              rows={2}
+              className="w-full text-xs p-2 rounded-md border border-input bg-background mt-1 focus:outline-none focus:ring-1 focus:ring-ring"
+              placeholder="Good clinical paper citation, professional doctor rapport..."
+              value={accompanimentForm.strengthsObserved}
+              onChange={(e) => setAccompanimentForm({ ...accompanimentForm, strengthsObserved: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-medium">Areas of Improvement</label>
+            <textarea
+              rows={2}
+              className="w-full text-xs p-2 rounded-md border border-input bg-background mt-1 focus:outline-none focus:ring-1 focus:ring-ring"
+              placeholder="Closing for secondary prescription commitment, time pacing..."
+              value={accompanimentForm.areasOfImprovement}
+              onChange={(e) => setAccompanimentForm({ ...accompanimentForm, areasOfImprovement: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-medium">Private Manager Coaching Feedback</label>
+            <textarea
+              rows={2}
+              className="w-full text-xs p-2 rounded-md border border-input bg-background mt-1 focus:outline-none focus:ring-1 focus:ring-ring"
+              placeholder="Confidential coaching observations (only visible to Managers and Admins)..."
+              value={accompanimentForm.coachingFeedback}
+              onChange={(e) => setAccompanimentForm({ ...accompanimentForm, coachingFeedback: e.target.value })}
+            />
+          </div>
+
+          <div className="flex items-center gap-2 pt-1">
+            <input
+              type="checkbox"
+              id="isPrivate"
+              checked={accompanimentForm.isPrivateCoaching}
+              onChange={(e) => setAccompanimentForm({ ...accompanimentForm, isPrivateCoaching: e.target.checked })}
+              className="rounded border-input"
+            />
+            <label htmlFor="isPrivate" className="text-xs text-muted-foreground">
+              Keep coaching feedback confidential to Managers and Admins (Do not disclose to MR)
+            </label>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-border/50">
+            <Button type="button" variant="outline" size="sm" onClick={() => setIsAccompanimentOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" size="sm" disabled={isSavingAccompaniment} className="bg-blue-600 hover:bg-blue-700 text-white">
+              Save Accompaniment Record
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
 
       {/* SCHEDULE VISIT MODAL */}
       <Modal

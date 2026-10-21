@@ -49,8 +49,10 @@ import {
   Users,
   ShieldCheck,
   X,
+  Loader2,
 } from "lucide-react";
 import { ReportTab } from "@/types";
+import { reportService } from "@/services";
 
 export default function ReportsPage() {
   // Tab State
@@ -62,6 +64,7 @@ export default function ReportsPage() {
   const [selectedMR, setSelectedMR] = useState<string>("ALL");
   const [selectedProduct, setSelectedProduct] = useState<string>("ALL");
   const [exportNotice, setExportNotice] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState<boolean>(false);
 
   // Filter master datasets
   const { data: territories } = useTerritories();
@@ -90,10 +93,29 @@ export default function ReportsPage() {
     setSelectedProduct("ALL");
   };
 
-  const handleExport = (format: string, reportName: string) => {
-    const message = `Exporting ${reportName} in ${format} format... (Ready for download)`;
-    setExportNotice(message);
-    setTimeout(() => setExportNotice(null), 4000);
+  const handleExport = async (formatStr: string, reportNameOrTab: string) => {
+    let format: "csv" | "xlsx" | "pdf" = "csv";
+    const lowerFmt = formatStr.toLowerCase();
+    if (lowerFmt.includes("excel") || lowerFmt.includes("xlsx")) format = "xlsx";
+    else if (lowerFmt.includes("pdf") || lowerFmt.includes("print")) format = "pdf";
+
+    setIsExporting(true);
+    setExportNotice(`Preparing ${reportNameOrTab} in ${format.toUpperCase()} format...`);
+
+    try {
+      const res = await reportService.downloadReportExport({
+        reportType: reportNameOrTab,
+        format,
+        filters: filterParams,
+      });
+      setExportNotice(`Successfully exported: ${res.filename}`);
+      setTimeout(() => setExportNotice(null), 5000);
+    } catch (err: any) {
+      setExportNotice(`Export failed: ${err.message || "Network error"}`);
+      setTimeout(() => setExportNotice(null), 5000);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -108,28 +130,43 @@ export default function ReportsPage() {
             <Button
               variant="outline"
               size="sm"
+              disabled={isExporting}
               onClick={() => handleExport("Excel (.xlsx)", activeTab)}
               className="gap-1.5 text-xs"
             >
-              <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
+              {isExporting ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-600" />
+              ) : (
+                <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
+              )}
               Export Excel
             </Button>
             <Button
               variant="outline"
               size="sm"
+              disabled={isExporting}
               onClick={() => handleExport("CSV (.csv)", activeTab)}
               className="gap-1.5 text-xs"
             >
-              <Download className="h-3.5 w-3.5 text-sky-600" />
+              {isExporting ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-sky-600" />
+              ) : (
+                <Download className="h-3.5 w-3.5 text-sky-600" />
+              )}
               Export CSV
             </Button>
             <Button
               variant="outline"
               size="sm"
+              disabled={isExporting}
               onClick={() => handleExport("PDF Document", activeTab)}
               className="gap-1.5 text-xs"
             >
-              <Printer className="h-3.5 w-3.5 text-slate-600" />
+              {isExporting ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-600" />
+              ) : (
+                <Printer className="h-3.5 w-3.5 text-slate-600" />
+              )}
               Print / PDF
             </Button>
           </div>

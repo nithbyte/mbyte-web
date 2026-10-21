@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 const MR_RESTRICTED_PREFIXES = [
   "/orders",
   "/collections",
+  "/receivables",
   "/distributors",
   "/pharmacies",
   "/doctors",
@@ -27,6 +28,7 @@ const SUPER_ADMIN_RESTRICTED_PREFIXES = [
   "/visits",
   "/orders",
   "/collections",
+  "/receivables",
   "/distributors",
   "/pharmacies",
   "/doctors",

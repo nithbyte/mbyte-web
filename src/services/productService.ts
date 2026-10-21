@@ -228,6 +228,50 @@ export const productService = {
     return Promise.resolve([...mockProductCategories]);
   },
 
+  async getVisualAidAnalytics(visualAidId?: string): Promise<{
+    disclaimer: string;
+    totalSessions: number;
+    totalPresentationDurationSeconds: number;
+    averageSessionDurationSeconds: number;
+    slides: Array<{
+      slideIdentifier: string;
+      slideIndex: number;
+      viewCount: number;
+      totalDurationSeconds: number;
+      averageDurationSeconds: number;
+      feedbackSummary: Record<string, number>;
+    }>;
+    feedbackDistribution: Record<string, number>;
+  }> {
+    try {
+      const res: any = await apiClient.get('/visual-aids/analytics/summary', {
+        params: visualAidId ? { visualAidId } : {},
+      });
+      return (
+        res?.data ||
+        res || {
+          disclaimer:
+            'Slide display duration records screen presentation time during detailing visits and must NOT be interpreted as medical proof of doctor attention, comprehension, or clinical agreement.',
+          totalSessions: 0,
+          totalPresentationDurationSeconds: 0,
+          averageSessionDurationSeconds: 0,
+          slides: [],
+          feedbackDistribution: {},
+        }
+      );
+    } catch {
+      return {
+        disclaimer:
+          'Slide display duration records screen presentation time during detailing visits and must NOT be interpreted as medical proof of doctor attention, comprehension, or clinical agreement.',
+        totalSessions: 0,
+        totalPresentationDurationSeconds: 0,
+        averageSessionDurationSeconds: 0,
+        slides: [],
+        feedbackDistribution: {},
+      };
+    }
+  },
+
   async getVisualAids(params?: { productId?: string; search?: string }): Promise<VisualAid[]> {
     try {
       const queryParams: Record<string, any> = { limit: 50 };
