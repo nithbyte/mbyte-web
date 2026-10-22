@@ -1,4 +1,4 @@
-import { apiClient } from "../lib/api-client";
+import { apiClient, isMockFallbackAllowed } from "../lib/api-client";
 import {
   mockPharmacies,
   mockTerritories,
@@ -52,6 +52,9 @@ export const pharmacyService = {
         return items.map(mapApiPharmacy);
       }
     } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       console.warn("Real /pharmacies API call failed, falling back to mock:", err);
     }
 
@@ -89,7 +92,10 @@ export const pharmacyService = {
       if (res && res.id) {
         return mapApiPharmacy(res);
       }
-    } catch {
+    } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       // fallback
     }
 
@@ -123,6 +129,9 @@ export const pharmacyService = {
         return created;
       }
     } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       console.warn("Real /pharmacies POST failed, falling back to local state:", err);
     }
 
@@ -157,7 +166,10 @@ export const pharmacyService = {
         if (idx !== -1) pharmaciesState[idx] = updated;
         return updated;
       }
-    } catch {
+    } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       // fallback
     }
 

@@ -23,49 +23,81 @@ export function MByteLogo({
   className,
   width,
   height,
-  alt = "MByte - Pharma Field Force Platform",
+  alt = "MByte - Pharma Field-Force Intelligence",
   priority = false,
 }: MByteLogoProps) {
-  // Determine source file names based on variant
-  const getSrc = (t: "light" | "dark") => {
-    switch (variant) {
-      case "full":
-        return t === "dark" ? "/logo-dark.png" : "/logo-light.png";
-      case "compact":
-        return t === "dark" ? "/logo-compact-dark.png" : "/logo-compact-light.png";
-      case "symbol":
-        return t === "dark" ? "/symbol-dark.png" : "/symbol-light.png";
-      case "icon":
-        return t === "dark" ? "/icon-dark.png" : "/icon-light.png";
-    }
-  };
-
-  // Default dimensions based on variant
+  // Dimension definitions preserving visual proportions
   const getDefaultDimensions = () => {
     switch (variant) {
       case "full":
-        return { width: width || 220, height: height || 91 };
+        return { width: width || 220, height: height || 52 };
       case "compact":
-        return { width: width || 160, height: height || 48 };
+        return { width: width || 170, height: height || 40 };
       case "symbol":
-        return { width: width || 44, height: height || 38 };
+        return { width: width || 40, height: height || 40 };
       case "icon":
-        return { width: width || 44, height: height || 44 };
+        return { width: width || 36, height: height || 36 };
     }
   };
 
   const dims = getDefaultDimensions();
+  const isEmblem = variant === "symbol" || variant === "icon";
 
+  // Dedicated minimal geometric M-Pulse SVG for icons and symbols
+  if (isEmblem) {
+    return (
+      <div
+        className={cn(
+          "inline-flex items-center justify-center rounded-xl bg-[#F5F3EE] p-1.5 border border-[#E5E1D9] dark:bg-[#1E1E1E] dark:border-[#333333] shadow-xs select-none shrink-0",
+          className
+        )}
+        style={{ width: dims.width, height: dims.height }}
+      >
+        <svg
+          viewBox="0 0 100 100"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-full h-full"
+        >
+          {/* M Uprights */}
+          <path
+            d="M22 78V22L40 46"
+            className="stroke-[#171717] dark:stroke-white transition-colors"
+            strokeWidth="8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M78 78V36L64 50"
+            className="stroke-[#171717] dark:stroke-white transition-colors"
+            strokeWidth="8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          {/* Medical Telemetry / Pulse */}
+          <path
+            d="M22 52H36L44 32L54 74L78 22"
+            stroke="#FF6B00"
+            strokeWidth="8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </div>
+    );
+  }
+
+  // Full / Compact horizontal logo presentation
   if (theme === "dark") {
     return (
-      <div className={cn("inline-flex items-center select-none", className)}>
+      <div className={cn("inline-flex items-center select-none shrink-0", className)}>
         <Image
-          src={getSrc("dark")}
+          src="/brand/mbyte-logo-dark.svg"
           alt={alt}
           width={dims.width}
           height={dims.height}
           priority={priority}
-          className="h-auto w-auto object-contain"
+          className="h-auto max-w-full object-contain"
         />
       </div>
     );
@@ -73,37 +105,37 @@ export function MByteLogo({
 
   if (theme === "light") {
     return (
-      <div className={cn("inline-flex items-center select-none", className)}>
+      <div className={cn("inline-flex items-center select-none shrink-0", className)}>
         <Image
-          src={getSrc("light")}
+          src="/brand/mbyte-logo.svg"
           alt={alt}
           width={dims.width}
           height={dims.height}
           priority={priority}
-          className="h-auto w-auto object-contain"
+          className="h-auto max-w-full object-contain"
         />
       </div>
     );
   }
 
-  // Auto theme: Renders both with CSS classes to prevent flash of wrong theme
+  // Auto theme (responsive to dark mode)
   return (
-    <div className={cn("inline-flex items-center select-none", className)}>
+    <div className={cn("inline-flex items-center select-none shrink-0", className)}>
       <Image
-        src={getSrc("light")}
+        src="/brand/mbyte-logo.svg"
         alt={alt}
         width={dims.width}
         height={dims.height}
         priority={priority}
-        className="block dark:hidden h-auto w-auto object-contain"
+        className="block dark:hidden h-auto max-w-full object-contain"
       />
       <Image
-        src={getSrc("dark")}
+        src="/brand/mbyte-logo-dark.svg"
         alt={alt}
         width={dims.width}
         height={dims.height}
         priority={priority}
-        className="hidden dark:block h-auto w-auto object-contain"
+        className="hidden dark:block h-auto max-w-full object-contain"
       />
     </div>
   );

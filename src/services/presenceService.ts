@@ -1,4 +1,4 @@
-import { apiClient } from "../lib/api-client";
+import { apiClient, isMockFallbackAllowed } from "../lib/api-client";
 import { mockProductPresence } from "../mock";
 import type { ProductPresenceAudit, PresenceQueryParams, PresenceCounts } from "../types";
 import { authService } from "./authService";
@@ -58,6 +58,9 @@ export const presenceService = {
         return list;
       }
     } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       console.warn("Real /product-presence API failed, falling back to mock:", err);
     }
 

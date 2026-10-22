@@ -1,4 +1,4 @@
-import { apiClient } from "../lib/api-client";
+import { apiClient, isMockFallbackAllowed } from "../lib/api-client";
 import {
   mockMRs,
   mockVisits,
@@ -131,6 +131,9 @@ export const fieldForceService = {
         return summaries;
       }
     } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       console.warn("Failed to fetch field force from API, falling back to mock:", err);
     }
 
@@ -339,6 +342,9 @@ export const fieldForceService = {
         return mappedList;
       }
     } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       console.warn("Failed to fetch MR list from API, falling back to mock:", err);
     }
 
@@ -796,6 +802,9 @@ export const fieldForceService = {
       });
       return res;
     } catch (err: any) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       console.warn("Backend user creation failed, falling back to mock creation:", err);
       // Create in mock users
       const currentUser = await authService.getCurrentUser();

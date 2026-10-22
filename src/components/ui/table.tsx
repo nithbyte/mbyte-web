@@ -19,7 +19,7 @@ const TableHeader = React.forwardRef<
   HTMLTableSectionElement,
   React.HTMLAttributes<HTMLTableSectionElement>
 >(({ className, ...props }, ref) => (
-  <thead ref={ref} className={cn("[&_tr]:border-b bg-slate-50/70 dark:bg-slate-900/50", className)} {...props} />
+  <thead ref={ref} className={cn("[&_tr]:border-b bg-[#F5F3EE]/80 border-[#E5E1D9] dark:bg-[#242424]/90 dark:border-[#333333]", className)} {...props} />
 ));
 TableHeader.displayName = "TableHeader";
 
@@ -42,7 +42,7 @@ const TableFooter = React.forwardRef<
   <tfoot
     ref={ref}
     className={cn(
-      "border-t bg-slate-50/50 font-medium [&>tr]:last:border-b-0 dark:bg-slate-900/50",
+      "border-t border-[#E5E1D9] bg-[#F5F3EE]/50 font-medium [&>tr]:last:border-b-0 dark:bg-[#242424]/50 dark:border-[#333333]",
       className
     )}
     {...props}
@@ -57,7 +57,7 @@ const TableRow = React.forwardRef<
   <tr
     ref={ref}
     className={cn(
-      "border-b border-slate-100 transition-colors hover:bg-slate-50/60 data-[state=selected]:bg-slate-100 dark:border-slate-800 dark:hover:bg-slate-800/50 dark:data-[state=selected]:bg-slate-800",
+      "border-b border-[#E5E1D9]/70 transition-colors hover:bg-[#F5F3EE]/75 data-[state=selected]:bg-[#F5F3EE] dark:border-[#333333]/60 dark:hover:bg-[#2C2C2C]/50 dark:data-[state=selected]:bg-[#2C2C2C]",
       className
     )}
     {...props}
@@ -73,7 +73,7 @@ const TableHead = React.forwardRef<
     ref={ref}
     scope={scope}
     className={cn(
-      "h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wider text-slate-500 [&:has([role=checkbox])]:pr-0 dark:text-slate-400",
+      "h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wider text-slate-600 [&:has([role=checkbox])]:pr-0 dark:text-slate-300",
       className
     )}
     {...props}

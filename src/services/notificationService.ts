@@ -1,4 +1,4 @@
-import { apiClient } from "../lib/api-client";
+import { apiClient, isMockFallbackAllowed } from "../lib/api-client";
 import { mockNotifications } from "../mock";
 import { authService } from "./authService";
 
@@ -49,6 +49,9 @@ export const notificationService = {
         return list.map(mapNotification);
       }
     } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       console.warn("Failed to fetch notifications from API, falling back to mock:", err);
     }
 
@@ -65,7 +68,10 @@ export const notificationService = {
       if (raw && raw.unreadCount != null) {
         return Number(raw.unreadCount);
       }
-    } catch {
+    } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       // Fallback
     }
 
@@ -79,7 +85,10 @@ export const notificationService = {
       if (raw && raw.id) {
         return mapNotification(raw);
       }
-    } catch {
+    } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       // Fallback
     }
 

@@ -1,7 +1,33 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from "axios";
 
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://mbyte-backend.onrender.com/api/v1";
+function resolveApiBaseUrl(): string {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (envUrl && envUrl.trim().length > 0) {
+    return envUrl.trim().replace(/\/+$/, "");
+  }
+
+  // Preserve local development default when running locally against NestJS backend
+  if (process.env.NODE_ENV !== "production") {
+    return "http://localhost:4000/api/v1";
+  }
+
+  // In production, an explicit endpoint is required; do not invent or hardcode external endpoints
+  return "";
+}
+
+export const API_BASE_URL = resolveApiBaseUrl();
+
+/**
+ * Determines whether mock data fallback is permitted.
+ * Mock fallback is STRICTLY DISALLOWED in production environments.
+ * It is only permitted if explicitly opted into via NEXT_PUBLIC_ENABLE_MOCKS="true" in development or test.
+ */
+export function isMockFallbackAllowed(): boolean {
+  if (process.env.NODE_ENV === "production") {
+    return false;
+  }
+  return process.env.NEXT_PUBLIC_ENABLE_MOCKS === "true";
+}
 
 export class ApiError extends Error {
   statusCode: number;
@@ -116,9 +142,19 @@ export async function ensureAuthenticated(): Promise<string | null> {
   return null;
 }
 
-// Request Interceptor: Attach Bearer JWT if available
+// Request Interceptor: Attach Bearer JWT if available and validate endpoint
 axiosInstance.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
+    // Validate that API endpoint is configured in production
+    const effectiveBase = config.baseURL || API_BASE_URL;
+    if (!effectiveBase && process.env.NODE_ENV === "production") {
+      throw new ApiError(
+        "Missing NEXT_PUBLIC_API_URL configuration. Production deployments require an explicit NEXT_PUBLIC_API_URL environment variable pointing to the MByte backend API.",
+        500,
+        "CONFIG_ERROR"
+      );
+    }
+
     let token = tokenStorage.getAccessToken();
 
     // If token exists but expired, and refreshToken exists, try to refresh

@@ -1,4 +1,4 @@
-import { apiClient } from "../lib/api-client";
+import { apiClient, isMockFallbackAllowed } from "../lib/api-client";
 import { mockOrders } from "../mock";
 import { authService } from "./authService";
 import { isOrgMatch } from "../lib/utils";
@@ -96,6 +96,9 @@ export const orderService = {
         return list;
       }
     } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       console.warn("Real /orders API call failed, falling back to mock:", err);
     }
 

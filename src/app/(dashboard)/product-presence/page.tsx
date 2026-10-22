@@ -1,3 +1,5 @@
-import ProductPresencePage from "../products/presence/page";
+import { redirect } from "next/navigation";
 
-export default ProductPresencePage;
+export default function ProductPresenceRedirect() {
+  redirect("/products/presence");
+}

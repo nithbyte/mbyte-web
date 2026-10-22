@@ -1,4 +1,4 @@
-import { apiClient } from "../lib/api-client";
+import { apiClient, isMockFallbackAllowed } from "../lib/api-client";
 import { mockTargets, mockMRs, mockTerritories } from "../mock";
 import { authService } from "./authService";
 import { isOrgMatch } from "../lib/utils";
@@ -92,6 +92,9 @@ export const targetService = {
         return list.map(mapTargetItem);
       }
     } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       console.warn("Failed to fetch targets from API, falling back to mock:", err);
     }
 
@@ -170,6 +173,9 @@ export const targetService = {
         };
       }
     } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       console.warn("Failed to fetch achievement summary from API, falling back to mock:", err);
     }
 

@@ -1,4 +1,4 @@
-import { apiClient } from "../lib/api-client";
+import { apiClient, isMockFallbackAllowed } from "../lib/api-client";
 import { mockDistributors, mockTerritories, mockOrders, mockProductPresence, mockProducts } from "../mock";
 import { authService } from "./authService";
 import type { Distributor, DistributorInput, CustomerHistoryItem, StockInwardInput } from "../types";
@@ -46,6 +46,9 @@ export const distributorService = {
         return items.map(mapApiDistributor);
       }
     } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       console.warn("Real /distributors API call failed, falling back to mock:", err);
     }
 
@@ -83,7 +86,10 @@ export const distributorService = {
       if (res && res.id) {
         return mapApiDistributor(res);
       }
-    } catch {
+    } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       // fallback
     }
 
@@ -119,6 +125,9 @@ export const distributorService = {
         return created;
       }
     } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       console.warn("Real /distributors POST failed, falling back to local state:", err);
     }
 
@@ -153,7 +162,10 @@ export const distributorService = {
         if (idx !== -1) distributorsState[idx] = updated;
         return updated;
       }
-    } catch {
+    } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       // fallback
     }
 

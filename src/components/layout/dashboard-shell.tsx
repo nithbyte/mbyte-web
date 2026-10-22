@@ -76,7 +76,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     MR_RESTRICTED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 
   return (
-    <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950">
+    <div className="min-h-screen bg-[#F5F3EE] dark:bg-[#171717]">
       <Suspense fallback={<div className="w-16 lg:w-64" />}>
         <Sidebar />
       </Suspense>

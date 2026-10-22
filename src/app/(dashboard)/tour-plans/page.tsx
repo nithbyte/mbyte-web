@@ -35,8 +35,10 @@ import {
   Unlock,
 } from "lucide-react";
 import { tourPlanService, TourPlan, PlannedVsActualReport, TourPlanStatus } from "@/services/tourPlanService";
+import { useFilterStore } from "@/store";
 
 export default function TourPlansPage() {
+  const { operatingDate, setOperatingDate } = useFilterStore();
   const [selectedYear, setSelectedYear] = useState<number>(2026);
   const [selectedMonth, setSelectedMonth] = useState<number>(10);
   const [statusFilter, setStatusFilter] = useState<TourPlanStatus | "ALL">("ALL");
@@ -46,12 +48,30 @@ export default function TourPlansPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
 
+  // Synchronize year & month whenever operatingDate changes
   useEffect(() => {
-    const now = new Date();
-    setSelectedYear(now.getFullYear());
-    setSelectedMonth(now.getMonth() + 1);
+    if (operatingDate && /^\d{4}-\d{2}-\d{2}$/.test(operatingDate)) {
+      const [yStr, mStr] = operatingDate.split("-");
+      const y = parseInt(yStr, 10);
+      const m = parseInt(mStr, 10);
+      if (!isNaN(y) && !isNaN(m)) {
+        setSelectedYear(y);
+        setSelectedMonth(m);
+      }
+    }
+  }, [operatingDate]);
+
+  useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  const updateOperatingPeriod = (year: number, month: number) => {
+    const dayPart = operatingDate ? parseInt(operatingDate.split("-")[2] || "1", 10) : 1;
+    const maxDays = new Date(year, month, 0).getDate();
+    const safeDay = Math.min(Math.max(1, dayPart), maxDays);
+    const newDate = `${year}-${String(month).padStart(2, "0")}-${String(safeDay).padStart(2, "0")}`;
+    setOperatingDate(newDate);
+  };
 
   // Inspection Modal
   const [selectedPlan, setSelectedPlan] = useState<TourPlan | null>(null);
@@ -227,9 +247,14 @@ export default function TourPlansPage() {
           <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
             {/* Year Selector */}
             <select
+              aria-label="Filter Tour Plans by Year"
               value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
-              className="h-9 px-3 py-1 rounded-md border border-input bg-background text-sm font-medium focus:ring-1 focus:ring-ring"
+              onChange={(e) => {
+                const yr = Number(e.target.value);
+                setSelectedYear(yr);
+                updateOperatingPeriod(yr, selectedMonth);
+              }}
+              className="h-9 px-3 py-1 rounded-md border border-input bg-background text-sm font-medium focus:ring-1 focus:ring-ring cursor-pointer"
             >
               {[2025, 2026, 2027].map((yr) => (
                 <option key={yr} value={yr}>
@@ -240,9 +265,14 @@ export default function TourPlansPage() {
 
             {/* Month Selector */}
             <select
+              aria-label="Filter Tour Plans by Month"
               value={selectedMonth}
-              onChange={(e) => setSelectedMonth(Number(e.target.value))}
-              className="h-9 px-3 py-1 rounded-md border border-input bg-background text-sm font-medium focus:ring-1 focus:ring-ring"
+              onChange={(e) => {
+                const m = Number(e.target.value);
+                setSelectedMonth(m);
+                updateOperatingPeriod(selectedYear, m);
+              }}
+              className="h-9 px-3 py-1 rounded-md border border-input bg-background text-sm font-medium focus:ring-1 focus:ring-ring cursor-pointer"
             >
               {monthNames.map((name, idx) => (
                 <option key={idx + 1} value={idx + 1}>

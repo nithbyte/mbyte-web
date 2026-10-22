@@ -63,8 +63,8 @@ async function runTestSuite() {
     const afterLogoutUser = await authService.getCurrentUser();
     assert(afterLogoutUser === null, "logout safely clears session tokens");
 
-    // Restore primary manager session for downstream service checks
-    await authService.login({ email: "rajesh.kannan@novispharma.com", password: "Password123!" });
+    // Restore primary admin session for downstream service checks
+    await authService.login({ email: "admin@novispharma.com", password: "Password123!" });
 
     // 2. Territory Service
     console.log("\n--- [2] Territory Service ---");

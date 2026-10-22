@@ -1,4 +1,4 @@
-import { apiClient } from "../lib/api-client";
+import { apiClient, isMockFallbackAllowed } from "../lib/api-client";
 import { mockDoctors, mockTerritories, mockVisits } from "../mock";
 import { authService } from "./authService";
 import type { Doctor, DoctorInput, CustomerHistoryItem } from "../types";
@@ -54,6 +54,9 @@ export const doctorService = {
         return items.map(mapApiDoctor);
       }
     } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       console.warn("Real /doctors API call failed, falling back to mock:", err);
     }
 
@@ -98,7 +101,10 @@ export const doctorService = {
       if (res && res.id) {
         return mapApiDoctor(res);
       }
-    } catch {
+    } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       // fallback
     }
 
@@ -136,6 +142,9 @@ export const doctorService = {
         return created;
       }
     } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       console.warn("Real /doctors POST failed, falling back to local state:", err);
     }
 
@@ -173,7 +182,10 @@ export const doctorService = {
         if (idx !== -1) doctorsState[idx] = updated;
         return updated;
       }
-    } catch {
+    } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       // fallback
     }
 
@@ -215,7 +227,10 @@ export const doctorService = {
           });
         });
       }
-    } catch {
+    } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       // fallback to mock visits
       const doctorVisits = mockVisits.filter((v) => v.customerId === id);
       doctorVisits.forEach((v) => {
@@ -254,7 +269,10 @@ export const doctorService = {
       const docs = await this.getDoctors();
       const set = new Set(docs.map((d) => d.specialty).filter(Boolean));
       if (set.size > 0) return Array.from(set).sort();
-    } catch {
+    } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       // fallback
     }
 

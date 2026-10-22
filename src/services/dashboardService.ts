@@ -1,4 +1,4 @@
-import { apiClient } from "../lib/api-client";
+import { apiClient, isMockFallbackAllowed } from "../lib/api-client";
 import {
   mockVisits,
   mockOrders,
@@ -190,6 +190,9 @@ export const dashboardService = {
         },
       };
     } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       console.warn("Failed to fetch KPIs from real APIs, falling back to mock:", err);
     }
 

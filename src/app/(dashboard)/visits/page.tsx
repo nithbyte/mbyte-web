@@ -1,22 +1,12 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { PageHeader } from "@/components/layout/page-header";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/dialog";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
-import { EmptyState } from "@/components/ui/empty-state";
 import {
   useVisits,
   useVisitCounts,
@@ -29,132 +19,90 @@ import {
   useCreateVisit,
   useCurrentUser,
 } from "@/hooks";
+import { useFilterStore } from "@/store";
 import { visitService } from "@/services/visitService";
-import { formatDate } from "@/lib/utils";
-import { normalizeRole, type Visit, type VisitStatus, type VerificationStatus, type VisitQueryParams } from "@/types";
+import { getLocalTodayDate, formatOperatingDateDisplay } from "@/lib/utils";
+import { normalizeRole, type Visit, type VisitQueryParams } from "@/types";
 import {
-  Navigation,
+  VisitMasterList,
+  VisitDetailPane,
+  AccompanimentModal,
+  ScheduleVisitDialog,
+} from "@/features/visits";
+import {
   Radio,
-  CheckCircle,
-  AlertTriangle,
-  XCircle,
-  Clock,
-  MapPin,
-  User,
   Calendar,
   Search,
   Filter,
   RotateCcw,
-  Building2,
-  Stethoscope,
-  Eye,
-  FileText,
-  Boxes,
-  ShieldCheck,
   CalendarCheck,
   Plus,
-  AlertCircle,
-  Star,
-  UserCheck,
-  Award,
+  Navigation,
+  CheckCircle,
+  Clock,
+  AlertTriangle,
 } from "lucide-react";
-
-const INITIAL_VISIT_FORM = {
-  mrId: "",
-  customerId: "",
-  customerType: "DOCTOR" as "DOCTOR" | "PHARMACY",
-  scheduledDate: "2026-10-08",
-  scheduledStartTime: "10:00",
-  scheduledEndTime: "10:30",
-  priority: "ROUTINE",
-  notes: "",
-};
 
 export default function VisitsPage() {
   const isMounted = useIsMounted();
+  const { operatingDate, setOperatingDate, selectedTerritoryId } = useFilterStore();
 
   // Filters State
-  const [selectedDate, setSelectedDate] = useState("2026-10-08"); // Today in mock data
+  const [todayDate, setTodayDate] = useState<string>("");
+  const selectedDate = operatingDate;
+  const setSelectedDate = setOperatingDate;
   const [selectedMR, setSelectedMR] = useState("ALL");
   const [selectedTerritory, setSelectedTerritory] = useState("ALL");
   const [selectedCustomer, setSelectedCustomer] = useState("ALL");
   const [selectedStatus, setSelectedStatus] = useState("ALL");
   const [search, setSearch] = useState("");
 
-  // Details Modal State
+  useEffect(() => {
+    setTodayDate(getLocalTodayDate());
+  }, []);
+
+  // Workspace Split-Screen Selection
   const [selectedVisit, setSelectedVisit] = useState<Visit | null>(null);
+  const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
 
   // Geofence Exception Review State
-  const [exceptionComment, setExceptionComment] = useState("");
   const [isReviewingException, setIsReviewingException] = useState(false);
 
-  // Manager Joint Visit Accompaniment State
+  // Joint Accompaniment Modal State
   const [isAccompanimentOpen, setIsAccompanimentOpen] = useState(false);
-  const [accompanimentForm, setAccompanimentForm] = useState({
-    durationMinutes: 30,
-    jointObjectives: "",
-    coachingFeedback: "",
-    isPrivateCoaching: true,
-    strengthsObserved: "",
-    areasOfImprovement: "",
-    rating: 4,
-  });
   const [isSavingAccompaniment, setIsSavingAccompaniment] = useState(false);
 
-  const handleReviewException = async (approved: boolean) => {
-    if (!selectedVisit) return;
-    setIsReviewingException(true);
-    try {
-      const updated = await visitService.reviewGeofenceException(
-        selectedVisit.id,
-        approved,
-        exceptionComment
-      );
-      setSelectedVisit(updated);
-      setExceptionComment("");
-    } catch (err: any) {
-      alert(err.response?.data?.message || err.message || "Failed to review exception");
-    } finally {
-      setIsReviewingException(false);
-    }
-  };
+  // Schedule Visit Modal State
+  const [isScheduleOpen, setIsScheduleOpen] = useState(false);
+  const createVisitMutation = useCreateVisit();
 
-  const handleSaveAccompaniment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedVisit) return;
-    setIsSavingAccompaniment(true);
-    try {
-      await visitService.recordAccompaniment(selectedVisit.id, accompanimentForm);
-      setIsAccompanimentOpen(false);
-      const accs = await visitService.getAccompaniments(selectedVisit.id);
-      setSelectedVisit({ ...selectedVisit, accompaniments: accs });
-      alert("Joint visit accompaniment recorded successfully!");
-    } catch (err: any) {
-      alert(err.response?.data?.message || err.message || "Failed to record accompaniment");
-    } finally {
-      setIsSavingAccompaniment(false);
-    }
-  };
+  // Effective Territory Filter (Local Page Filter + Shared Header Store)
+  const effectiveTerritory =
+    selectedTerritory !== "ALL"
+      ? selectedTerritory
+      : selectedTerritoryId !== "ALL"
+      ? selectedTerritoryId
+      : "ALL";
 
   // Query Params
   const queryParams: VisitQueryParams = useMemo(
     () => ({
       date: selectedDate,
       mrId: selectedMR,
-      territoryId: selectedTerritory,
+      territoryId: effectiveTerritory,
       customerId: selectedCustomer,
       status: selectedStatus,
       search,
     }),
-    [selectedDate, selectedMR, selectedTerritory, selectedCustomer, selectedStatus, search]
+    [selectedDate, selectedMR, effectiveTerritory, selectedCustomer, selectedStatus, search]
   );
 
   // Queries
-  const { data: visits, isLoading } = useVisits(queryParams);
+  const { data: visits = [], isLoading } = useVisits(queryParams);
   const { data: counts } = useVisitCounts({
     date: selectedDate,
     mrId: selectedMR,
-    territoryId: selectedTerritory,
+    territoryId: effectiveTerritory,
   });
   const { data: visitDates } = useVisitDates();
   const { data: territories } = useTerritories();
@@ -166,7 +114,35 @@ export default function VisitsPage() {
   const canonicalRole = normalizeRole(currentUser?.role);
   const isTerritoryManager = canonicalRole === "TERRITORY_MANAGER";
   const isMR = canonicalRole === "MR";
+  const isManagerOrAdmin = !isMR;
   const managerTerritoryId = isTerritoryManager ? currentUser?.territoryId : null;
+
+  // Sync selectedVisit if current list changes or active visit is updated
+  useEffect(() => {
+    if (visits.length > 0) {
+      if (!selectedVisit) {
+        // Auto-select the first visit for immediate desktop workspace inspection
+        setSelectedVisit(visits[0]);
+      } else {
+        // Keep updated reference to selected visit if it exists in current query result
+        const refreshed = visits.find((v) => v.id === selectedVisit.id);
+        if (refreshed) {
+          setSelectedVisit(refreshed);
+        }
+      }
+    } else {
+      setSelectedVisit(null);
+    }
+  }, [visits]);
+
+  // Handle visit selection from list
+  const handleSelectVisit = (visit: Visit) => {
+    setSelectedVisit(visit);
+    // On mobile viewports (<1024px), open the slide-over dialog
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      setIsMobileDetailOpen(true);
+    }
+  };
 
   // Role-scoped eligible MRs for scheduling
   const eligibleMRs = useMemo(() => {
@@ -201,7 +177,7 @@ export default function VisitsPage() {
   }, [pharmacies, isTerritoryManager, managerTerritoryId]);
 
   const handleResetFilters = () => {
-    setSelectedDate("2026-10-08");
+    setSelectedDate(getLocalTodayDate());
     setSelectedMR("ALL");
     setSelectedTerritory("ALL");
     setSelectedCustomer("ALL");
@@ -209,125 +185,65 @@ export default function VisitsPage() {
     setSearch("");
   };
 
-  // Schedule Visit Modal
-  const createVisitMutation = useCreateVisit();
-  const [isScheduleOpen, setIsScheduleOpen] = useState(false);
-  const [visitForm, setVisitForm] = useState(INITIAL_VISIT_FORM);
-  const [visitFormErrors, setVisitFormErrors] = useState<Record<string, string>>({});
-
-  const validateVisitForm = (): boolean => {
-    const errors: Record<string, string> = {};
-    if (!visitForm.mrId) errors.mrId = "Please assign a Medical Representative.";
-    if (!visitForm.customerId) errors.customerId = "Please select a target doctor or pharmacy.";
-    if (!visitForm.scheduledDate) errors.scheduledDate = "Scheduled date is required.";
-    if (!visitForm.scheduledStartTime) errors.scheduledStartTime = "Start time is required.";
-    setVisitFormErrors(errors);
-    return Object.keys(errors).length === 0;
+  // Geofence exception approval / rejection
+  const handleReviewException = async (approved: boolean, comment: string) => {
+    if (!selectedVisit) return;
+    setIsReviewingException(true);
+    try {
+      const updated = await visitService.reviewGeofenceException(
+        selectedVisit.id,
+        approved,
+        comment
+      );
+      setSelectedVisit(updated);
+    } catch (err: any) {
+      alert(err.response?.data?.message || err.message || "Failed to review exception");
+    } finally {
+      setIsReviewingException(false);
+    }
   };
 
-  const handleScheduleVisit = async () => {
-    if (!validateVisitForm()) return;
-    await createVisitMutation.mutateAsync(visitForm);
-    setVisitForm(INITIAL_VISIT_FORM);
-    setVisitFormErrors({});
+  // Joint accompaniment coaching submission
+  const handleSaveAccompaniment = async (formData: any) => {
+    if (!selectedVisit) return;
+    setIsSavingAccompaniment(true);
+    try {
+      await visitService.recordAccompaniment(selectedVisit.id, formData);
+      setIsAccompanimentOpen(false);
+      const accs = await visitService.getAccompaniments(selectedVisit.id);
+      setSelectedVisit({ ...selectedVisit, accompaniments: accs });
+      alert("Joint visit accompaniment recorded successfully!");
+    } catch (err: any) {
+      alert(err.response?.data?.message || err.message || "Failed to record accompaniment");
+    } finally {
+      setIsSavingAccompaniment(false);
+    }
+  };
+
+  // Schedule visit submission
+  const handleScheduleSubmit = async (formData: any) => {
+    await createVisitMutation.mutateAsync(formData);
     setIsScheduleOpen(false);
   };
 
   const hasActiveFilters =
-    selectedDate !== "2026-10-08" ||
+    selectedDate === "ALL" ||
     selectedMR !== "ALL" ||
     selectedTerritory !== "ALL" ||
     selectedCustomer !== "ALL" ||
     selectedStatus !== "ALL" ||
     Boolean(search.trim());
 
-  // Status Badge Helper
-  const getStatusBadge = (status: VisitStatus) => {
-    switch (status) {
-      case "COMPLETED":
-        return (
-          <Badge variant="success" className="gap-1 text-[11px] font-semibold">
-            <CheckCircle className="h-3 w-3" />
-            COMPLETED
-          </Badge>
-        );
-      case "IN_PROGRESS":
-      case "LOCATION_VERIFIED":
-        return (
-          <Badge variant="info" className="gap-1 text-[11px] font-semibold">
-            <Clock className="h-3 w-3" />
-            IN PROGRESS
-          </Badge>
-        );
-      case "MISSED":
-        return (
-          <Badge variant="warning" className="gap-1 text-[11px] font-semibold">
-            <AlertTriangle className="h-3 w-3" />
-            MISSED
-          </Badge>
-        );
-      case "CANCELLED":
-        return (
-          <Badge variant="destructive" className="gap-1 text-[11px] font-semibold">
-            <XCircle className="h-3 w-3" />
-            CANCELLED
-          </Badge>
-        );
-      case "PLANNED":
-      default:
-        return (
-          <Badge variant="secondary" className="gap-1 text-[11px] font-semibold">
-            <Calendar className="h-3 w-3" />
-            PLANNED
-          </Badge>
-        );
-    }
-  };
-
-  // Verification Badge Helper
-  const getVerificationBadge = (verStatus: VerificationStatus, distance?: number) => {
-    switch (verStatus) {
-      case "VERIFIED":
-        return (
-          <Badge variant="success" className="gap-1 text-[10px] font-mono">
-            <CheckCircle className="h-3 w-3 text-emerald-600" />
-            <span>VERIFIED ({distance ?? 18}m)</span>
-          </Badge>
-        );
-      case "OUTSIDE_RADIUS":
-        return (
-          <Badge variant="destructive" className="gap-1 text-[10px] font-mono">
-            <AlertTriangle className="h-3 w-3 text-rose-600" />
-            <span>OUTSIDE RADIUS ({distance ?? 120}m)</span>
-          </Badge>
-        );
-      case "MANUAL_EXCEPTION":
-        return (
-          <Badge variant="warning" className="gap-1 text-[10px] font-mono">
-            <ShieldCheck className="h-3 w-3 text-amber-600" />
-            <span>EXCEPTION APPROVED</span>
-          </Badge>
-        );
-      case "UNVERIFIED":
-      default:
-        return (
-          <Badge variant="secondary" className="gap-1 text-[10px] font-mono">
-            <span>UNVERIFIED</span>
-          </Badge>
-        );
-    }
-  };
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Page Header */}
       <PageHeader
         title="Field Visit Management & Detailing Operations"
-        description="Daily representative doctor calls, in-clinic detailing logs, GPS geofence radius verification, and visit completion telemetry."
+        description="Desktop field operations workspace: live doctor calls, in-clinic detailing logs, PostGIS 200m geofence radius audit, and supervisory accompaniment."
         badge={
           <Badge variant="success" className="gap-1">
             <Radio className="h-3 w-3 animate-pulse" />
-            <span>Live Field Feed</span>
+            <span>Live Field Telemetry</span>
           </Badge>
         }
         actions={
@@ -335,20 +251,22 @@ export default function VisitsPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setSelectedDate("2026-10-08")}
+              onClick={() => setSelectedDate(todayDate || getLocalTodayDate())}
               className={`h-8 gap-1.5 text-xs ${
-                selectedDate === "2026-10-08" ? "bg-sky-50 text-sky-600 border-sky-300 font-bold" : ""
+                todayDate && selectedDate === todayDate
+                  ? "border-sky-500 text-sky-700 bg-sky-50 dark:bg-sky-950/40"
+                  : ""
               }`}
             >
-              <CalendarCheck className="h-3.5 w-3.5" />
-              <span>Today: Oct 8, 2026</span>
+              <Calendar className="h-3.5 w-3.5" />
+              <span>Today</span>
             </Button>
-            {!isMR && (
+            {isManagerOrAdmin && (
               <Button
                 variant="primary"
                 size="sm"
-                className="h-8 gap-1.5 text-xs"
                 onClick={() => setIsScheduleOpen(true)}
+                className="h-8 gap-1.5 text-xs"
                 id="btn-schedule-visit"
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -359,141 +277,83 @@ export default function VisitsPage() {
         }
       />
 
-      {/* KPI SUMMARY CARDS: TODAY'S VISITS, COMPLETED, IN PROGRESS, MISSED, CANCELLED */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        {/* 1. TODAY'S VISITS */}
-        <Card className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">Today&apos;s Calls</span>
-            <Navigation className="h-4 w-4 text-sky-600" />
+      {/* KPI METRIC TILES */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex items-center justify-between">
+          <div>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Scheduled</span>
+            <div className="text-xl font-extrabold text-slate-900 dark:text-white mt-0.5">
+              {counts?.todayTotal ?? visits.length}
+            </div>
           </div>
-          <div className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
-            {counts?.todayTotal || 0}
+          <div className="p-2 rounded-lg bg-sky-50 dark:bg-sky-950/60 text-sky-600">
+            <CalendarCheck className="h-4 w-4" />
           </div>
-          <p className="text-[11px] text-slate-400 mt-1">Scheduled for selected date</p>
-        </Card>
+        </div>
 
-        {/* 2. COMPLETED */}
-        <Card
-          onClick={() => setSelectedStatus(selectedStatus === "COMPLETED" ? "ALL" : "COMPLETED")}
-          className={`p-4 cursor-pointer transition-all border ${
-            selectedStatus === "COMPLETED"
-              ? "border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/30 ring-2 ring-emerald-500/20"
-              : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-emerald-300"
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-              Completed
-            </span>
-            <CheckCircle className="h-4 w-4 text-emerald-600" />
+        <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex items-center justify-between">
+          <div>
+            <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Completed</span>
+            <div className="text-xl font-extrabold text-emerald-600 mt-0.5">
+              {counts?.completed ?? visits.filter((v) => v.status === "COMPLETED").length}
+            </div>
           </div>
-          <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
-            {counts?.completed || 0}
+          <div className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600">
+            <CheckCircle className="h-4 w-4" />
           </div>
-          <p className="text-[11px] text-emerald-600/80 font-medium mt-1">
-            {counts?.todayTotal ? Math.round(((counts.completed || 0) / counts.todayTotal) * 100) : 0}% of planned calls
-          </p>
-        </Card>
+        </div>
 
-        {/* 3. IN PROGRESS */}
-        <Card
-          onClick={() => setSelectedStatus(selectedStatus === "IN_PROGRESS" ? "ALL" : "IN_PROGRESS")}
-          className={`p-4 cursor-pointer transition-all border ${
-            selectedStatus === "IN_PROGRESS"
-              ? "border-sky-500 bg-sky-50/50 dark:bg-sky-950/30 ring-2 ring-sky-500/20"
-              : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-sky-300"
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-sky-700 dark:text-sky-400">
-              In Progress
-            </span>
-            <Clock className="h-4 w-4 text-sky-600" />
+        <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex items-center justify-between">
+          <div>
+            <span className="text-[10px] font-bold text-sky-600 uppercase tracking-wider">In Progress</span>
+            <div className="text-xl font-extrabold text-sky-600 mt-0.5">
+              {counts?.inProgress ?? visits.filter((v) => v.status === "IN_PROGRESS" || v.status === "LOCATION_VERIFIED").length}
+            </div>
           </div>
-          <div className="text-2xl font-bold text-sky-600 dark:text-sky-400 mt-1">
-            {counts?.inProgress || 0}
+          <div className="p-2 rounded-lg bg-sky-50 dark:bg-sky-950/60 text-sky-600">
+            <Clock className="h-4 w-4" />
           </div>
-          <p className="text-[11px] text-sky-600/80 font-medium mt-1">
-            At clinic / verified radius
-          </p>
-        </Card>
+        </div>
 
-        {/* 4. MISSED */}
-        <Card
-          onClick={() => setSelectedStatus(selectedStatus === "MISSED" ? "ALL" : "MISSED")}
-          className={`p-4 cursor-pointer transition-all border ${
-            selectedStatus === "MISSED"
-              ? "border-amber-500 bg-amber-50/50 dark:bg-amber-950/30 ring-2 ring-amber-500/20"
-              : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-amber-300"
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">
-              Missed
-            </span>
-            <AlertTriangle className="h-4 w-4 text-amber-600" />
+        <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex items-center justify-between">
+          <div>
+            <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Missed Calls</span>
+            <div className="text-xl font-extrabold text-amber-600 mt-0.5">
+              {counts?.missed ?? visits.filter((v) => v.status === "MISSED").length}
+            </div>
           </div>
-          <div className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">
-            {counts?.missed || 0}
+          <div className="p-2 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-600">
+            <AlertTriangle className="h-4 w-4" />
           </div>
-          <p className="text-[11px] text-amber-600/80 font-medium mt-1">
-            Unvisited doctor quota
-          </p>
-        </Card>
+        </div>
 
-        {/* 5. CANCELLED */}
-        <Card
-          onClick={() => setSelectedStatus(selectedStatus === "CANCELLED" ? "ALL" : "CANCELLED")}
-          className={`p-4 cursor-pointer transition-all border ${
-            selectedStatus === "CANCELLED"
-              ? "border-rose-500 bg-rose-50/50 dark:bg-rose-950/30 ring-2 ring-rose-500/20"
-              : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-rose-300"
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-rose-700 dark:text-rose-400">
-              Cancelled
-            </span>
-            <XCircle className="h-4 w-4 text-rose-600" />
+        <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex items-center justify-between col-span-2 sm:col-span-1">
+          <div>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Planned / Due</span>
+            <div className="text-xl font-extrabold text-slate-700 dark:text-slate-300 mt-0.5">
+              {counts?.planned ?? visits.filter((v) => v.status === "PLANNED").length}
+            </div>
           </div>
-          <div className="text-2xl font-bold text-rose-600 dark:text-rose-400 mt-1">
-            {counts?.cancelled || 0}
+          <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500">
+            <Navigation className="h-4 w-4" />
           </div>
-          <p className="text-[11px] text-rose-600/80 font-medium mt-1">
-            Doctor unavailable / emergency
-          </p>
-        </Card>
-
-        {/* 6. GPS VERIFIED RATE */}
-        <Card className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">GPS Accuracy</span>
-            <ShieldCheck className="h-4 w-4 text-emerald-600" />
-          </div>
-          <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
-            {counts?.gpsVerifiedRate || 95}%
-          </div>
-          <p className="text-[11px] text-emerald-600 font-medium mt-1">
-            Within 50m registered pin
-          </p>
-        </Card>
+        </div>
       </div>
 
       {/* MULTI-FILTER TOOLBAR */}
-      <Card className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+      <Card className="p-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="space-y-3">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800 text-xs">
             <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
               <Filter className="h-3.5 w-3.5 text-sky-600" />
-              Field Visit Search & Audit Filters
+              Field Visit Search & Filter Criteria
             </span>
             {hasActiveFilters && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleResetFilters}
-                className="h-6 text-[11px] gap-1 text-slate-500 hover:text-slate-900"
+                className="h-6 text-[11px] gap-1 text-slate-500 hover:text-slate-900 dark:hover:text-slate-100"
               >
                 <RotateCcw className="h-3 w-3" />
                 Reset Filters
@@ -505,19 +365,24 @@ export default function VisitsPage() {
             {/* 1. DATE FILTER */}
             <div>
               <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                Call Schedule Date
+                Schedule Date
               </label>
               <select
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
                 suppressHydrationWarning
-                className="w-full h-8 px-2 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                className="w-full h-8 px-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
               >
                 <option value="ALL">All Recorded Dates</option>
+                {selectedDate && selectedDate !== "ALL" && !visitDates?.includes(selectedDate) && (
+                  <option value={selectedDate}>
+                    {formatOperatingDateDisplay(selectedDate)}
+                  </option>
+                )}
                 {isMounted &&
                   visitDates?.map((d) => (
                     <option key={d} value={d}>
-                      {d === "2026-10-08" ? `Today (${formatDate(d)})` : formatDate(d)}
+                      {formatOperatingDateDisplay(d)}
                     </option>
                   ))}
               </select>
@@ -532,9 +397,9 @@ export default function VisitsPage() {
                 value={selectedMR}
                 onChange={(e) => setSelectedMR(e.target.value)}
                 suppressHydrationWarning
-                className="w-full h-8 px-2 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                className="w-full h-8 px-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
               >
-                <option value="ALL">All Medical Representatives</option>
+                <option value="ALL">All Representatives</option>
                 {isMounted &&
                   mrList?.map((mr) => (
                     <option key={mr.id} value={mr.id}>
@@ -553,9 +418,9 @@ export default function VisitsPage() {
                 value={selectedTerritory}
                 onChange={(e) => setSelectedTerritory(e.target.value)}
                 suppressHydrationWarning
-                className="w-full h-8 px-2 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                className="w-full h-8 px-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
               >
-                <option value="ALL">All Territory Zones</option>
+                <option value="ALL">All Territories</option>
                 {isMounted &&
                   territories?.map((t) => (
                     <option key={t.id} value={t.id}>
@@ -568,13 +433,13 @@ export default function VisitsPage() {
             {/* 4. CUSTOMER FILTER */}
             <div>
               <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                Customer (Doctor / Pharmacy)
+                Customer (Doctor / Retail)
               </label>
               <select
                 value={selectedCustomer}
                 onChange={(e) => setSelectedCustomer(e.target.value)}
                 suppressHydrationWarning
-                className="w-full h-8 px-2 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                className="w-full h-8 px-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
               >
                 <option value="ALL">All Target Customers</option>
                 {isMounted && (
@@ -607,7 +472,7 @@ export default function VisitsPage() {
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
                 suppressHydrationWarning
-                className="w-full h-8 px-2 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                className="w-full h-8 px-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
               >
                 <option value="ALL">All Call Statuses</option>
                 <option value="COMPLETED">COMPLETED</option>
@@ -623,7 +488,7 @@ export default function VisitsPage() {
           <div className="relative">
             <Search className="absolute left-2.5 top-2 h-4 w-4 text-slate-400" />
             <Input
-              placeholder="Search customer name, doctor specialty, MR name, clinic address, or detailing feedback notes..."
+              placeholder="Search doctor name, clinic address, representative name, or feedback notes..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-8 h-8 text-xs"
@@ -632,800 +497,88 @@ export default function VisitsPage() {
         </div>
       </Card>
 
-      {/* VISITS TABLE */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-3">
-          <div>
-            <CardTitle className="text-base font-bold flex items-center gap-2">
-              <Navigation className="h-4 w-4 text-sky-600" />
-              Representative Field Call Roster & Geofence Logs
-            </CardTitle>
-            <CardDescription>
-              Audit distance deviation, scheduled vs actual duration, and detailing outcomes
-            </CardDescription>
-          </div>
-          <div className="text-xs text-slate-500 font-medium flex items-center gap-1">
-            <Filter className="h-3.5 w-3.5 text-slate-400" />
-            Showing {visits?.length || 0} visits
-          </div>
-        </CardHeader>
+      {/* SPLIT-SCREEN WORKSPACE LAYOUT */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        {/* LEFT PANEL: Master Visit List (5 cols on desktop, full width on mobile) */}
+        <div className="lg:col-span-5 xl:col-span-5">
+          <Card className="border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+            <CardHeader className="p-3.5 bg-slate-50 dark:bg-slate-950/60 border-b border-slate-200 dark:border-slate-800 flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-xs font-bold flex items-center gap-2 text-slate-900 dark:text-white">
+                  <Navigation className="h-3.5 w-3.5 text-sky-600" />
+                  Scheduled Calls Roster
+                </CardTitle>
+              </div>
+              <Badge variant="outline" className="text-[10px] font-mono">
+                {visits.length} Calls
+              </Badge>
+            </CardHeader>
 
-        <CardContent className="p-0">
-          {isLoading ? (
-            <div className="p-6 space-y-3">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </div>
-          ) : !visits || visits.length === 0 ? (
-            <div className="p-8">
-              <EmptyState
-                title="No Representative Calls Found"
-                description="No field visits match the selected date, representative, customer, or call status."
-                actionLabel="Reset All Filters"
-                onAction={handleResetFilters}
+            <CardContent className="p-0">
+              <VisitMasterList
+                visits={visits}
+                selectedVisitId={selectedVisit?.id || null}
+                onSelectVisit={handleSelectVisit}
+                isLoading={isLoading}
+                onResetFilters={handleResetFilters}
+                hasActiveFilters={hasActiveFilters}
               />
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Customer / Clinic</TableHead>
-                  <TableHead>Field Representative</TableHead>
-                  <TableHead>Territory</TableHead>
-                  <TableHead>Time Schedule</TableHead>
-                  <TableHead>Call Status</TableHead>
-                  <TableHead>GPS Verification</TableHead>
-                  <TableHead>Outcome / Notes</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {visits.map((v) => (
-                    <TableRow key={v.id}>
-                      {/* Customer */}
-                      <TableCell>
-                        <div className="flex items-start gap-1.5">
-                          {v.customerType === "DOCTOR" ? (
-                            <Stethoscope className="h-3.5 w-3.5 text-sky-600 shrink-0 mt-0.5" />
-                          ) : (
-                            <Building2 className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" />
-                          )}
-                          <div>
-                            <button
-                              onClick={() => setSelectedVisit(v)}
-                              className="font-bold text-xs text-slate-900 dark:text-slate-100 hover:text-sky-600 text-left transition-colors"
-                            >
-                              {v.customerName}
-                            </button>
-                            <div className="text-[11px] text-slate-500">
-                              {v.specialty || "Clinic / Pharmacy"}
-                            </div>
-                            <div className="text-[10px] text-slate-400 truncate max-w-xs">
-                              {v.customerAddress}
-                            </div>
-                          </div>
-                        </div>
-                      </TableCell>
+            </CardContent>
+          </Card>
+        </div>
 
-                      {/* MR */}
-                      <TableCell>
-                        <div className="font-semibold text-xs text-slate-800 dark:text-slate-200 flex items-center gap-1">
-                          <User className="h-3.5 w-3.5 text-slate-400" />
-                          <span>{v.mrName}</span>
-                        </div>
-                        <div className="text-[10px] font-mono text-slate-400 pl-4.5">
-                          {v.employeeCode}
-                        </div>
-                      </TableCell>
+        {/* RIGHT PANEL: Desktop Detail Pane (7 cols on desktop, sticky position) */}
+        <div className="hidden lg:block lg:col-span-7 xl:col-span-7 lg:sticky lg:top-20">
+          <VisitDetailPane
+            visit={selectedVisit}
+            isManagerOrAdmin={isManagerOrAdmin}
+            onReviewException={handleReviewException}
+            isReviewingException={isReviewingException}
+            onOpenAccompaniment={() => setIsAccompanimentOpen(true)}
+          />
+        </div>
+      </div>
 
-                      {/* Territory */}
-                      <TableCell>
-                        <div className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-400">
-                          <MapPin className="h-3 w-3 text-sky-600 shrink-0" />
-                          <span>{v.territoryName}</span>
-                        </div>
-                      </TableCell>
-
-                      {/* Time Schedule */}
-                      <TableCell>
-                        <div className="text-xs font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-1">
-                          <Clock className="h-3 w-3 text-slate-400" />
-                          <span>{v.scheduledStartTime || "09:00 AM"}</span>
-                        </div>
-                        <div className="text-[10px] text-slate-500">
-                          Date: {formatDate(v.scheduledDate || v.plannedDate)}
-                        </div>
-                        {v.durationSeconds && (
-                          <div className="text-[10px] font-mono text-emerald-600">
-                            Duration: {Math.round(v.durationSeconds / 60)} mins
-                          </div>
-                        )}
-                      </TableCell>
-
-                      {/* Call Status */}
-                      <TableCell>{getStatusBadge(v.status)}</TableCell>
-
-                      {/* GPS Verification */}
-                      <TableCell>
-                        {getVerificationBadge(v.verificationStatus, v.distanceMeters)}
-                      </TableCell>
-
-                      {/* Outcome / Notes */}
-                      <TableCell>
-                        <div className="text-[11px] text-slate-600 dark:text-slate-400 line-clamp-2 max-w-xs italic">
-                          &ldquo;{v.feedbackNotes || v.doctorFeedback || "Detailed core therapeutic portfolio"}&rdquo;
-                        </div>
-                        {v.nextFollowUpDate && (
-                          <div className="text-[10px] text-sky-600 font-medium mt-0.5">
-                            Follow-Up: {formatDate(v.nextFollowUpDate)}
-                          </div>
-                        )}
-                      </TableCell>
-
-                      {/* Actions */}
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 px-2 text-xs text-slate-600 hover:text-sky-600"
-                          onClick={() => setSelectedVisit(v)}
-                          title="Inspect Detailing Call Record"
-                        >
-                          <Eye className="h-3.5 w-3.5 mr-1" />
-                          Details
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* VISIT DETAILS MODAL */}
+      {/* MOBILE / TABLET SLIDE-OVER MODAL (<1024px) */}
       <Modal
-        isOpen={Boolean(selectedVisit)}
-        onClose={() => setSelectedVisit(null)}
+        isOpen={isMobileDetailOpen}
+        onClose={() => setIsMobileDetailOpen(false)}
         title={selectedVisit ? `Call Details: ${selectedVisit.customerName}` : "Visit Record"}
-        description={`Audit ID #${selectedVisit?.id} • Scheduled ${formatDate(selectedVisit?.scheduledDate || "")} at ${selectedVisit?.scheduledStartTime}`}
+        description={`Audit ID #${selectedVisit?.id} • Scheduled ${selectedVisit?.scheduledStartTime}`}
       >
-        {selectedVisit && (
-          <div className="space-y-4 text-xs max-h-[70vh] overflow-y-auto pr-1">
-            {/* Top Status & Verification Banner */}
-            <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-sky-100 dark:bg-sky-950 text-sky-600">
-                  {selectedVisit.customerType === "DOCTOR" ? (
-                    <Stethoscope className="h-5 w-5" />
-                  ) : (
-                    <Building2 className="h-5 w-5" />
-                  )}
-                </div>
-                <div>
-                  <div className="text-sm font-bold text-slate-900 dark:text-white">
-                    {selectedVisit.customerName}
-                  </div>
-                  <div className="text-slate-500 text-[11px]">
-                    {selectedVisit.specialty} • {selectedVisit.customerType}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                {getStatusBadge(selectedVisit.status)}
-                {getVerificationBadge(selectedVisit.verificationStatus, selectedVisit.distanceMeters)}
-              </div>
-            </div>
-
-            {/* MR Profile & Customer Address Grid */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1">
-                <span className="text-slate-400 font-semibold uppercase text-[10px]">
-                  Field Representative (MR)
-                </span>
-                <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1">
-                  <User className="h-3.5 w-3.5 text-sky-600" />
-                  <span>{selectedVisit.mrName}</span>
-                </div>
-                <div className="text-slate-500 text-[11px]">
-                  Employee Code: {selectedVisit.employeeCode || "NP-MR-101"}
-                </div>
-                <div className="text-slate-500 text-[11px]">
-                  Territory: {selectedVisit.territoryName}
-                </div>
-              </div>
-
-              <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1">
-                <span className="text-slate-400 font-semibold uppercase text-[10px]">
-                  Customer Clinic / Store Address
-                </span>
-                <div className="font-bold text-slate-900 dark:text-slate-100">
-                  {selectedVisit.customerAddress}
-                </div>
-                <div className="text-slate-500 text-[11px]">
-                  Priority Tier: {selectedVisit.priority || "NORMAL"}
-                </div>
-                <div className="text-emerald-600 font-mono text-[11px]">
-                  GPS Pin: ({selectedVisit.verifiedLatitude?.toFixed(4)}, {selectedVisit.verifiedLongitude?.toFixed(4)})
-                </div>
-              </div>
-            </div>
-
-            {/* Time Breakdown Grid (Scheduled vs Actual) */}
-            <div className="p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 space-y-2">
-              <span className="text-slate-400 font-semibold uppercase text-[10px] flex items-center gap-1">
-                <Clock className="h-3 w-3 text-sky-600" />
-                Time Schedule & Call Duration Telemetry
-              </span>
-
-              <div className="grid grid-cols-3 gap-2 text-center pt-1">
-                <div className="p-2 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                  <div className="text-[10px] text-slate-500 font-semibold">Scheduled Window</div>
-                  <div className="text-xs font-bold text-slate-900 dark:text-white mt-0.5">
-                    {selectedVisit.scheduledStartTime} - {selectedVisit.scheduledEndTime}
-                  </div>
-                </div>
-
-                <div className="p-2 rounded bg-sky-50 dark:bg-sky-950/40 border border-sky-100 dark:border-sky-900/50">
-                  <div className="text-[10px] text-sky-700 dark:text-sky-300 font-semibold">
-                    Actual Start / End
-                  </div>
-                  <div className="text-xs font-bold text-sky-900 dark:text-sky-100 mt-0.5 font-mono">
-                    {selectedVisit.actualStartTime
-                      ? new Date(selectedVisit.actualStartTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                      : selectedVisit.scheduledStartTime}
-                    {" - "}
-                    {selectedVisit.actualEndTime
-                      ? new Date(selectedVisit.actualEndTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                      : selectedVisit.scheduledEndTime}
-                  </div>
-                </div>
-
-                <div className="p-2 rounded bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/50">
-                  <div className="text-[10px] text-emerald-700 dark:text-emerald-300 font-semibold">
-                    Total In-Clinic Duration
-                  </div>
-                  <div className="text-xs font-bold text-emerald-900 dark:text-emerald-100 mt-0.5">
-                    {selectedVisit.durationSeconds
-                      ? `${Math.floor(selectedVisit.durationSeconds / 60)}m ${selectedVisit.durationSeconds % 60}s`
-                      : "18 mins (Standard)"}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* GPS Verification & Geofence Distance */}
-            <div className="p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 space-y-2">
-              <span className="text-slate-400 font-semibold uppercase text-[10px] flex items-center gap-1">
-                <ShieldCheck className="h-3 w-3 text-emerald-600" />
-                Geofence Verification & Distance Compliance
-              </span>
-
-              <div className="grid grid-cols-2 gap-3 pt-1">
-                <div className="p-2.5 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                  <div className="text-[10px] text-slate-500 font-semibold">Distance Deviation</div>
-                  <div className="text-sm font-bold text-slate-900 dark:text-white mt-0.5 font-mono">
-                    {selectedVisit.distanceMeters ?? 18.5} meters
-                  </div>
-                  <div className="text-[10px] text-emerald-600 mt-0.5">
-                    {selectedVisit.verificationStatus === "EXCEPTION_APPROVED"
-                      ? "Approved by Manager as Geofence Exception"
-                      : "Within allowable clinic geofence"}
-                  </div>
-                </div>
-
-                <div className="p-2.5 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                  <div className="text-[10px] text-slate-500 font-semibold">Verification Status</div>
-                  <div className="mt-1">
-                    {selectedVisit.verificationStatus === "EXCEPTION_REQUESTED" ? (
-                      <Badge variant="outline" className="border-amber-500 text-amber-500 text-[10px]">
-                        <Clock className="w-2.5 h-2.5 mr-1" /> Exception Pending Review
-                      </Badge>
-                    ) : selectedVisit.verificationStatus === "EXCEPTION_APPROVED" ? (
-                      <Badge variant="default" className="bg-emerald-600 text-white text-[10px]">
-                        <CheckCircle className="w-2.5 h-2.5 mr-1" /> Exception Approved
-                      </Badge>
-                    ) : selectedVisit.verificationStatus === "VERIFIED" ? (
-                      <Badge variant="default" className="bg-emerald-600 text-white text-[10px]">
-                        <CheckCircle className="w-2.5 h-2.5 mr-1" /> Verified Within Radius
-                      </Badge>
-                    ) : (
-                      <Badge variant="destructive" className="text-[10px]">
-                        <XCircle className="w-2.5 h-2.5 mr-1" /> Outside Radius
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* GEOFENCE EXCEPTION REVIEW PANEL */}
-              {selectedVisit.verificationStatus === "EXCEPTION_REQUESTED" && (
-                <div className="mt-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg space-y-2">
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
-                    <AlertTriangle className="w-4 h-4" />
-                    MR Requested Geofence Exception
-                  </div>
-                  <p className="text-xs text-foreground italic">
-                    &ldquo;{selectedVisit.exceptionReason || "Reason not specified"}&rdquo;
-                  </p>
-                  <div className="text-[11px] text-muted-foreground">
-                    Requested on: {selectedVisit.exceptionRequestedAt ? new Date(selectedVisit.exceptionRequestedAt).toLocaleString() : "Recently"}
-                  </div>
-
-                  {!isMR && (
-                    <div className="pt-2 border-t border-amber-500/20 space-y-2">
-                      <label className="text-[11px] font-medium text-foreground">Reviewer Feedback Notes:</label>
-                      <input
-                        type="text"
-                        className="w-full text-xs p-1.5 rounded border border-border bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-                        placeholder="e.g. Verified doctor clinic relocated to 2nd floor over call..."
-                        value={exceptionComment}
-                        onChange={(e) => setExceptionComment(e.target.value)}
-                      />
-                      <div className="flex justify-end gap-2 pt-1">
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          disabled={isReviewingException}
-                          onClick={() => handleReviewException(false)}
-                          className="h-7 text-xs"
-                        >
-                          Reject Exception
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
-                          disabled={isReviewingException}
-                          onClick={() => handleReviewException(true)}
-                        >
-                          Authorize Exception Approval
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {selectedVisit.verificationStatus === "EXCEPTION_APPROVED" && selectedVisit.exceptionReviewComments && (
-                <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded-md text-xs text-emerald-800 dark:text-emerald-300">
-                  <span className="font-semibold">Manager Review Comment:</span> {selectedVisit.exceptionReviewComments}
-                </div>
-              )}
-            </div>
-
-            {/* JOINT FIELD VISIT ACCOMPANIMENTS */}
-            <div className="p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400 font-semibold uppercase text-[10px] flex items-center gap-1">
-                  <UserCheck className="h-3.5 w-3.5 text-blue-600" />
-                  Manager Joint Field Visit & Coaching
-                </span>
-                {!isMR && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-7 text-xs flex items-center gap-1 text-blue-600 border-blue-600/40 hover:bg-blue-50 dark:hover:bg-blue-950/40"
-                    onClick={() => setIsAccompanimentOpen(true)}
-                  >
-                    <Plus className="w-3 h-3" />
-                    Record Accompaniment
-                  </Button>
-                )}
-              </div>
-
-              {selectedVisit.accompaniments && selectedVisit.accompaniments.length > 0 ? (
-                <div className="space-y-2 pt-1">
-                  {selectedVisit.accompaniments.map((acc: any) => (
-                    <div key={acc.id} className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-border/50 text-xs space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-foreground">
-                          Accompanied by {acc.manager?.user?.firstName || "Manager"} {acc.manager?.user?.lastName || ""}
-                          <span className="font-normal text-muted-foreground ml-1.5">({acc.manager?.employeeCode || "MGR"})</span>
-                        </span>
-                        {acc.rating && (
-                          <div className="flex items-center text-amber-500 font-bold text-xs gap-0.5">
-                            <Star className="w-3.5 h-3.5 fill-current" /> {acc.rating} / 5
-                          </div>
-                        )}
-                      </div>
-
-                      {acc.jointObjectives && (
-                        <p className="text-slate-600 dark:text-slate-300">
-                          <strong>Objectives:</strong> {acc.jointObjectives}
-                        </p>
-                      )}
-
-                      {acc.strengthsObserved && (
-                        <p className="text-emerald-700 dark:text-emerald-400">
-                          <strong>Strengths:</strong> {acc.strengthsObserved}
-                        </p>
-                      )}
-
-                      {acc.areasOfImprovement && (
-                        <p className="text-amber-700 dark:text-amber-400">
-                          <strong>Areas for Improvement:</strong> {acc.areasOfImprovement}
-                        </p>
-                      )}
-
-                      {acc.coachingFeedback && (
-                        <div className="p-2 rounded bg-blue-50/60 dark:bg-blue-950/40 border border-blue-500/20 text-blue-900 dark:text-blue-200 mt-1">
-                          <strong>Manager Coaching Feedback:</strong> {acc.coachingFeedback}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground italic pt-1">
-                  No manager joint accompaniment recorded for this call.
-                </p>
-              )}
-            </div>
-
-            {/* Outcome and Representative Notes */}
-            <div className="p-3.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
-              <span className="text-slate-400 font-semibold uppercase text-[10px] flex items-center gap-1">
-                <FileText className="h-3 w-3 text-sky-600" />
-                Physician Response & Detailing Outcome Notes
-              </span>
-              <p className="text-slate-800 dark:text-slate-200 leading-relaxed italic text-xs">
-                &ldquo;{selectedVisit.feedbackNotes || selectedVisit.doctorFeedback}&rdquo;
-              </p>
-
-              {selectedVisit.nextFollowUpDate && (
-                <div className="pt-2 border-t border-slate-200 dark:border-slate-800 text-[11px] text-sky-700 dark:text-sky-400 font-medium">
-                  Follow-up call booked for: {formatDate(selectedVisit.nextFollowUpDate)}
-                </div>
-              )}
-            </div>
-
-            {/* Products Discussed & Samples */}
-            {selectedVisit.visitProducts && selectedVisit.visitProducts.length > 0 && (
-              <div className="space-y-2">
-                <span className="text-slate-400 font-semibold uppercase text-[10px] flex items-center gap-1">
-                  <Boxes className="h-3 w-3 text-indigo-600" />
-                  Formulations Promoted & Samples Distributed
-                </span>
-
-                <div className="space-y-1.5">
-                  {selectedVisit.visitProducts.map((p, idx) => (
-                    <div
-                      key={idx}
-                      className="p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 flex items-center justify-between"
-                    >
-                      <div>
-                        <div className="font-semibold text-xs text-slate-900 dark:text-slate-100">
-                          {p.productId === "prod_001" ? "CardioVas 10mg" : p.productId === "prod_003" ? "NormoTens 40mg" : "NovisMet 500mg"}
-                        </div>
-                        {p.feedback && (
-                          <div className="text-[11px] text-slate-500 mt-0.5">
-                            Feedback: {p.feedback}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        {p.promoted && (
-                          <Badge variant="outline" className="text-[10px]">
-                            Promoted
-                          </Badge>
-                        )}
-                        {p.samplesQty && (
-                          <Badge variant="info" className="text-[10px]">
-                            {p.samplesQty} Samples
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="flex justify-end pt-3 border-t border-slate-200 dark:border-slate-800">
-              <Button variant="primary" size="sm" onClick={() => setSelectedVisit(null)}>
-                Close Call Record
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
-
-      {/* RECORD JOINT FIELD VISIT ACCOMPANIMENT MODAL */}
-      <Modal
-        isOpen={isAccompanimentOpen}
-        onClose={() => setIsAccompanimentOpen(false)}
-        title="Record Joint Field Visit Accompaniment"
-        description="Log supervisory coaching, performance evaluation, and field coaching observations for this visit."
-      >
-        <form onSubmit={handleSaveAccompaniment} className="space-y-3">
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-xs font-medium">Accompaniment Duration (Minutes)</label>
-              <Input
-                type="number"
-                min={5}
-                max={240}
-                value={accompanimentForm.durationMinutes}
-                onChange={(e) => setAccompanimentForm({ ...accompanimentForm, durationMinutes: Number(e.target.value) })}
-                className="mt-1 text-xs"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-medium">Performance Rating (1-5)</label>
-              <select
-                className="w-full text-xs p-2 rounded-md border border-input bg-background mt-1"
-                value={accompanimentForm.rating}
-                onChange={(e) => setAccompanimentForm({ ...accompanimentForm, rating: Number(e.target.value) })}
-              >
-                <option value={5}>5 - Outstanding (Role Model)</option>
-                <option value={4}>4 - Exceeds Expectations</option>
-                <option value={3}>3 - Meets Standard Expectations</option>
-                <option value={2}>2 - Needs Coaching & Improvement</option>
-                <option value={1}>1 - Unsatisfactory Call Delivery</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="text-xs font-medium">Joint Visit Call Objectives</label>
-            <Input
-              placeholder="e.g. Coach MR on objection handling for CardioVas 10mg..."
-              value={accompanimentForm.jointObjectives}
-              onChange={(e) => setAccompanimentForm({ ...accompanimentForm, jointObjectives: e.target.value })}
-              className="mt-1 text-xs"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs font-medium">Strengths Observed</label>
-            <textarea
-              rows={2}
-              className="w-full text-xs p-2 rounded-md border border-input bg-background mt-1 focus:outline-none focus:ring-1 focus:ring-ring"
-              placeholder="Good clinical paper citation, professional doctor rapport..."
-              value={accompanimentForm.strengthsObserved}
-              onChange={(e) => setAccompanimentForm({ ...accompanimentForm, strengthsObserved: e.target.value })}
-            />
-          </div>
-
-          <div>
-            <label className="text-xs font-medium">Areas of Improvement</label>
-            <textarea
-              rows={2}
-              className="w-full text-xs p-2 rounded-md border border-input bg-background mt-1 focus:outline-none focus:ring-1 focus:ring-ring"
-              placeholder="Closing for secondary prescription commitment, time pacing..."
-              value={accompanimentForm.areasOfImprovement}
-              onChange={(e) => setAccompanimentForm({ ...accompanimentForm, areasOfImprovement: e.target.value })}
-            />
-          </div>
-
-          <div>
-            <label className="text-xs font-medium">Private Manager Coaching Feedback</label>
-            <textarea
-              rows={2}
-              className="w-full text-xs p-2 rounded-md border border-input bg-background mt-1 focus:outline-none focus:ring-1 focus:ring-ring"
-              placeholder="Confidential coaching observations (only visible to Managers and Admins)..."
-              value={accompanimentForm.coachingFeedback}
-              onChange={(e) => setAccompanimentForm({ ...accompanimentForm, coachingFeedback: e.target.value })}
-            />
-          </div>
-
-          <div className="flex items-center gap-2 pt-1">
-            <input
-              type="checkbox"
-              id="isPrivate"
-              checked={accompanimentForm.isPrivateCoaching}
-              onChange={(e) => setAccompanimentForm({ ...accompanimentForm, isPrivateCoaching: e.target.checked })}
-              className="rounded border-input"
-            />
-            <label htmlFor="isPrivate" className="text-xs text-muted-foreground">
-              Keep coaching feedback confidential to Managers and Admins (Do not disclose to MR)
-            </label>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-2 border-t border-border/50">
-            <Button type="button" variant="outline" size="sm" onClick={() => setIsAccompanimentOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" size="sm" disabled={isSavingAccompaniment} className="bg-blue-600 hover:bg-blue-700 text-white">
-              Save Accompaniment Record
-            </Button>
-          </div>
-        </form>
-      </Modal>
-
-
-      {/* SCHEDULE VISIT MODAL */}
-      <Modal
-        isOpen={isScheduleOpen}
-        onClose={() => { setIsScheduleOpen(false); setVisitForm(INITIAL_VISIT_FORM); setVisitFormErrors({}); }}
-        title="Schedule New Field Visit"
-        description="Plan a doctor or pharmacy call and assign it to a Medical Representative for execution."
-      >
-        <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
-
-          {isTerritoryManager && (
-            <div className="rounded-xl border border-emerald-500/30 bg-emerald-50/60 dark:bg-emerald-950/30 p-3 text-xs text-emerald-800 dark:text-emerald-300">
-              <span className="font-bold">Territory Enforced:</span> Assignments are restricted to Medical Representatives and customers within your assigned territory ({currentUser?.territoryName || "Assigned Territory"}).
-            </div>
-          )}
-
-          {/* Assignment */}
-          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-3">
-            <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 uppercase tracking-wider">
-              <User className="h-3.5 w-3.5 text-sky-600" />
-              Assignment
-            </h4>
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Medical Representative *</label>
-              <select
-                id="visit-mr"
-                value={visitForm.mrId}
-                onChange={(e) => setVisitForm(f => ({ ...f, mrId: e.target.value }))}
-                className={`w-full h-9 px-3 rounded-md border bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500 ${visitFormErrors.mrId ? "border-rose-400" : "border-slate-200 dark:border-slate-800"}`}
-              >
-                <option value="">Select MR…</option>
-                {eligibleMRs.map(mr => (
-                  <option key={mr.id} value={mr.id}>{mr.name} — {mr.territoryName || "Territory"}</option>
-                ))}
-              </select>
-              {visitFormErrors.mrId && <p className="text-[11px] text-rose-500 mt-0.5 flex items-center gap-1"><AlertCircle className="h-3 w-3" />{visitFormErrors.mrId}</p>}
-            </div>
-          </div>
-
-          {/* Target Customer */}
-          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-3">
-            <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 uppercase tracking-wider">
-              <Stethoscope className="h-3.5 w-3.5 text-indigo-600" />
-              Target Customer
-            </h4>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => setVisitForm(f => ({ ...f, customerType: "DOCTOR", customerId: "" }))}
-                className={`py-2 rounded-lg border text-xs font-semibold transition-colors ${
-                  visitForm.customerType === "DOCTOR"
-                    ? "border-sky-500 bg-sky-50 text-sky-700 dark:bg-sky-950/40"
-                    : "border-slate-200 dark:border-slate-700 text-slate-600 hover:border-sky-300"
-                }`}
-              >
-                <Stethoscope className="h-3.5 w-3.5 mx-auto mb-0.5" />
-                Doctor
-              </button>
-              <button
-                type="button"
-                onClick={() => setVisitForm(f => ({ ...f, customerType: "PHARMACY", customerId: "" }))}
-                className={`py-2 rounded-lg border text-xs font-semibold transition-colors ${
-                  visitForm.customerType === "PHARMACY"
-                    ? "border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40"
-                    : "border-slate-200 dark:border-slate-700 text-slate-600 hover:border-emerald-300"
-                }`}
-              >
-                <Building2 className="h-3.5 w-3.5 mx-auto mb-0.5" />
-                Pharmacy
-              </button>
-              <button
-                type="button"
-                disabled
-                className="py-2 rounded-lg border border-dashed border-slate-200 dark:border-slate-700 text-xs text-slate-400 cursor-not-allowed"
-              >
-                <Boxes className="h-3.5 w-3.5 mx-auto mb-0.5" />
-                Stockist
-              </button>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                {visitForm.customerType === "DOCTOR" ? "Doctor" : "Pharmacy"} *
-              </label>
-              <select
-                id="visit-customer"
-                value={visitForm.customerId}
-                onChange={(e) => setVisitForm(f => ({ ...f, customerId: e.target.value }))}
-                className={`w-full h-9 px-3 rounded-md border bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500 ${visitFormErrors.customerId ? "border-rose-400" : "border-slate-200 dark:border-slate-800"}`}
-              >
-                <option value="">Select {visitForm.customerType === "DOCTOR" ? "Doctor" : "Pharmacy"}…</option>
-                {visitForm.customerType === "DOCTOR"
-                  ? eligibleDoctors.map(d => <option key={d.id} value={d.id}>{d.name}{d.specialty ? ` — ${d.specialty}` : ""}</option>)
-                  : eligiblePharmacies.map(p => <option key={p.id} value={p.id}>{p.name}</option>)
-                }
-              </select>
-              {visitFormErrors.customerId && <p className="text-[11px] text-rose-500 mt-0.5 flex items-center gap-1"><AlertCircle className="h-3 w-3" />{visitFormErrors.customerId}</p>}
-            </div>
-          </div>
-
-          {/* Schedule */}
-          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-3">
-            <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 uppercase tracking-wider">
-              <Calendar className="h-3.5 w-3.5 text-amber-600" />
-              Schedule & Timing
-            </h4>
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Date *</label>
-                <input
-                  id="visit-date"
-                  type="date"
-                  value={visitForm.scheduledDate}
-                  onChange={(e) => setVisitForm(f => ({ ...f, scheduledDate: e.target.value }))}
-                  className={`w-full h-9 px-3 rounded-md border bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500 ${visitFormErrors.scheduledDate ? "border-rose-400" : "border-slate-200 dark:border-slate-800"}`}
-                />
-                {visitFormErrors.scheduledDate && <p className="text-[11px] text-rose-500 mt-0.5">{visitFormErrors.scheduledDate}</p>}
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Start Time *</label>
-                <input
-                  id="visit-start-time"
-                  type="time"
-                  value={visitForm.scheduledStartTime}
-                  onChange={(e) => setVisitForm(f => ({ ...f, scheduledStartTime: e.target.value }))}
-                  className={`w-full h-9 px-3 rounded-md border bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500 ${visitFormErrors.scheduledStartTime ? "border-rose-400" : "border-slate-200 dark:border-slate-800"}`}
-                />
-                {visitFormErrors.scheduledStartTime && <p className="text-[11px] text-rose-500 mt-0.5">{visitFormErrors.scheduledStartTime}</p>}
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">End Time</label>
-                <input
-                  id="visit-end-time"
-                  type="time"
-                  value={visitForm.scheduledEndTime}
-                  onChange={(e) => setVisitForm(f => ({ ...f, scheduledEndTime: e.target.value }))}
-                  className="w-full h-9 px-3 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Priority</label>
-                <select
-                  id="visit-priority"
-                  value={visitForm.priority}
-                  onChange={(e) => setVisitForm(f => ({ ...f, priority: e.target.value }))}
-                  className="w-full h-9 px-3 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                >
-                  <option value="ROUTINE">Routine</option>
-                  <option value="HIGH">High Priority</option>
-                  <option value="URGENT">Urgent</option>
-                  <option value="FOLLOW_UP">Follow-Up</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Internal Notes</label>
-                <Input
-                  id="visit-notes"
-                  placeholder="Optional briefing notes for MR…"
-                  value={visitForm.notes}
-                  onChange={(e) => setVisitForm(f => ({ ...f, notes: e.target.value }))}
-                  className="h-9 text-xs"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => { setIsScheduleOpen(false); setVisitForm(INITIAL_VISIT_FORM); setVisitFormErrors({}); }}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={handleScheduleVisit}
-              disabled={createVisitMutation.isPending}
-              id="btn-save-visit"
-              className="gap-1.5"
-            >
-              <CalendarCheck className="h-3.5 w-3.5" />
-              {createVisitMutation.isPending ? "Scheduling…" : "Schedule & Assign Visit"}
-            </Button>
-          </div>
+        <div className="max-h-[75vh] overflow-y-auto">
+          <VisitDetailPane
+            visit={selectedVisit}
+            onClose={() => setIsMobileDetailOpen(false)}
+            isManagerOrAdmin={isManagerOrAdmin}
+            onReviewException={handleReviewException}
+            isReviewingException={isReviewingException}
+            onOpenAccompaniment={() => setIsAccompanimentOpen(true)}
+          />
         </div>
       </Modal>
+
+      {/* JOINT FIELD ACCOMPANIMENT MODAL */}
+      <AccompanimentModal
+        isOpen={isAccompanimentOpen}
+        onClose={() => setIsAccompanimentOpen(false)}
+        onSave={handleSaveAccompaniment}
+        isSaving={isSavingAccompaniment}
+      />
+
+      {/* SCHEDULE VISIT MODAL */}
+      <ScheduleVisitDialog
+        isOpen={isScheduleOpen}
+        onClose={() => setIsScheduleOpen(false)}
+        onSubmit={handleScheduleSubmit}
+        isPending={createVisitMutation.isPending}
+        eligibleMRs={eligibleMRs}
+        eligibleDoctors={eligibleDoctors}
+        eligiblePharmacies={eligiblePharmacies}
+        isTerritoryManager={isTerritoryManager}
+        managerTerritoryName={currentUser?.territoryName}
+        defaultDate={selectedDate}
+      />
     </div>
   );
 }

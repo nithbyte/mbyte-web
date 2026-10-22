@@ -1,7 +1,7 @@
-import { apiClient } from "../lib/api-client";
+import { apiClient, isMockFallbackAllowed } from "../lib/api-client";
 import { mockVisits } from "../mock";
 import { authService } from "./authService";
-import { isOrgMatch } from "../lib/utils";
+import { isOrgMatch, getLocalTodayDate } from "../lib/utils";
 import type { Visit, VisitQueryParams, VisitCounts } from "../types";
 
 function mapApiVisit(v: any): Visit {
@@ -31,8 +31,8 @@ function mapApiVisit(v: any): Visit {
     customerType: v.customerType || "DOCTOR",
     specialty,
     customerAddress,
-    plannedDate: v.scheduledDate?.split("T")[0] || "2026-10-08",
-    scheduledDate: v.scheduledDate?.split("T")[0] || "2026-10-08",
+    plannedDate: v.scheduledDate?.split("T")[0] || getLocalTodayDate(),
+    scheduledDate: v.scheduledDate?.split("T")[0] || getLocalTodayDate(),
     scheduledStartTime: scheduledStartTimeStr || "10:00 AM",
     scheduledEndTime: v.scheduledEndTime || "10:30 AM",
     status: v.status || "PLANNED",
@@ -94,6 +94,9 @@ export const visitService = {
         return list;
       }
     } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       console.warn("Real /visits API call failed, falling back to mock:", err);
     }
 
@@ -202,7 +205,7 @@ export const visitService = {
   },
 
   async getTodayVisits(territoryId?: string): Promise<Visit[]> {
-    return this.getVisits({ date: "2026-10-08", territoryId });
+    return this.getVisits({ date: getLocalTodayDate(), territoryId });
   },
 
   async getUniqueVisitDates(): Promise<string[]> {

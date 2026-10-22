@@ -37,9 +37,13 @@ import {
   Stethoscope,
 } from "lucide-react";
 import { dcrService, DailyCallReport, DcrStatus } from "@/services/dcrService";
+import { useFilterStore } from "@/store";
+import { getLocalTodayDate, formatOperatingDateDisplay } from "@/lib/utils";
 
 export default function DailyCallReportsPage() {
-  const [selectedDate, setSelectedDate] = useState<string>("");
+  const { operatingDate, setOperatingDate } = useFilterStore();
+  const [showAllDates, setShowAllDates] = useState(false);
+  const activeDate = showAllDates ? "" : operatingDate;
   const [statusFilter, setStatusFilter] = useState<DcrStatus | "ALL">("ALL");
   const [search, setSearch] = useState("");
 
@@ -48,7 +52,6 @@ export default function DailyCallReportsPage() {
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    setSelectedDate(new Date().toISOString().split("T")[0]);
     setIsMounted(true);
   }, []);
 
@@ -65,7 +68,7 @@ export default function DailyCallReportsPage() {
     setIsLoading(true);
     try {
       const res = await dcrService.getDcrs({
-        date: selectedDate || undefined,
+        date: activeDate || undefined,
         status: statusFilter,
       });
       setDcrs(res.items);
@@ -74,7 +77,7 @@ export default function DailyCallReportsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedDate, statusFilter]);
+  }, [activeDate, statusFilter]);
 
   useEffect(() => {
     if (isMounted) {
@@ -173,7 +176,9 @@ export default function DailyCallReportsPage() {
         <Card className="p-4 bg-card/60 backdrop-blur border-border/80">
           <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Reports Logged</div>
           <div className="text-2xl font-bold mt-1 text-foreground">{totalCount}</div>
-          <div className="text-xs text-muted-foreground mt-1">Date: {selectedDate || "All Dates"}</div>
+          <div className="text-xs text-muted-foreground mt-1">
+            Date: {activeDate ? formatOperatingDateDisplay(activeDate) : "All Recorded Dates"}
+          </div>
         </Card>
         <Card className="p-4 bg-amber-50/50 dark:bg-amber-950/20 border-amber-200/50 dark:border-amber-800/40">
           <div className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wider">Pending Review</div>
@@ -206,16 +211,34 @@ export default function DailyCallReportsPage() {
               <Calendar className="h-4 w-4 text-muted-foreground" />
               <input
                 type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="h-9 px-3 py-1 rounded-md border border-input bg-background text-sm font-medium focus:ring-1 focus:ring-ring"
+                aria-label="Filter DCR by date"
+                value={activeDate}
+                onChange={(e) => {
+                  setShowAllDates(false);
+                  if (e.target.value) {
+                    setOperatingDate(e.target.value);
+                  }
+                }}
+                className="h-9 px-3 py-1 rounded-md border border-input bg-background text-sm font-medium focus:ring-1 focus:ring-ring cursor-pointer"
               />
-              {selectedDate && (
+              {activeDate ? (
                 <button
-                  onClick={() => setSelectedDate("")}
-                  className="text-xs text-muted-foreground hover:text-foreground underline ml-1"
+                  type="button"
+                  onClick={() => setShowAllDates(true)}
+                  className="text-xs text-muted-foreground hover:text-foreground underline ml-1 cursor-pointer"
                 >
-                  Clear
+                  Show All Dates
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAllDates(false);
+                    setOperatingDate(getLocalTodayDate());
+                  }}
+                  className="text-xs text-primary hover:underline ml-1 cursor-pointer"
+                >
+                  Reset to Operating Date
                 </button>
               )}
             </div>

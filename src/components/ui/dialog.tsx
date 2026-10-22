@@ -61,12 +61,12 @@ export function Modal({
         aria-modal="true"
         aria-labelledby="modal-dialog-title"
         className={cn(
-          "relative w-full rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl transition-all animate-in zoom-in-95 max-h-[90vh] overflow-y-auto dark:border-slate-800 dark:bg-slate-900 text-slate-900 dark:text-slate-100",
+          "relative w-full rounded-2xl border border-[#E5E1D9] bg-white p-6 shadow-2xl transition-all animate-in zoom-in-95 max-h-[90vh] overflow-y-auto dark:border-[#333333] dark:bg-[#242424] text-slate-900 dark:text-[#F5F3EE]",
           widthClasses[maxWidth],
           className
         )}
       >
-        <div className="flex items-start justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex items-start justify-between pb-4 border-b border-[#E5E1D9] dark:border-[#333333]">
           <div>
             <h2
               id="modal-dialog-title"
@@ -83,7 +83,7 @@ export function Modal({
           <button
             onClick={onClose}
             aria-label="Close dialog"
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-[#2C2C2C] dark:hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] dark:focus-visible:ring-[#FF6B00]"
           >
             <X className="h-4 w-4" />
           </button>

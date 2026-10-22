@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Menu,
   Bell,
@@ -8,31 +8,59 @@ import {
   MapPin,
   Building,
   ChevronDown,
-  User as UserIcon,
   Mail,
   Shield,
   Briefcase,
   IdCard,
+  Calendar,
 } from "lucide-react";
 import { useSidebarStore, useFilterStore } from "@/store";
 import { useTerritories, useCurrentUser, useLogout, useIsMounted } from "@/hooks";
 import { normalizeRole, getRoleLabel, type CanonicalRole } from "@/types";
 import { Modal } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { LogOut } from "lucide-react";
+import { getLocalTodayDate, getLocalYesterdayDate, isValidIsoDate, cn } from "@/lib/utils";
 
 export function Header() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
   const isMounted = useIsMounted();
   const { toggleMobileOpen } = useSidebarStore();
-  const { selectedTerritoryId, setSelectedTerritoryId } = useFilterStore();
+  const { selectedTerritoryId, setSelectedTerritoryId, operatingDate, setOperatingDate } = useFilterStore();
   const { data: territories } = useTerritories();
   const { data: currentUser } = useCurrentUser();
   const logoutMutation = useLogout();
-
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
+  // Compute local dates when mounted in the browser
+  const todayDate = isMounted ? getLocalTodayDate() : "";
+  const yesterdayDate = isMounted ? getLocalYesterdayDate() : "";
+
+  // URL query parameter synchronization (?date=YYYY-MM-DD)
+  useEffect(() => {
+    const urlDate = searchParams?.get("date");
+    if (urlDate) {
+      // Validate strictly to prevent invalid dates like 2026-02-31 from corrupting store
+      if (isValidIsoDate(urlDate) && urlDate !== operatingDate) {
+        setOperatingDate(urlDate);
+      }
+    }
+  }, [searchParams, operatingDate, setOperatingDate]);
+
+  const handleDateChange = (newDate: string) => {
+    if (!newDate || !isValidIsoDate(newDate) || newDate === operatingDate) return;
+    setOperatingDate(newDate);
+
+    // Update URL parameter without reload
+    const params = new URLSearchParams(searchParams ? searchParams.toString() : "");
+    if (params.get("date") !== newDate) {
+      params.set("date", newDate);
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    }
+  };
 
   const canonicalRole = normalizeRole(currentUser?.role);
   const userName = currentUser?.name || "Field User";
@@ -86,20 +114,20 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-20 flex h-16 w-full items-center justify-between border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95 lg:px-8">
+      <header className="sticky top-0 z-20 flex h-16 w-full items-center justify-between border-b border-[#E5E1D9] bg-white/95 px-4 backdrop-blur-md dark:border-[#333333] dark:bg-[#242424]/95 lg:px-8">
         {/* Left: Mobile Toggle, Territory Filter & Date Badge */}
         <div className="flex items-center gap-2.5 min-w-0">
           <button
             onClick={toggleMobileOpen}
-            className="lg:hidden rounded-lg p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 shrink-0"
+            className="lg:hidden rounded-lg p-2 text-slate-600 hover:bg-[#F5F3EE] dark:text-slate-300 dark:hover:bg-[#2C2C2C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] dark:focus-visible:ring-[#FF6B00] shrink-0"
             aria-label="Open navigation menu"
           >
             <Menu className="h-5 w-5" />
           </button>
 
           {/* Territory Selector */}
-          <div className="hidden sm:flex items-center gap-2 rounded-lg border border-slate-200 bg-white/90 px-3 py-1.5 text-xs shadow-xs dark:border-slate-800 dark:bg-slate-900/90 shrink-0">
-            <MapPin className="h-3.5 w-3.5 text-sky-600 dark:text-sky-400 shrink-0" aria-hidden="true" />
+          <div className="hidden sm:flex items-center gap-2 rounded-lg border border-[#E5E1D9] bg-white/90 px-3 py-1.5 text-xs shadow-xs dark:border-[#333333] dark:bg-[#2C2C2C]/90 shrink-0">
+            <MapPin className="h-3.5 w-3.5 text-[#FF6B00] shrink-0" aria-hidden="true" />
             <label htmlFor="header-territory-select" className="font-semibold text-slate-500 dark:text-slate-400 shrink-0">
               Territory:
             </label>
@@ -111,24 +139,87 @@ export function Header() {
               suppressHydrationWarning
               className="bg-transparent font-medium text-slate-900 focus:outline-none dark:text-slate-100 cursor-pointer text-xs max-w-[150px] md:max-w-[180px] lg:max-w-[220px] truncate"
             >
-              <option value="ALL" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+              <option value="ALL" className="bg-white dark:bg-[#242424] text-slate-900 dark:text-slate-100">
                 All Authorized Territories
               </option>
               {isMounted &&
                 territories?.map((t) => (
-                  <option key={t.id} value={t.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+                  <option key={t.id} value={t.id} className="bg-white dark:bg-[#242424] text-slate-900 dark:text-slate-100">
                     {t.name} ({t.code})
                   </option>
                 ))}
             </select>
           </div>
 
-          {/* Date Context Badge */}
-          <div className="hidden md:inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-100/90 px-3 py-1.5 text-xs text-slate-700 shadow-xs dark:border-slate-700/80 dark:bg-slate-800/95 dark:text-slate-200 shrink-0 whitespace-nowrap">
-            <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-            <span className="font-bold text-slate-900 dark:text-slate-100">Oct 2026</span>
-            <span className="text-slate-300 dark:text-slate-600 font-normal">|</span>
-            <span className="font-semibold text-sky-600 dark:text-sky-400">Live Field Ops</span>
+          {/* Operating Date Selector & Context Controls */}
+          <div className="hidden sm:flex items-center gap-1 rounded-lg border border-[#E5E1D9] bg-white/95 p-1 text-xs shadow-xs dark:border-[#333333] dark:bg-[#2C2C2C]/95 shrink-0">
+            <div className="flex items-center gap-1 px-1 text-slate-500 dark:text-slate-400">
+              <Calendar className="h-3.5 w-3.5 text-[#FF6B00] shrink-0" aria-hidden="true" />
+              <label htmlFor="header-operating-date" className="font-semibold hidden xl:inline text-slate-600 dark:text-slate-300">
+                Date:
+              </label>
+            </div>
+
+            {/* Today Shortcut Button */}
+            <button
+              type="button"
+              onClick={() => handleDateChange(getLocalTodayDate())}
+              className={cn(
+                "rounded px-2 py-1 text-xs font-medium transition-colors cursor-pointer",
+                todayDate && operatingDate === todayDate
+                  ? "bg-orange-50 font-semibold text-[#FF6B00] dark:bg-[#FF6B00]/20 dark:text-[#FF6B00]"
+                  : "text-slate-600 hover:bg-[#F5F3EE] dark:text-slate-300 dark:hover:bg-[#333333]"
+              )}
+              title="Set operating date to Today"
+            >
+              Today
+            </button>
+
+            {/* Yesterday Shortcut Button */}
+            <button
+              type="button"
+              onClick={() => handleDateChange(getLocalYesterdayDate())}
+              className={cn(
+                "rounded px-2 py-1 text-xs font-medium transition-colors cursor-pointer",
+                yesterdayDate && operatingDate === yesterdayDate
+                  ? "bg-orange-50 font-semibold text-[#FF6B00] dark:bg-[#FF6B00]/20 dark:text-[#FF6B00]"
+                  : "text-slate-600 hover:bg-[#F5F3EE] dark:text-slate-300 dark:hover:bg-[#333333]"
+              )}
+              title="Set operating date to Yesterday"
+            >
+              Yesterday
+            </button>
+
+            {/* Native Date Picker */}
+            <input
+              id="header-operating-date"
+              type="date"
+              aria-label="Filter by operating date"
+              value={operatingDate}
+              onChange={(e) => {
+                if (e.target.value) {
+                  handleDateChange(e.target.value);
+                }
+              }}
+              suppressHydrationWarning
+              className="rounded border border-transparent bg-transparent px-1.5 py-0.5 text-xs font-semibold text-slate-900 focus:border-[#FF6B00] focus:outline-none dark:text-slate-100 dark:hover:border-slate-700 cursor-pointer"
+            />
+
+            {/* Operating Mode Live/Review Indicator */}
+            <div className="hidden lg:flex items-center gap-1.5 border-l border-[#E5E1D9] pl-2 pr-1 dark:border-[#333333]">
+              <span
+                className={cn(
+                  "flex h-2 w-2 rounded-full shrink-0",
+                  todayDate && operatingDate === todayDate
+                    ? "bg-[#15803D] animate-pulse"
+                    : "bg-[#B45309]"
+                )}
+                aria-hidden="true"
+              />
+              <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                {todayDate && operatingDate === todayDate ? "Live Ops" : "Review Mode"}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -141,13 +232,13 @@ export function Header() {
               type="text"
               aria-label="Search portal records"
               placeholder="Search doctors, chemist, orders..."
-              className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50/60 pl-8 pr-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+              className="h-9 w-full rounded-lg border border-[#E5E1D9] bg-[#F5F3EE]/60 pl-8 pr-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-[#FF6B00] focus:bg-white focus:outline-none dark:border-[#333333] dark:bg-[#242424] dark:text-slate-100"
             />
           </div>
 
           {/* Tenant Organization Tag */}
-          <div className="hidden lg:flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-800 dark:border-sky-800/80 dark:bg-sky-950/70 dark:text-sky-300 shrink-0">
-            <Building className="h-3.5 w-3.5 text-sky-600 dark:text-sky-400" aria-hidden="true" />
+          <div className="hidden lg:flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-semibold text-[#FF6B00] dark:border-orange-900/60 dark:bg-[#FF6B00]/10 dark:text-[#FF6B00] shrink-0">
+            <Building className="h-3.5 w-3.5 text-[#FF6B00]" aria-hidden="true" />
             <span>{tenantCompanyName}</span>
           </div>
 
@@ -156,13 +247,13 @@ export function Header() {
 
           {/* Notification Bell */}
           <button
-            className="relative rounded-lg p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 shrink-0"
+            className="relative rounded-lg p-2 text-slate-600 hover:bg-[#F5F3EE] dark:text-slate-300 dark:hover:bg-[#2C2C2C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] dark:focus-visible:ring-[#FF6B00] shrink-0"
             aria-label="View notifications"
           >
             <Bell className="h-5 w-5" />
             <span className="absolute right-1.5 top-1.5 flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-sky-500" />
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-[#FF6B00]" />
             </span>
           </button>
 
@@ -171,9 +262,9 @@ export function Header() {
             onClick={() => setIsProfileModalOpen(true)}
             aria-label="User Profile and Account Details"
             suppressHydrationWarning
-            className="flex items-center gap-2.5 pl-2 border-l border-slate-200/80 dark:border-slate-800 hover:opacity-85 transition-opacity text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 rounded-lg py-1 px-1.5 shrink-0 cursor-pointer"
+            className="flex items-center gap-2.5 pl-2 border-l border-[#E5E1D9] dark:border-[#333333] hover:opacity-85 transition-opacity text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] dark:focus-visible:ring-[#FF6B00] rounded-lg py-1 px-1.5 shrink-0 cursor-pointer"
           >
-            <div suppressHydrationWarning className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-sky-600 to-indigo-600 text-xs font-bold text-white shadow-xs shrink-0">
+            <div suppressHydrationWarning className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-[#FF6B00] to-[#F45100] text-xs font-bold text-white shadow-xs shrink-0">
               {initials}
             </div>
             <div className="hidden sm:flex flex-col text-left">
@@ -183,7 +274,7 @@ export function Header() {
                 </span>
                 <ChevronDown className="h-3 w-3 text-slate-400" aria-hidden="true" />
               </div>
-              <span suppressHydrationWarning className="text-[10px] font-medium uppercase tracking-wider text-sky-600 dark:text-sky-400">
+              <span suppressHydrationWarning className="text-[10px] font-medium uppercase tracking-wider text-[#FF6B00] dark:text-[#FF6B00]">
                 {userRole}
               </span>
             </div>
@@ -201,7 +292,7 @@ export function Header() {
       >
         <div className="space-y-4">
           {/* User Identity Card */}
-          <div className="flex items-center gap-3.5 p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60">
+          <div className="flex items-center gap-3.5 p-4 rounded-xl border border-slate-200 dark:border-[#123261] bg-slate-50 dark:bg-[#0b2247]/60">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-sky-600 to-indigo-600 font-bold text-sm text-white shadow-xs">
               {initials}
             </div>

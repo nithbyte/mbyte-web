@@ -1,6 +1,7 @@
 import { orderService } from "./orderService";
 import { collectionService } from "./collectionService";
 import { fieldForceService } from "./fieldForceService";
+import { isMockFallbackAllowed } from "../lib/api-client";
 import { mockOrders, mockCollections, mockMRs } from "../mock";
 import type {
   CommercialKPIs,
@@ -104,6 +105,9 @@ export const commercialService = {
         return leaderboard;
       }
     } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       console.warn("Failed to generate leaderboard from real services, falling back to mock:", err);
     }
 

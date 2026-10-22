@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Minimalist MByte Geometric Pulse Monogram -->
+  <!-- Dark Charcoal Structure -->
+  <path d="M22 78V22L40 46" stroke="#171717" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M78 78V36L64 50" stroke="#171717" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Vibrant Orange Heartbeat / Data Telemetry Pulse -->
+  <path d="M22 52H36L44 32L54 74L78 22" stroke="#FF6B00" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

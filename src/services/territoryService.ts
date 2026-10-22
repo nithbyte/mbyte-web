@@ -1,4 +1,4 @@
-import { apiClient } from "../lib/api-client";
+import { apiClient, isMockFallbackAllowed } from "../lib/api-client";
 import { mockTerritories } from "../mock";
 import { authService } from "./authService";
 import { isOrgMatch } from "../lib/utils";
@@ -33,6 +33,9 @@ export const territoryService = {
         return items.map(mapApiTerritory);
       }
     } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       console.warn("Real /territories API call failed, falling back to mock:", err);
     }
 
@@ -54,7 +57,10 @@ export const territoryService = {
       if (res && res.id) {
         return mapApiTerritory(res);
       }
-    } catch {
+    } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       // fallback
     }
 
@@ -80,6 +86,9 @@ export const territoryService = {
         return mapApiTerritory(res);
       }
     } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       console.warn("Real /territories POST failed, falling back to mock creation:", err);
     }
 

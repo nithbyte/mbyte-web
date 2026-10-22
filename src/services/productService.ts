@@ -1,4 +1,4 @@
-import { apiClient } from "../lib/api-client";
+import { apiClient, isMockFallbackAllowed } from "../lib/api-client";
 import {
   mockProducts,
   mockProductCategories,
@@ -134,6 +134,9 @@ export const productService = {
         });
       }
     } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       console.warn("Real /products API call failed, falling back to mock:", err);
     }
 

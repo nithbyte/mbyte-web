@@ -78,9 +78,9 @@ export default function LoginPage() {
       </div>
 
       {/* Background glowing gradients */}
-      <div className="absolute top-[-20%] left-[-10%] h-[500px] w-[500px] rounded-full bg-sky-600/20 blur-[130px] pointer-events-none" />
-      <div className="absolute bottom-[-15%] right-[-10%] h-[600px] w-[600px] rounded-full bg-emerald-600/15 blur-[150px] pointer-events-none" />
-      <div className="absolute top-[40%] right-[30%] h-[400px] w-[400px] rounded-full bg-indigo-600/10 blur-[120px] pointer-events-none" />
+      <div className="absolute top-[-20%] left-[-10%] h-[500px] w-[500px] rounded-full bg-orange-600/15 blur-[130px] pointer-events-none" />
+      <div className="absolute bottom-[-15%] right-[-10%] h-[600px] w-[600px] rounded-full bg-orange-500/10 blur-[150px] pointer-events-none" />
+      <div className="absolute top-[40%] right-[30%] h-[400px] w-[400px] rounded-full bg-amber-600/10 blur-[120px] pointer-events-none" />
 
       {/* Grid pattern overlay */}
       <div
@@ -95,7 +95,9 @@ export default function LoginPage() {
         {/* Left Side: Enterprise Platform Overview */}
         <div className="lg:col-span-5 space-y-6">
           <div className="space-y-4">
-            <MByteLogo variant="full" theme="dark" width={320} height={133} priority />
+            <div className="inline-block py-1">
+              <MByteLogo variant="full" theme="dark" width={260} height={60} priority />
+            </div>
             <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
               Pharma Field-Force Access & Management
             </h1>
@@ -172,12 +174,12 @@ export default function LoginPage() {
 
         {/* Right Side: Login Card */}
         <div className="lg:col-span-7">
-          <div className="relative rounded-2xl border border-slate-800 bg-slate-900/90 p-6 sm:p-8 backdrop-blur-xl shadow-2xl shadow-black/60">
+          <div className="relative rounded-2xl border border-slate-800 bg-[#242424]/95 p-6 sm:p-8 backdrop-blur-xl shadow-2xl shadow-black/60">
             <div className="mb-6">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl overflow-hidden shadow-md shadow-blue-500/20">
-                    <MByteLogo variant="icon" theme="dark" width={44} height={44} />
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl overflow-hidden shadow-md shadow-orange-500/20">
+                    <MByteLogo variant="icon" width={44} height={44} />
                   </div>
                   <div>
                     <h2 className="text-lg font-bold text-white">Sign In to MByte</h2>
@@ -217,7 +219,7 @@ export default function LoginPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@company.com"
-                    className="w-full rounded-xl border border-slate-800 bg-slate-950/80 px-3.5 py-2.5 pl-10 text-xs text-white placeholder-slate-500 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 transition-colors"
+                    className="w-full rounded-xl border border-slate-700 bg-slate-900/90 px-3.5 py-2.5 pl-10 text-xs text-white placeholder-slate-500 focus:border-[#FF6B00] focus:outline-none focus:ring-1 focus:ring-[#FF6B00] transition-colors"
                   />
                 </div>
               </div>
@@ -236,7 +238,7 @@ export default function LoginPage() {
                       e.preventDefault();
                       alert("Please contact your Company Administrator or IT support to reset your credentials.");
                     }}
-                    className="text-[11px] text-sky-400 hover:text-sky-300 transition-colors"
+                    className="text-[11px] text-orange-400 hover:text-orange-300 transition-colors"
                   >
                     Forgot password?
                   </a>
@@ -251,7 +253,7 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••••••"
-                    className="w-full rounded-xl border border-slate-800 bg-slate-950/80 px-3.5 py-2.5 pl-10 pr-10 text-xs text-white placeholder-slate-500 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 transition-colors"
+                    className="w-full rounded-xl border border-slate-700 bg-slate-900/90 px-3.5 py-2.5 pl-10 pr-10 text-xs text-white placeholder-slate-500 focus:border-[#FF6B00] focus:outline-none focus:ring-1 focus:ring-[#FF6B00] transition-colors"
                   />
                   <button
                     type="button"
@@ -274,7 +276,7 @@ export default function LoginPage() {
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="h-3.5 w-3.5 rounded border-slate-700 bg-slate-950 text-sky-600 focus:ring-sky-500/20"
+                    className="h-3.5 w-3.5 rounded border-slate-700 bg-slate-950 text-[#FF6B00] focus:ring-[#FF6B00]/20"
                   />
                   <span className="text-xs text-slate-400">Remember session</span>
                 </label>
@@ -283,7 +285,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loginMutation.isPending}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 px-4 py-3 text-xs font-bold text-white shadow-lg shadow-sky-600/25 hover:from-sky-500 hover:to-indigo-500 focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#FF6B00] to-[#F45100] px-4 py-3 text-xs font-bold text-white shadow-lg shadow-orange-600/25 hover:from-[#F45100] hover:to-[#C23B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/50 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loginMutation.isPending ? (
                   <>

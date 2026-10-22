@@ -18,7 +18,9 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useCurrentUser, useIsMounted } from "@/hooks";
+import { useFilterStore } from "@/store";
 import { attendanceService } from "@/services/growthServices";
+import { formatOperatingDateDisplay } from "@/lib/utils";
 import type { AttendanceRecord, AttendanceCorrection, AttendanceSummary } from "@/types";
 import {
   Clock,
@@ -38,6 +40,8 @@ import {
 export default function AttendancePage() {
   const isMounted = useIsMounted();
   const { data: user } = useCurrentUser();
+  const { operatingDate } = useFilterStore();
+  const [filterByOperatingDate, setFilterByOperatingDate] = useState(true);
 
   const [activeTab, setActiveTab] = useState<"records" | "corrections">("records");
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
@@ -60,10 +64,17 @@ export default function AttendancePage() {
   const loadData = async () => {
     setIsLoading(true);
     try {
+      const dateParams = filterByOperatingDate
+        ? { startDate: operatingDate, endDate: operatingDate }
+        : undefined;
+
       const [recs, corrs, summ] = await Promise.all([
-        attendanceService.getRecords(),
+        attendanceService.getRecords(dateParams),
         attendanceService.getCorrections(),
-        attendanceService.getSummary(),
+        attendanceService.getSummary(
+          filterByOperatingDate ? operatingDate : undefined,
+          filterByOperatingDate ? operatingDate : undefined
+        ),
       ]);
       setRecords(recs);
       setCorrections(corrs);
@@ -79,7 +90,7 @@ export default function AttendancePage() {
     if (isMounted) {
       loadData();
     }
-  }, [isMounted]);
+  }, [isMounted, operatingDate, filterByOperatingDate]);
 
   const filteredRecords = useMemo(() => {
     if (!search.trim()) return records;
@@ -141,8 +152,13 @@ export default function AttendancePage() {
         <Card className="border-l-4 border-l-blue-500 shadow-sm">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Shifts Logged</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                Total Shifts ({filterByOperatingDate ? "Operating Date" : "All Dates"})
+              </p>
               <h3 className="text-2xl font-bold mt-1">{summary?.totalRecords ?? 0}</h3>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                {filterByOperatingDate ? formatOperatingDateDisplay(operatingDate) : "Full History"}
+              </p>
             </div>
             <Clock className="w-8 h-8 text-blue-500 opacity-80" />
           </CardContent>
@@ -213,14 +229,32 @@ export default function AttendancePage() {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="relative w-72">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by MR name, email, territory..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative w-72">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by MR name, email, territory..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+
+          {/* Operating Date Context Indicator & Toggle */}
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-xs shadow-xs">
+            <Calendar className="h-3.5 w-3.5 text-sky-600 dark:text-sky-400" />
+            <span className="font-semibold text-muted-foreground">Date:</span>
+            <span className="font-bold text-foreground">
+              {filterByOperatingDate ? formatOperatingDateDisplay(operatingDate) : "All Recorded Shifts"}
+            </span>
+            <button
+              type="button"
+              onClick={() => setFilterByOperatingDate(!filterByOperatingDate)}
+              className="ml-1 text-xs text-primary hover:underline cursor-pointer font-medium"
+            >
+              {filterByOperatingDate ? "Show All Shifts" : "Filter by Operating Date"}
+            </button>
+          </div>
         </div>
 
         {activeTab === "corrections" && (

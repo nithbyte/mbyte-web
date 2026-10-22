@@ -197,7 +197,7 @@ function getNavSections(role: CanonicalRole): NavSection[] {
             },
             {
               title: "Product Presence Intel",
-              href: "/product-presence",
+              href: "/products/presence",
               icon: MapPin,
               badge: "LIVE",
               badgeVariant: "live",
@@ -345,7 +345,7 @@ function getNavSections(role: CanonicalRole): NavSection[] {
             },
             {
               title: "Product Presence",
-              href: "/product-presence",
+              href: "/products/presence",
               icon: MapPin,
               badge: "LIVE",
               badgeVariant: "live",
@@ -460,7 +460,7 @@ export function Sidebar() {
     <div className="flex h-full flex-col justify-between">
       {/* Brand & Organization */}
       <div>
-        <div className="flex h-16 items-center justify-between border-b border-slate-200/80 px-4 dark:border-slate-800">
+        <div className="flex h-16 items-center justify-between border-b border-[#E5E1D9] px-4 dark:border-[#333333]">
           <Link
             href={canonicalRole === "SUPER_ADMIN" ? "/companies" : canonicalRole === "MR" ? "/visits" : "/"}
             className="flex items-center gap-3 overflow-hidden transition-opacity hover:opacity-90"
@@ -473,9 +473,9 @@ export function Sidebar() {
               <div className="flex flex-col truncate">
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm font-extrabold tracking-tight text-slate-900 dark:text-white">
-                    M<span className="text-blue-600 dark:text-cyan-400">Byte</span>
+                    M<span className="text-[#FF6B00]">Byte</span>
                   </span>
-                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-cyan-950/60 dark:text-cyan-300 border border-blue-200 dark:border-cyan-800/80">
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-50 text-[#FF6B00] dark:bg-[#FF6B00]/10 dark:text-[#FF6B00] border border-orange-200 dark:border-orange-900/60">
                     FieldOps
                   </span>
                 </div>
@@ -527,7 +527,7 @@ export function Sidebar() {
                       className={cn(
                         "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
                         isActive
-                          ? "bg-sky-50 font-semibold text-sky-700 shadow-sm dark:bg-sky-950/60 dark:text-sky-300"
+                          ? "bg-orange-50 font-semibold text-[#FF6B00] shadow-xs dark:bg-[#FF6B00]/10 dark:text-[#FF6B00]"
                           : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200",
                         isCollapsed && "justify-center px-2"
                       )}
@@ -536,7 +536,7 @@ export function Sidebar() {
                         className={cn(
                           "h-4 w-4 shrink-0 transition-colors",
                           isActive
-                            ? "text-sky-600 dark:text-sky-400"
+                            ? "text-[#FF6B00] dark:text-[#FF6B00]"
                             : "text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300"
                         )}
                       />
@@ -570,9 +570,9 @@ export function Sidebar() {
       </div>
 
       {/* Footer, Profile & Logout */}
-      <div className="border-t border-slate-200/80 p-3 dark:border-slate-800 space-y-2">
+      <div className="border-t border-slate-200/80 p-3 dark:border-[#123261] space-y-2">
         {!isCollapsed && (
-          <div className="flex items-center gap-3 rounded-xl bg-slate-50/80 p-2.5 dark:bg-slate-800/80">
+          <div className="flex items-center gap-3 rounded-xl bg-slate-50/80 p-2.5 dark:bg-[#0b2247]/60">
             <div suppressHydrationWarning className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-100 text-xs font-bold text-sky-700 dark:bg-sky-900 dark:text-sky-300 shrink-0">
               {initials}
             </div>
@@ -638,7 +638,7 @@ export function Sidebar() {
       {/* Desktop Sidebar */}
       <aside
         className={cn(
-          "hidden lg:block fixed inset-y-0 left-0 z-30 border-r border-slate-200/80 bg-white transition-all duration-300 ease-in-out dark:border-slate-800 dark:bg-slate-900",
+          "hidden lg:block fixed inset-y-0 left-0 z-30 border-r border-[#E5E1D9] bg-white transition-all duration-300 ease-in-out dark:border-[#333333] dark:bg-[#242424]",
           isCollapsed ? "w-16" : "w-64"
         )}
       >
@@ -652,7 +652,7 @@ export function Sidebar() {
             className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-2xl dark:bg-slate-900">
+          <aside className="fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-2xl dark:bg-[#242424] dark:border-r dark:border-[#333333]">
             {sidebarContent}
           </aside>
         </div>

@@ -1,4 +1,4 @@
-import { apiClient } from "../lib/api-client";
+import { apiClient, isMockFallbackAllowed } from "../lib/api-client";
 import {
   mockVisits,
   mockMRs,
@@ -122,6 +122,9 @@ export const reportService = {
         };
       }
     } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       console.warn("Failed to fetch visit report from API, falling back to mock:", err);
     }
 
@@ -265,6 +268,9 @@ export const reportService = {
         };
       }
     } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       console.warn("Failed to fetch MR performance report from API, falling back to mock:", err);
     }
 
@@ -432,6 +438,9 @@ export const reportService = {
         };
       }
     } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       console.warn("Failed to fetch product presence report from API, falling back to mock:", err);
     }
 
@@ -573,6 +582,9 @@ export const reportService = {
         };
       }
     } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       console.warn("Failed to fetch sales report from API, falling back to mock:", err);
     }
 
@@ -725,6 +737,9 @@ export const reportService = {
         };
       }
     } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       console.warn("Failed to fetch collection report from API, falling back to mock:", err);
     }
 
@@ -880,6 +895,9 @@ export const reportService = {
         };
       }
     } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       console.warn("Failed to fetch target achievement report from API, falling back to mock:", err);
     }
 

@@ -1,4 +1,4 @@
-import { apiClient } from "../lib/api-client";
+import { apiClient, isMockFallbackAllowed } from "../lib/api-client";
 import { mockCollections } from "../mock";
 import { authService } from "./authService";
 import { isOrgMatch } from "../lib/utils";
@@ -98,6 +98,9 @@ export const collectionService = {
         return mapped;
       }
     } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       console.warn("Failed to fetch collections from backend, falling back to mock:", err);
     }
 

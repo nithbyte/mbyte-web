@@ -3,80 +3,145 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #f8fafc;
-  --foreground: #091124;
-  --card: #ffffff;
-  --card-foreground: #091124;
-  --popover: #ffffff;
-  --popover-foreground: #091124;
-  --primary: #0052ff;
-  --primary-foreground: #ffffff;
-  --secondary: #f1f5f9;
-  --secondary-foreground: #091124;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --accent: #eff6ff;
-  --accent-foreground: #0052ff;
-  --destructive: #ef4444;
-  --destructive-foreground: #ffffff;
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #0052ff;
+  --background: #F5F3EE;
+  --foreground: #171717;
+  --card: #FFFFFF;
+  --card-foreground: #171717;
+  --popover: #FFFFFF;
+  --popover-foreground: #171717;
+  --primary: #FF6B00;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F5F3EE;
+  --secondary-foreground: #171717;
+  --muted: #E5E1D9;
+  --muted-foreground: #525252;
+  --accent: #FFF7ED;
+  --accent-foreground: #FF6B00;
+  --destructive: #DC2626;
+  --destructive-foreground: #FFFFFF;
+  --border: #E5E1D9;
+  --input: #E5E1D9;
+  --ring: #FF6B00;
 
-  /* Official MByte Brand Tokens */
-  --mbyte-navy: #011126;
-  --mbyte-blue: #0052ff;
-  --mbyte-azure: #0a66c2;
-  --mbyte-cyan: #00dfd8;
-  --mbyte-electric: #00f2fe;
-  --mbyte-mint: #00e676;
+  /* Semantic Status Tokens (Light) */
+  --success: #15803D;
+  --success-foreground: #FFFFFF;
+  --success-bg: #F0FDF4;
+  --warning: #B45309;
+  --warning-foreground: #FFFFFF;
+  --warning-bg: #FFFBEB;
+  --info: #2563EB;
+  --info-foreground: #FFFFFF;
+  --info-bg: #EFF6FF;
+
+  /* Official NITHBYTE Brand Tokens */
+  --nithbyte-orange: #FF6B00;
+  --nithbyte-deep-orange: #F45100;
+  --nithbyte-warm-offwhite: #F5F3EE;
+  --nithbyte-charcoal: #171717;
+  --nithbyte-secondary-text: #525252;
+  --nithbyte-border: #E5E1D9;
+  --nithbyte-dark-bg: #171717;
+  --nithbyte-dark-surface: #242424;
+}
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-nithbyte-orange: #FF6B00;
+  --color-nithbyte-deep-orange: #F45100;
+  --color-nithbyte-warm-offwhite: #F5F3EE;
+  --color-nithbyte-charcoal: #171717;
+  --color-nithbyte-secondary-text: #525252;
+  --color-nithbyte-border: #E5E1D9;
+  --color-nithbyte-dark-bg: #171717;
+  --color-nithbyte-dark-surface: #242424;
 }
 
 .dark,
 :root[class~="dark"],
 [data-theme="dark"] {
-  --background: #011126;
-  --foreground: #f8fafc;
-  --card: #071936;
-  --card-foreground: #f8fafc;
-  --popover: #071936;
-  --popover-foreground: #f8fafc;
-  --primary: #00dfd8;
-  --primary-foreground: #011126;
-  --secondary: #0b2247;
-  --secondary-foreground: #f8fafc;
-  --muted: #0b2247;
-  --muted-foreground: #94a3b8;
-  --accent: #0f2b58;
-  --accent-foreground: #00dfd8;
-  --destructive: #7f1d1d;
-  --destructive-foreground: #f8fafc;
-  --border: #123261;
-  --input: #123261;
-  --ring: #00dfd8;
+  --background: #171717;
+  --foreground: #F5F3EE;
+  --card: #242424;
+  --card-foreground: #F5F3EE;
+  --popover: #242424;
+  --popover-foreground: #F5F3EE;
+  --primary: #FF6B00;
+  --primary-foreground: #FFFFFF;
+  --secondary: #2C2C2C;
+  --secondary-foreground: #F5F3EE;
+  --muted: #2C2C2C;
+  --muted-foreground: #A3A3A3;
+  --accent: #2C241E;
+  --accent-foreground: #FF6B00;
+  --destructive: #DC2626;
+  --destructive-foreground: #FFFFFF;
+  --border: #333333;
+  --input: #333333;
+  --ring: #FF6B00;
+
+  /* Semantic Status Tokens (Dark) */
+  --success: #22C55E;
+  --success-foreground: #171717;
+  --success-bg: #14532D;
+  --warning: #F59E0B;
+  --warning-foreground: #171717;
+  --warning-bg: #78350F;
+  --info: #3B82F6;
+  --info-foreground: #171717;
+  --info-bg: #1E3A8A;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {
-    --background: #011126;
-    --foreground: #f8fafc;
-    --card: #071936;
-    --card-foreground: #f8fafc;
-    --popover: #071936;
-    --popover-foreground: #f8fafc;
-    --primary: #00dfd8;
-    --primary-foreground: #011126;
-    --secondary: #0b2247;
-    --secondary-foreground: #f8fafc;
-    --muted: #0b2247;
-    --muted-foreground: #94a3b8;
-    --accent: #0f2b58;
-    --accent-foreground: #00dfd8;
-    --destructive: #7f1d1d;
-    --destructive-foreground: #f8fafc;
-    --border: #123261;
-    --input: #123261;
-    --ring: #00dfd8;
+    --background: #171717;
+    --foreground: #F5F3EE;
+    --card: #242424;
+    --card-foreground: #F5F3EE;
+    --popover: #242424;
+    --popover-foreground: #F5F3EE;
+    --primary: #FF6B00;
+    --primary-foreground: #FFFFFF;
+    --secondary: #2C2C2C;
+    --secondary-foreground: #F5F3EE;
+    --muted: #2C2C2C;
+    --muted-foreground: #A3A3A3;
+    --accent: #2C241E;
+    --accent-foreground: #FF6B00;
+    --destructive: #DC2626;
+    --destructive-foreground: #FFFFFF;
+    --border: #333333;
+    --input: #333333;
+    --ring: #FF6B00;
+
+    --success: #22C55E;
+    --success-foreground: #171717;
+    --success-bg: #14532D;
+    --warning: #F59E0B;
+    --warning-foreground: #171717;
+    --warning-bg: #78350F;
+    --info: #3B82F6;
+    --info-foreground: #171717;
+    --info-bg: #1E3A8A;
   }
 }
 
