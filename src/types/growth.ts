@@ -223,7 +223,7 @@ export interface AttendanceCorrection {
   mr?: {
     id: string;
     employeeCode: string;
-    territory?: string;
+    territory?: string | { id?: string; name?: string; code?: string; [key: string]: any };
   };
   reviewedBy?: {
     id: string;
@@ -262,7 +262,7 @@ export interface AttendanceRecord {
   mr?: {
     id: string;
     employeeCode: string;
-    territory?: string;
+    territory?: string | { id?: string; name?: string; code?: string; [key: string]: any };
   };
   corrections?: AttendanceCorrection[];
 }
