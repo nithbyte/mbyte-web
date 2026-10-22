@@ -1,4 +1,4 @@
-import { apiClient, tokenStorage } from "../lib/api-client";
+import { apiClient, tokenStorage, isMockFallbackAllowed } from "../lib/api-client";
 import { mockUsers } from "../mock";
 import { normalizeRole, getRoleLabel, type User } from "../types";
 
@@ -196,19 +196,20 @@ export const authService = {
         };
       }
     } catch (err: any) {
-      // Check if fallback to mock user for offline test credentials
-      const matched = mockUsers.find(
-        (u) => u.email.toLowerCase() === credentials.email.trim().toLowerCase()
-      );
-      if (matched) {
-        const mockToken = `mock_jwt_token_${matched.id}`;
-        tokenStorage.setTokens(mockToken);
-        activeUserId = matched.id;
-        const user = formatUser(matched);
-        return {
-          user,
-          token: mockToken,
-        };
+      if (isMockFallbackAllowed()) {
+        const matched = mockUsers.find(
+          (u) => u.email.toLowerCase() === credentials.email.trim().toLowerCase()
+        );
+        if (matched) {
+          const mockToken = `mock_jwt_token_${matched.id}`;
+          tokenStorage.setTokens(mockToken);
+          activeUserId = matched.id;
+          const user = formatUser(matched);
+          return {
+            user,
+            token: mockToken,
+          };
+        }
       }
       throw err;
     }

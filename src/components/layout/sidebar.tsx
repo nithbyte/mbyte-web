@@ -482,10 +482,13 @@ export function Sidebar() {
                 <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">
                   {canonicalRole === "SUPER_ADMIN"
                     ? "Platform Control"
-                    : currentUser?.organizationId === "org_apex_002" ||
-                      currentUser?.organizationId === "31524081-7b14-4925-a331-e4cd05a62e04"
-                    ? "Apex Healthcare"
-                    : "Novis Pharma"}
+                    : currentUser?.organization?.name ||
+                      (currentUser?.organizationId === "04e96f67-2c5b-4a67-af41-a4505d7bcb0c"
+                        ? "Kovel Designs"
+                        : currentUser?.organizationId === "org_apex_002" ||
+                          currentUser?.organizationId === "31524081-7b14-4925-a331-e4cd05a62e04"
+                        ? "Apex Healthcare"
+                        : "Novis Pharma")}
                 </span>
               </div>
             )}
