@@ -67,8 +67,8 @@ export default function ExpensesPage() {
 
   // New Claim Form
   const [newClaimTitle, setNewClaimTitle] = useState("");
-  const [newClaimStartDate, setNewClaimStartDate] = useState(new Date().toISOString().split("T")[0]);
-  const [newClaimEndDate, setNewClaimEndDate] = useState(new Date().toISOString().split("T")[0]);
+  const [newClaimStartDate, setNewClaimStartDate] = useState("");
+  const [newClaimEndDate, setNewClaimEndDate] = useState("");
   const [newClaimNotes, setNewClaimNotes] = useState("");
   const [isCreatingClaim, setIsCreatingClaim] = useState(false);
 
@@ -97,6 +97,9 @@ export default function ExpensesPage() {
 
   useEffect(() => {
     if (isMounted) {
+      const today = new Date().toISOString().split("T")[0];
+      setNewClaimStartDate((prev) => prev || today);
+      setNewClaimEndDate((prev) => prev || today);
       fetchData();
     }
   }, [isMounted, selectedStatus, search]);
