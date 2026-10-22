@@ -17,7 +17,8 @@ export const campaignService = {
   async getCampaigns(params?: { status?: string; search?: string }): Promise<Campaign[]> {
     try {
       const res = await apiClient.get<any>("/campaigns", { params });
-      return Array.isArray(res) ? res : res?.items || [];
+      if (Array.isArray(res)) return res;
+      return res?.items || res?.data || [];
     } catch {
       return [];
     }
@@ -62,7 +63,8 @@ export const trainingService = {
   async getModules(params?: { category?: string; search?: string }): Promise<TrainingModule[]> {
     try {
       const res = await apiClient.get<any>("/training/modules", { params });
-      return Array.isArray(res) ? res : res?.items || [];
+      if (Array.isArray(res)) return res;
+      return res?.items || res?.data || [];
     } catch {
       return [];
     }
@@ -116,7 +118,8 @@ export const surveyService = {
   async getSurveys(params?: { campaignId?: string; search?: string }): Promise<Survey[]> {
     try {
       const res = await apiClient.get<any>("/surveys", { params });
-      return Array.isArray(res) ? res : res?.items || [];
+      if (Array.isArray(res)) return res;
+      return res?.items || res?.data || [];
     } catch {
       return [];
     }

@@ -37,13 +37,15 @@ export const expenseService = {
     limit?: number;
   }): Promise<{ items: ExpenseClaim[]; total: number }> {
     try {
+      // apiClient interceptor unwraps envelope: for paginated responses,
+      // the array is returned directly with _meta attached.
       const res = await apiClient.get<any>("/expenses", { params });
-      if (res && Array.isArray(res.items)) {
-        return res;
-      }
       if (Array.isArray(res)) {
-        return { items: res, total: res.length };
+        return { items: res, total: (res as any)._meta?.pagination?.totalRecords ?? res.length };
       }
+      // fallback: server returned object with items/data key
+      if (res && Array.isArray(res.items)) return { items: res.items, total: res.total ?? res.items.length };
+      if (res && Array.isArray(res.data)) return { items: res.data, total: res.total ?? res.data.length };
       return { items: [], total: 0 };
     } catch {
       return { items: [], total: 0 };
