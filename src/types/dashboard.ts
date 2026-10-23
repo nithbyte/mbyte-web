@@ -114,12 +114,26 @@ export interface PendingCommercialAlert {
   actionRequired: string;
 }
 
+export interface GeofenceExceptionAlert {
+  id: string;
+  visitId: string;
+  customerName: string;
+  customerType: string;
+  mrName: string;
+  territoryName: string;
+  distanceMeters: number;
+  reason: string;
+  requestedAt: string;
+  status: string;
+}
+
 export interface AttentionCenterData {
   totalAlertsCount: number;
   belowTargetMRs: BelowTargetMRAlert[];
   missedVisits: MissedVisitAlert[];
   criticalStockouts: StockAlert[];
   pendingCommercial: PendingCommercialAlert[];
+  geofenceExceptions: GeofenceExceptionAlert[];
 }
 
 export interface ManagerDashboardData {

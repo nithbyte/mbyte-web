@@ -5,12 +5,14 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatCurrency(amount: number): string {
+export function formatCurrency(amount?: number | string | null): string {
+  const num = typeof amount === "number" ? amount : Number(amount);
+  const safeAmount = isNaN(num) || amount == null ? 0 : num;
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
     maximumFractionDigits: 0,
-  }).format(amount);
+  }).format(safeAmount);
 }
 
 export function formatDate(dateString: string): string {

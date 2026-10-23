@@ -16,10 +16,16 @@ import {
   XCircle,
   TrendingDown,
   PhoneCall,
+  ShieldCheck,
+  Clock,
+  ExternalLink,
+  Check,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDashboardData, useCurrentUser } from "@/hooks";
 import { useFilterStore } from "@/store";
+import { orderService, collectionService, visitService } from "@/services";
 import { MetricCard } from "@/components/ui/metric-card";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -60,14 +66,57 @@ export function DashboardOverview() {
           ? "Corporate Operations"
           : "Field Operations");
 
+  const router = useRouter();
+
   // Active view tabs for deep dives
   const [activeAttentionTab, setActiveAttentionTab] = useState<
-    "ALL" | "BELOW_TARGET" | "MISSED_VISITS" | "STOCKOUTS" | "PENDING_COMMERCIAL"
+    "ALL" | "BELOW_TARGET" | "MISSED_VISITS" | "STOCKOUTS" | "PENDING_COMMERCIAL" | "GEOFENCE_EXCEPTIONS"
   >("ALL");
 
   const [activeDimensionTab, setActiveDimensionTab] = useState<
     "TEAM" | "ACTIVITY" | "COMMERCIAL" | "PRODUCTS"
   >("TEAM");
+
+  // Approval interaction state
+  const [approvingCommercialIds, setApprovingCommercialIds] = useState<string[]>([]);
+  const [approvedCommercialIds, setApprovedCommercialIds] = useState<string[]>([]);
+  const [reviewingExceptionIds, setReviewingExceptionIds] = useState<string[]>([]);
+  const [handledExceptionIds, setHandledExceptionIds] = useState<string[]>([]);
+
+  const handleApproveCommercial = async (item: any) => {
+    setApprovingCommercialIds((prev) => [...prev, item.id]);
+    try {
+      if (item.type === "ORDER") {
+        await orderService.updateOrderStatus(item.id, "ACCEPTED");
+      } else {
+        await collectionService.reconcileCheque(item.id, "CLEARED");
+      }
+      setApprovedCommercialIds((prev) => [...prev, item.id]);
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    } catch (err: any) {
+      alert(`Approval error: ${err?.message || "Failed to process commercial approval"}`);
+    } finally {
+      setApprovingCommercialIds((prev) => prev.filter((id) => id !== item.id));
+    }
+  };
+
+  const handleReviewException = async (item: any, approved: boolean) => {
+    setReviewingExceptionIds((prev) => [...prev, item.id]);
+    try {
+      await visitService.reviewGeofenceException(
+        item.visitId,
+        approved,
+        approved ? "Geofence exception approved by Manager." : "Outside radius exception rejected."
+      );
+      setHandledExceptionIds((prev) => [...prev, item.id]);
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["visits"] });
+    } catch (err: any) {
+      alert(`Exception review error: ${err?.message || "Failed to submit exception decision"}`);
+    } finally {
+      setReviewingExceptionIds((prev) => prev.filter((id) => id !== item.id));
+    }
+  };
 
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ["dashboard"] });
@@ -365,6 +414,14 @@ export function DashboardOverview() {
             >
               Pending Commercial ({attentionCenter.pendingCommercial.length})
             </Button>
+            <Button
+              variant={activeAttentionTab === "GEOFENCE_EXCEPTIONS" ? "destructive" : "outline"}
+              size="sm"
+              className="text-xs h-7 px-2.5"
+              onClick={() => setActiveAttentionTab("GEOFENCE_EXCEPTIONS")}
+            >
+              GPS Exceptions ({attentionCenter.geofenceExceptions?.filter((e) => !handledExceptionIds.includes(e.id)).length || 0})
+            </Button>
           </div>
         </CardHeader>
 
@@ -538,45 +595,130 @@ export function DashboardOverview() {
                     </span>
                   </div>
                   <Badge variant="info" className="text-[10px]">
-                    {attentionCenter.pendingCommercial.length} Pending Actions
+                    {attentionCenter.pendingCommercial.filter((i) => !approvedCommercialIds.includes(i.id)).length} Pending Actions
                   </Badge>
                 </div>
 
                 <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {attentionCenter.pendingCommercial.map((item) => (
-                    <div key={item.id} className="py-2.5 flex items-center justify-between gap-3 text-xs">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono font-bold text-slate-900 dark:text-slate-100">
-                            {item.identifier}
-                          </span>
-                          <Badge variant="outline" className="text-[10px]">
-                            {item.status}
-                          </Badge>
-                        </div>
-                        <div className="text-[11px] text-slate-600 dark:text-slate-400 font-medium mt-0.5">
-                          {item.customerName} • Rep: {item.mrName} • {formatDate(item.date)}
-                        </div>
-                      </div>
+                  {attentionCenter.pendingCommercial.map((item) => {
+                    const isApproving = approvingCommercialIds.includes(item.id);
+                    const isApproved = approvedCommercialIds.includes(item.id);
 
-                      <div className="flex items-center gap-3">
-                        <div className="text-right">
-                          <div className="font-bold text-slate-900 dark:text-slate-100">
-                            {formatCurrency(item.amount)}
+                    return (
+                      <div key={item.id} className="py-2.5 flex items-center justify-between gap-3 text-xs">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-bold text-slate-900 dark:text-slate-100">
+                              {item.identifier}
+                            </span>
+                            <Badge
+                              variant={isApproved ? "success" : "outline"}
+                              className="text-[10px]"
+                            >
+                              {isApproved ? "APPROVED" : item.status}
+                            </Badge>
                           </div>
-                          <div className="text-[10px] text-sky-600 font-medium">{item.actionRequired}</div>
+                          <div className="text-[11px] text-slate-600 dark:text-slate-400 font-medium mt-0.5">
+                            {item.customerName} • Rep: {item.mrName} • {formatDate(item.date)}
+                          </div>
                         </div>
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          className="h-7 text-[11px]"
-                          onClick={() => alert(`Approving ${item.identifier}`)}
-                        >
-                          Approve
-                        </Button>
+
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <div className="font-bold text-slate-900 dark:text-slate-100">
+                              {formatCurrency(item.amount)}
+                            </div>
+                            <div className="text-[10px] text-sky-600 font-medium">{item.actionRequired}</div>
+                          </div>
+                          <Button
+                            variant={isApproved ? "outline" : "primary"}
+                            size="sm"
+                            disabled={isApproving || isApproved}
+                            className={`h-7 text-[11px] min-w-[75px] ${
+                              isApproved ? "text-emerald-600 border-emerald-300 bg-emerald-50 dark:bg-emerald-950/40" : ""
+                            }`}
+                            onClick={() => handleApproveCommercial(item)}
+                          >
+                            {isApproving ? "Approving..." : isApproved ? "Approved ✓" : "Approve"}
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+          {/* E. Pending Geofence / GPS Exceptions */}
+          {(activeAttentionTab === "ALL" || activeAttentionTab === "GEOFENCE_EXCEPTIONS") &&
+            attentionCenter.geofenceExceptions &&
+            attentionCenter.geofenceExceptions.filter((e) => !handledExceptionIds.includes(e.id)).length > 0 && (
+              <div className="rounded-lg border border-amber-200 bg-white p-4 dark:border-amber-900 dark:bg-slate-900">
+                <div className="flex items-center justify-between pb-2 mb-2 border-b border-amber-100 dark:border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-amber-600 animate-pulse" />
+                    <span className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+                      Pending GPS Verification Exceptions (Geofence Audit)
+                    </span>
+                  </div>
+                  <Badge variant="warning" className="text-[10px]">
+                    {attentionCenter.geofenceExceptions.filter((e) => !handledExceptionIds.includes(e.id)).length} Awaiting Approval
+                  </Badge>
+                </div>
+
+                <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {attentionCenter.geofenceExceptions
+                    .filter((exc) => !handledExceptionIds.includes(exc.id))
+                    .map((exc) => {
+                      const isReviewing = reviewingExceptionIds.includes(exc.id);
+                      return (
+                        <div key={exc.id} className="py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-slate-900 dark:text-slate-100">
+                                {exc.customerName}
+                              </span>
+                              <Badge variant="outline" className="text-[10px] text-amber-700 dark:text-amber-300 border-amber-300">
+                                {exc.distanceMeters}m from Clinic (Max 200m)
+                              </Badge>
+                            </div>
+                            <div className="text-[11px] text-slate-600 dark:text-slate-400 font-medium mt-0.5">
+                              Rep: {exc.mrName} • {exc.territoryName} • Reason: &ldquo;{exc.reason}&rdquo;
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-[11px] text-slate-600 hover:text-slate-900"
+                              onClick={() => router.push(`/visits?search=${encodeURIComponent(exc.customerName)}`)}
+                            >
+                              <ExternalLink className="h-3 w-3 mr-1" />
+                              View on Map
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={isReviewing}
+                              className="h-7 text-[11px] text-rose-600 hover:bg-rose-50 border-rose-200"
+                              onClick={() => handleReviewException(exc, false)}
+                            >
+                              Reject
+                            </Button>
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              disabled={isReviewing}
+                              className="h-7 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white"
+                              onClick={() => handleReviewException(exc, true)}
+                            >
+                              {isReviewing ? "Processing..." : "Approve Exception"}
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
                 </div>
               </div>
             )}

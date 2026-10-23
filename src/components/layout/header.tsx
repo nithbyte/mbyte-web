@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Menu,
   Bell,
@@ -15,10 +15,17 @@ import {
   Calendar,
 } from "lucide-react";
 import { useSidebarStore, useFilterStore } from "@/store";
-import { useTerritories, useCurrentUser, useLogout, useIsMounted } from "@/hooks";
+import {
+  useTerritories,
+  useCurrentUser,
+  useLogout,
+  useIsMounted,
+  useUnreadNotificationsCount,
+} from "@/hooks";
 import { normalizeRole, getRoleLabel, type CanonicalRole } from "@/types";
 import { Modal } from "@/components/ui/dialog";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { NotificationDropdown } from "./notification-dropdown";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { getLocalTodayDate, getLocalYesterdayDate, isValidIsoDate, cn } from "@/lib/utils";
@@ -32,8 +39,11 @@ export function Header() {
   const { selectedTerritoryId, setSelectedTerritoryId, operatingDate, setOperatingDate } = useFilterStore();
   const { data: territories } = useTerritories();
   const { data: currentUser } = useCurrentUser();
+  const { data: unreadNotificationsCount = 0 } = useUnreadNotificationsCount();
   const logoutMutation = useLogout();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const notificationButtonRef = useRef<HTMLButtonElement>(null);
 
   // Compute local dates when mounted in the browser
   const todayDate = isMounted ? getLocalTodayDate() : "";
@@ -116,7 +126,7 @@ export function Header() {
     <>
       <header className="sticky top-0 z-20 flex h-16 w-full items-center justify-between border-b border-[#E5E1D9] bg-white/95 px-3 sm:px-4 backdrop-blur-md dark:border-[#333333] dark:bg-[#242424]/95 lg:px-6 2xl:px-8 gap-2 sm:gap-4">
         {/* Left: Mobile Toggle, Territory Filter & Date Badge */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
           <button
             onClick={toggleMobileOpen}
             className="lg:hidden rounded-lg p-2 text-slate-600 hover:bg-[#F5F3EE] dark:text-slate-300 dark:hover:bg-[#2C2C2C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] dark:focus-visible:ring-[#FF6B00] shrink-0"
@@ -126,9 +136,9 @@ export function Header() {
           </button>
 
           {/* Territory Selector */}
-          <div className="hidden md:flex items-center gap-1.5 rounded-lg border border-[#E5E1D9] bg-white/90 px-2.5 py-1.5 text-xs shadow-xs dark:border-[#333333] dark:bg-[#2C2C2C]/90 shrink-0">
+          <div className="hidden sm:flex items-center gap-1.5 rounded-lg border border-[#E5E1D9] bg-white/90 px-2 sm:px-2.5 py-1 text-xs shadow-xs dark:border-[#333333] dark:bg-[#2C2C2C]/90 shrink">
             <MapPin className="h-3.5 w-3.5 text-[#FF6B00] shrink-0" aria-hidden="true" />
-            <label htmlFor="header-territory-select" className="font-semibold text-slate-500 dark:text-slate-400 shrink-0 hidden xl:inline">
+            <label htmlFor="header-territory-select" className="font-semibold text-slate-500 dark:text-slate-400 shrink-0 hidden md:inline">
               Territory:
             </label>
             <select
@@ -137,7 +147,7 @@ export function Header() {
               value={selectedTerritoryId}
               onChange={(e) => setSelectedTerritoryId(e.target.value)}
               suppressHydrationWarning
-              className="bg-transparent font-medium text-slate-900 focus:outline-none dark:text-slate-100 cursor-pointer text-xs max-w-[120px] lg:max-w-[150px] 2xl:max-w-[200px] truncate"
+              className="bg-transparent font-medium text-slate-900 focus:outline-none dark:text-slate-100 cursor-pointer text-xs max-w-[100px] sm:max-w-[130px] md:max-w-[160px] truncate"
             >
               <option value="ALL" className="bg-white dark:bg-[#242424] text-slate-900 dark:text-slate-100">
                 All Authorized Territories
@@ -152,7 +162,7 @@ export function Header() {
           </div>
 
           {/* Operating Date Selector & Context Controls */}
-          <div className="hidden sm:flex items-center gap-1 rounded-lg border border-[#E5E1D9] bg-white/95 p-1 text-xs shadow-xs dark:border-[#333333] dark:bg-[#2C2C2C]/95 shrink-0">
+          <div className="hidden sm:flex items-center gap-1 rounded-lg border border-[#E5E1D9] bg-white/95 p-1 text-xs shadow-xs dark:border-[#333333] dark:bg-[#2C2C2C]/95 shrink">
             <div className="flex items-center gap-1 px-1 text-slate-500 dark:text-slate-400">
               <Calendar className="h-3.5 w-3.5 text-[#FF6B00] shrink-0" aria-hidden="true" />
               <label htmlFor="header-operating-date" className="font-semibold hidden 2xl:inline text-slate-600 dark:text-slate-300">
@@ -165,7 +175,7 @@ export function Header() {
               type="button"
               onClick={() => handleDateChange(getLocalTodayDate())}
               className={cn(
-                "rounded px-2 py-1 text-xs font-medium transition-colors cursor-pointer",
+                "rounded px-1.5 py-0.5 text-xs font-medium transition-colors cursor-pointer",
                 todayDate && operatingDate === todayDate
                   ? "bg-orange-50 font-semibold text-[#FF6B00] dark:bg-[#FF6B00]/20 dark:text-[#FF6B00]"
                   : "text-slate-600 hover:bg-[#F5F3EE] dark:text-slate-300 dark:hover:bg-[#333333]"
@@ -202,7 +212,7 @@ export function Header() {
                 }
               }}
               suppressHydrationWarning
-              className="w-[110px] rounded border border-transparent bg-transparent px-1 py-0.5 text-xs font-semibold text-slate-900 focus:border-[#FF6B00] focus:outline-none dark:text-slate-100 dark:hover:border-slate-700 cursor-pointer"
+className="w-[110px] rounded border border-transparent bg-transparent px-1 py-0.5 text-xs font-semibold text-slate-900 focus:border-[#FF6B00] focus:outline-none dark:text-slate-100 dark:hover:border-slate-700 cursor-pointer"
             />
           </div>
         </div>
@@ -231,17 +241,32 @@ export function Header() {
           {/* Light / Dark Theme Mode Toggle */}
           <ThemeToggle />
 
-          {/* Notification Bell */}
-          <button
-            className="relative rounded-lg p-2 text-slate-600 hover:bg-[#F5F3EE] dark:text-slate-300 dark:hover:bg-[#2C2C2C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] dark:focus-visible:ring-[#FF6B00] shrink-0"
-            aria-label="View notifications"
-          >
-            <Bell className="h-5 w-5" />
-            <span className="absolute right-1.5 top-1.5 flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-[#FF6B00]" />
-            </span>
-          </button>
+          {/* Notification Bell with Popover Dropdown */}
+          <div className="relative shrink-0">
+            <button
+              ref={notificationButtonRef}
+              onClick={() => setIsNotificationOpen((prev) => !prev)}
+              className={cn(
+                "relative rounded-lg p-2 text-slate-600 hover:bg-[#F5F3EE] dark:text-slate-300 dark:hover:bg-[#2C2C2C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] dark:focus-visible:ring-[#FF6B00] shrink-0 transition-colors cursor-pointer",
+                isNotificationOpen && "bg-orange-50 text-[#FF6B00] dark:bg-[#2C2C2C]"
+              )}
+              aria-label="View notifications"
+              title="View notifications"
+            >
+              <Bell className="h-5 w-5" />
+              {unreadNotificationsCount > 0 && (
+                <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#FF6B00] px-1 text-[9px] font-bold text-white shadow-xs">
+                  {unreadNotificationsCount > 9 ? "9+" : unreadNotificationsCount}
+                </span>
+              )}
+            </button>
+
+            <NotificationDropdown
+              isOpen={isNotificationOpen}
+              onClose={() => setIsNotificationOpen(false)}
+              anchorRef={notificationButtonRef}
+            />
+          </div>
 
           {/* User Profile Pill */}
           <button

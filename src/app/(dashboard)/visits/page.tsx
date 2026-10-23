@@ -91,7 +91,8 @@ export default function VisitsPage() {
       mrId: selectedMR,
       territoryId: effectiveTerritory,
       customerId: selectedCustomer,
-      status: selectedStatus,
+      status: selectedStatus === "EXCEPTION_REQUESTED" ? undefined : selectedStatus,
+      verificationStatus: selectedStatus === "EXCEPTION_REQUESTED" ? "EXCEPTION_REQUESTED" : undefined,
       search,
     }),
     [selectedDate, selectedMR, effectiveTerritory, selectedCustomer, selectedStatus, search]
@@ -276,6 +277,37 @@ export default function VisitsPage() {
           </div>
         }
       />
+
+      {/* PENDING GEOFENCE EXCEPTION AUDIT ALERT */}
+      {visits.some((v) => v.verificationStatus === "EXCEPTION_REQUESTED") && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50/90 p-3.5 dark:border-amber-900/60 dark:bg-amber-950/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 shrink-0">
+              <AlertTriangle className="h-5 w-5 animate-bounce" />
+            </div>
+            <div>
+              <div className="text-xs font-bold text-amber-900 dark:text-amber-100 flex items-center gap-2">
+                <span>Field Geofence Verification Exception(s) Pending Manager/Admin Approval</span>
+                <Badge variant="warning" className="text-[10px] animate-pulse">Action Required</Badge>
+              </div>
+              <p className="text-[11px] text-amber-800 dark:text-amber-300 mt-0.5">
+                Medical Representatives have submitted GPS outside-radius exceptions. Review justifications and authorize clinic detailing.
+              </p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            className="h-8 text-xs bg-amber-600 hover:bg-amber-700 text-white shrink-0"
+            onClick={() => {
+              setSelectedStatus("EXCEPTION_REQUESTED");
+              const firstException = visits.find((v) => v.verificationStatus === "EXCEPTION_REQUESTED");
+              if (firstException) setSelectedVisit(firstException);
+            }}
+          >
+            Review Pending Exceptions ({visits.filter((v) => v.verificationStatus === "EXCEPTION_REQUESTED").length})
+          </Button>
+        </div>
+      )}
 
       {/* KPI METRIC TILES */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -475,6 +507,7 @@ export default function VisitsPage() {
                 className="w-full h-8 px-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
               >
                 <option value="ALL">All Call Statuses</option>
+                <option value="EXCEPTION_REQUESTED">⚠️ GPS EXCEPTION PENDING</option>
                 <option value="COMPLETED">COMPLETED</option>
                 <option value="IN_PROGRESS">IN PROGRESS</option>
                 <option value="MISSED">MISSED</option>

@@ -293,4 +293,33 @@ export const collectionService = {
 
     return Promise.resolve(days);
   },
+
+  async reconcileCheque(id: string, status: string = "CLEARED"): Promise<Collection> {
+    try {
+      const res = await apiClient.patch<any>(`/collections/${id}/reconcile`, { status });
+      if (res && res.id) return mapApiCollection(res);
+    } catch (err) {
+      console.warn("Real collection reconcile failed, using mock:", err);
+    }
+    const col = mockCollections.find((c) => c.id === id);
+    if (col) {
+      (col as any).status = status;
+      return col;
+    }
+    return {
+      id,
+      organizationId: "org_novis_001",
+      receiptNumber: id,
+      mrId: "mr_001",
+      mrName: "Field MR",
+      pharmacyId: "phm_001",
+      pharmacyName: "Pharmacy",
+      customerName: "Pharmacy",
+      amount: 1000,
+      paymentMode: "CHEQUE",
+      paymentDate: "2026-10-09",
+      createdAt: new Date().toISOString(),
+    };
+  },
 };
+

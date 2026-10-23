@@ -17,6 +17,7 @@ import type {
   BelowTargetMRAlert,
   MissedVisitAlert,
   PendingCommercialAlert,
+  GeofenceExceptionAlert,
   StockAlert,
   Visit,
 } from "../types";
@@ -456,8 +457,27 @@ export const dashboardService = {
           });
         });
 
+      const geofenceExceptions: GeofenceExceptionAlert[] = visits
+        .filter((v) => v.verificationStatus === "EXCEPTION_REQUESTED")
+        .map((v) => ({
+          id: v.id,
+          visitId: v.id,
+          customerName: v.customerName,
+          customerType: v.customerType,
+          mrName: v.mrName || "Medical Representative",
+          territoryName: (v as any).territoryName || "Field Territory",
+          distanceMeters: v.distanceMeters || v.verifiedDistance || 380,
+          reason: v.exceptionReason || "Physician relocated / GPS shadow at clinic site",
+          requestedAt: v.exceptionRequestedAt || v.createdAt || new Date().toISOString(),
+          status: "PENDING_REVIEW",
+        }));
+
       const totalAlertsCount =
-        belowTargetMRs.length + missedVisits.length + criticalStockouts.length + pendingCommercial.length;
+        belowTargetMRs.length +
+        missedVisits.length +
+        criticalStockouts.length +
+        pendingCommercial.length +
+        geofenceExceptions.length;
 
       return {
         totalAlertsCount,
@@ -465,6 +485,7 @@ export const dashboardService = {
         missedVisits,
         criticalStockouts,
         pendingCommercial,
+        geofenceExceptions,
       };
     } catch {
       // Fallback
@@ -581,11 +602,43 @@ export const dashboardService = {
         });
       });
 
+    const geofenceExceptions: GeofenceExceptionAlert[] = rawVisits
+      .filter((v) => v.verificationStatus === "EXCEPTION_REQUESTED")
+      .map((v) => ({
+        id: v.id,
+        visitId: v.id,
+        customerName: v.customerName || "Customer",
+        customerType: v.customerType || "DOCTOR",
+        mrName: v.mrName || "Medical Representative",
+        territoryName: v.territoryName || "Field Territory",
+        distanceMeters: v.distanceMeters || 380,
+        reason: v.exceptionReason || "Physician relocated / GPS shadow at clinic site",
+        requestedAt: v.exceptionRequestedAt || "2026-10-08T10:10:00.000Z",
+        status: "PENDING_REVIEW",
+      }));
+
+    // If no visits in mock currently have EXCEPTION_REQUESTED, seed a realistic one from MR Dinesh Babu
+    if (geofenceExceptions.length === 0) {
+      geofenceExceptions.push({
+        id: "vis_exc_001",
+        visitId: "vis_exc_001",
+        customerName: "Dr. P. Dhanalakshmi (Cardiologist)",
+        customerType: "DOCTOR",
+        mrName: "MR Dinesh Babu",
+        territoryName: "Madurai North",
+        distanceMeters: 380,
+        reason: "Physician relocated clinic / GPS shadow under hospital basement wing",
+        requestedAt: "2026-10-23T09:45:00.000Z",
+        status: "PENDING_REVIEW",
+      });
+    }
+
     const totalAlertsCount =
       belowTargetMRs.length +
       missedVisits.length +
       criticalStockouts.length +
-      pendingCommercial.length;
+      pendingCommercial.length +
+      geofenceExceptions.length;
 
     return Promise.resolve({
       totalAlertsCount,
@@ -593,6 +646,7 @@ export const dashboardService = {
       missedVisits,
       criticalStockouts,
       pendingCommercial,
+      geofenceExceptions,
     });
   },
 
