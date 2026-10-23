@@ -78,17 +78,17 @@ export function Header() {
     canonicalRole === "SUPER_ADMIN"
       ? "Platform Control"
       : currentUser?.organization?.name ||
-        currentUser?.organizationName ||
-        currentUser?.companyName ||
-        (currentUser?.organizationId === "org_apex_002" ||
+      currentUser?.organizationName ||
+      currentUser?.companyName ||
+      (currentUser?.organizationId === "org_apex_002" ||
         currentUser?.organizationId === "31524081-7b14-4925-a331-e4cd05a62e04"
-          ? "Apex Healthcare"
-          : currentUser?.organizationId === "org_novis_001" ||
-            currentUser?.organizationId === "28101346-8d53-4e0e-9433-feec8dbfeb28"
+        ? "Apex Healthcare"
+        : currentUser?.organizationId === "org_novis_001" ||
+          currentUser?.organizationId === "28101346-8d53-4e0e-9433-feec8dbfeb28"
           ? "Novis Pharma"
           : currentUser?.organizationId
-          ? "Corporate Enterprise"
-          : "Field Operations");
+            ? "Corporate Enterprise"
+            : "Field Operations");
 
   const handleLogout = async () => {
     try {
@@ -114,9 +114,9 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-20 flex h-16 w-full items-center justify-between border-b border-[#E5E1D9] bg-white/95 px-4 backdrop-blur-md dark:border-[#333333] dark:bg-[#242424]/95 lg:px-8">
+      <header className="sticky top-0 z-20 flex h-16 w-full items-center justify-between border-b border-[#E5E1D9] bg-white/95 px-3 sm:px-4 backdrop-blur-md dark:border-[#333333] dark:bg-[#242424]/95 lg:px-6 2xl:px-8 gap-2 sm:gap-4">
         {/* Left: Mobile Toggle, Territory Filter & Date Badge */}
-        <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={toggleMobileOpen}
             className="lg:hidden rounded-lg p-2 text-slate-600 hover:bg-[#F5F3EE] dark:text-slate-300 dark:hover:bg-[#2C2C2C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] dark:focus-visible:ring-[#FF6B00] shrink-0"
@@ -128,7 +128,7 @@ export function Header() {
           {/* Territory Selector */}
           <div className="hidden md:flex items-center gap-1.5 rounded-lg border border-[#E5E1D9] bg-white/90 px-2.5 py-1.5 text-xs shadow-xs dark:border-[#333333] dark:bg-[#2C2C2C]/90 shrink-0">
             <MapPin className="h-3.5 w-3.5 text-[#FF6B00] shrink-0" aria-hidden="true" />
-            <label htmlFor="header-territory-select" className="font-semibold text-slate-500 dark:text-slate-400 shrink-0 hidden lg:inline">
+            <label htmlFor="header-territory-select" className="font-semibold text-slate-500 dark:text-slate-400 shrink-0 hidden xl:inline">
               Territory:
             </label>
             <select
@@ -137,7 +137,7 @@ export function Header() {
               value={selectedTerritoryId}
               onChange={(e) => setSelectedTerritoryId(e.target.value)}
               suppressHydrationWarning
-              className="bg-transparent font-medium text-slate-900 focus:outline-none dark:text-slate-100 cursor-pointer text-xs max-w-[130px] lg:max-w-[160px] 2xl:max-w-[210px] truncate"
+              className="bg-transparent font-medium text-slate-900 focus:outline-none dark:text-slate-100 cursor-pointer text-xs max-w-[120px] lg:max-w-[150px] 2xl:max-w-[200px] truncate"
             >
               <option value="ALL" className="bg-white dark:bg-[#242424] text-slate-900 dark:text-slate-100">
                 All Authorized Territories
@@ -175,12 +175,12 @@ export function Header() {
               Today
             </button>
 
-            {/* Yesterday Shortcut Button */}
+            {/* Yesterday Shortcut Button (only on extra large screens to preserve layout space) */}
             <button
               type="button"
               onClick={() => handleDateChange(getLocalYesterdayDate())}
               className={cn(
-                "rounded px-2 py-1 text-xs font-medium transition-colors cursor-pointer",
+                "hidden 2xl:inline-block rounded px-2 py-1 text-xs font-medium transition-colors cursor-pointer",
                 yesterdayDate && operatingDate === yesterdayDate
                   ? "bg-orange-50 font-semibold text-[#FF6B00] dark:bg-[#FF6B00]/20 dark:text-[#FF6B00]"
                   : "text-slate-600 hover:bg-[#F5F3EE] dark:text-slate-300 dark:hover:bg-[#333333]"
@@ -202,42 +202,28 @@ export function Header() {
                 }
               }}
               suppressHydrationWarning
-              className="w-[112px] rounded border border-transparent bg-transparent px-1 py-0.5 text-xs font-semibold text-slate-900 focus:border-[#FF6B00] focus:outline-none dark:text-slate-100 dark:hover:border-slate-700 cursor-pointer"
+              className="w-[110px] rounded border border-transparent bg-transparent px-1 py-0.5 text-xs font-semibold text-slate-900 focus:border-[#FF6B00] focus:outline-none dark:text-slate-100 dark:hover:border-slate-700 cursor-pointer"
             />
-
-            {/* Operating Mode Live/Review Indicator */}
-            <div className="hidden xl:flex items-center gap-1.5 border-l border-[#E5E1D9] pl-2 pr-1 dark:border-[#333333]">
-              <span
-                className={cn(
-                  "flex h-2 w-2 rounded-full shrink-0",
-                  todayDate && operatingDate === todayDate
-                    ? "bg-[#15803D] animate-pulse"
-                    : "bg-[#B45309]"
-                )}
-                aria-hidden="true"
-              />
-              <span className="hidden 2xl:inline text-[11px] font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap">
-                {todayDate && operatingDate === todayDate ? "Live Ops" : "Review Mode"}
-              </span>
-            </div>
           </div>
         </div>
 
-        {/* Right: Search, Notifications & User Info */}
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Search trigger */}
-          <div className="relative hidden xl:block w-40 2xl:w-60 transition-all">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" aria-hidden="true" />
+        {/* Center: Flexible Global Search Bar */}
+        <div className="hidden lg:flex flex-1 items-center justify-center max-w-xs xl:max-w-sm 2xl:max-w-md mx-2 min-w-0">
+          <div className="relative w-full">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 dark:text-slate-500 pointer-events-none" aria-hidden="true" />
             <input
               type="text"
               aria-label="Search portal records"
-              placeholder="Search records..."
-              className="h-9 w-full rounded-lg border border-[#E5E1D9] bg-[#F5F3EE]/60 pl-8 pr-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-[#FF6B00] focus:bg-white focus:outline-none dark:border-[#333333] dark:bg-[#242424] dark:text-slate-100"
+              placeholder="Search records, doctors, orders..."
+              className="h-8.5 w-full rounded-lg border border-[#E5E1D9] bg-[#F5F3EE]/60 pl-8 pr-8 text-xs text-slate-900 placeholder:text-slate-400 transition-all focus:border-[#FF6B00] focus:bg-white focus:outline-none dark:border-[#333333] dark:bg-[#242424] dark:text-slate-100 dark:focus:bg-[#2C2C2C] shadow-2xs"
             />
           </div>
+        </div>
 
+        {/* Right: Tenant Badge, Notifications & User Info */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {/* Tenant Organization Tag */}
-          <div className="hidden xl:flex items-center gap-1.5 rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-xs font-semibold text-[#FF6B00] dark:border-orange-900/60 dark:bg-[#FF6B00]/10 dark:text-[#FF6B00] shrink-0 max-w-[150px]">
+          <div className="hidden 2xl:flex items-center gap-1.5 rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-xs font-semibold text-[#FF6B00] dark:border-orange-900/60 dark:bg-[#FF6B00]/10 dark:text-[#FF6B00] shrink-0 max-w-[140px]">
             <Building className="h-3.5 w-3.5 text-[#FF6B00] shrink-0" aria-hidden="true" />
             <span className="truncate">{tenantCompanyName}</span>
           </div>
@@ -267,7 +253,7 @@ export function Header() {
             <div suppressHydrationWarning className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-[#FF6B00] to-[#F45100] text-xs font-bold text-white shadow-xs shrink-0">
               {initials}
             </div>
-            <div className="hidden sm:flex flex-col text-left max-w-[110px] 2xl:max-w-[140px]">
+            <div className="hidden sm:flex flex-col text-left max-w-[100px] 2xl:max-w-[130px]">
               <div className="flex items-center gap-1">
                 <span suppressHydrationWarning className="text-xs font-semibold text-slate-800 dark:text-slate-200 leading-tight truncate">
                   {userName}
