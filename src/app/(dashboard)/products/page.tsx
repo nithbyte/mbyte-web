@@ -314,6 +314,7 @@ export default function ProductsPage() {
       <ProductVisualAidsDialog
         product={visualAidsModalProduct}
         onClose={() => setVisualAidsModalProduct(null)}
+        onOpenUploadVA={(p) => setUploadVAProduct(p)}
       />
 
       {/* MODAL 3: PRODUCT PRESENCE SUMMARY & AUDIT LOG */}

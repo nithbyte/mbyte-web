@@ -26,6 +26,7 @@ import {
   Boxes,
   Upload,
   Pencil,
+  Plus,
 } from "lucide-react";
 
 interface ProductCatalogTableProps {
@@ -191,10 +192,17 @@ export const ProductCatalogTable: React.FC<ProductCatalogTableProps> = ({
                           title="Click to view detailing decks"
                         >
                           <BookOpen className="h-3.5 w-3.5 text-amber-600" />
-                          <span>{visualAidList.length} Decks</span>
+                          <span>{visualAidList.length} {visualAidList.length === 1 ? 'Deck' : 'Decks'}</span>
                         </button>
                       ) : (
-                        <span className="text-[11px] text-slate-400 italic">None</span>
+                        <button
+                          onClick={() => onOpenUploadVA(p)}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-slate-500 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-slate-800 border border-dashed border-slate-300 dark:border-slate-700 transition-colors"
+                          title={`Upload visual aid for ${p.name}`}
+                        >
+                          <Plus className="h-3 w-3" />
+                          <span>Add Deck</span>
+                        </button>
                       )}
                     </TableCell>
 

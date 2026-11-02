@@ -5,16 +5,18 @@ import { Modal } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
 import type { Product } from "@/types";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Upload } from "lucide-react";
 
 interface ProductVisualAidsDialogProps {
   product: Product | null;
   onClose: () => void;
+  onOpenUploadVA?: (product: Product) => void;
 }
 
 export const ProductVisualAidsDialog: React.FC<ProductVisualAidsDialogProps> = ({
   product,
   onClose,
+  onOpenUploadVA,
 }) => {
   return (
     <Modal
@@ -72,16 +74,47 @@ export const ProductVisualAidsDialog: React.FC<ProductVisualAidsDialogProps> = (
             ))}
           </div>
         ) : (
-          <div className="py-8 text-center text-xs text-slate-500">
-            No visual aids uploaded for this product formulation.
+          <div className="py-8 text-center space-y-3">
+            <p className="text-xs text-slate-500">
+              No visual aids uploaded for this product formulation yet.
+            </p>
+            {onOpenUploadVA && product && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  onClose();
+                  onOpenUploadVA(product);
+                }}
+                className="gap-1.5 text-xs mx-auto"
+              >
+                <Upload className="h-3.5 w-3.5" />
+                Upload Visual Aid for {product.name}
+              </Button>
+            )}
           </div>
         )}
 
-        <div className="flex justify-end pt-3 border-t border-slate-200 dark:border-slate-800">
+        <div className="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-slate-800">
+          {onOpenUploadVA && product && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                onClose();
+                onOpenUploadVA(product);
+              }}
+              className="gap-1.5 text-xs"
+            >
+              <Upload className="h-3.5 w-3.5" />
+              Upload Another Deck
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
             onClick={onClose}
+            className="ml-auto"
           >
             Close
           </Button>
