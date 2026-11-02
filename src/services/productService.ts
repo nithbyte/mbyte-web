@@ -506,6 +506,50 @@ export const productService = {
     return Promise.resolve(updated);
   },
 
+  async uploadVisualAidFile(file: File): Promise<{
+    fileUrl: string;
+    filename: string;
+    sizeBytes: number;
+    mimeType: string;
+    detectedType?: string;
+  }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const res = await apiClient.post<any>('/visual-aids/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      if (res && (res.fileUrl || res.data?.fileUrl)) {
+        const data = res.fileUrl ? res : res.data;
+        return {
+          fileUrl: data.fileUrl,
+          filename: data.filename || file.name,
+          sizeBytes: data.sizeBytes || file.size,
+          mimeType: data.mimeType || file.type,
+          detectedType: data.detectedType,
+        };
+      }
+    } catch (err) {
+      console.warn('Real POST /visual-aids/upload failed, using data URL fallback:', err);
+    }
+    // Fallback: Read as base64 Data URL so preview and creation work smoothly even offline
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        resolve({
+          fileUrl: (reader.result as string) || URL.createObjectURL(file),
+          filename: file.name,
+          sizeBytes: file.size,
+          mimeType: file.type,
+          detectedType: file.type.startsWith('image/') ? 'IMAGE' : 'PDF',
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+  },
+
   async createVisualAid(input: {
     productId: string;
     title: string;
@@ -525,8 +569,8 @@ export const productService = {
         version: parseInt(input.version || '1', 10) || 1,
         isPublished: true,
       };
-      if (input.thumbnailUrl) {
-        payload.thumbnailUrl = input.thumbnailUrl;
+      if (input.thumbnailUrl || input.type === 'IMAGE') {
+        payload.thumbnailUrl = input.thumbnailUrl || input.fileUrl;
       }
       const res = await apiClient.post<any>('/visual-aids', payload);
       if (res && res.id) {
@@ -536,7 +580,7 @@ export const productService = {
           title: res.title,
           type: res.type,
           fileUrl: res.fileUrl,
-          thumbnailUrl: res.thumbnailUrl,
+          thumbnailUrl: res.thumbnailUrl || (input.type === 'IMAGE' ? res.fileUrl : undefined),
           fileSizeBytes: res.fileSizeBytes,
           version: res.version || '1.0',
           isPublished: res.isPublished ?? true,
@@ -553,7 +597,7 @@ export const productService = {
       title: input.title,
       type: input.type,
       fileUrl: input.fileUrl || 'https://example.com/deck.pdf',
-      thumbnailUrl: input.thumbnailUrl,
+      thumbnailUrl: input.thumbnailUrl || (input.type === 'IMAGE' ? input.fileUrl : undefined),
       version: input.version || '1.0',
       isPublished: true,
       publishedAt: new Date().toISOString(),

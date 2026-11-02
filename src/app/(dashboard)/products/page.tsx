@@ -27,6 +27,7 @@ import {
   ProductPresenceDialog,
   ProductFormDialog,
   VisualAidUploadDialog,
+  type VisualAidFormData,
 } from "@/features/products";
 
 export default function ProductsPage() {
@@ -139,14 +140,15 @@ export default function ProductsPage() {
   };
 
   // Upload Visual Aid Form state
-  const initialVAForm = {
+  const initialVAForm: VisualAidFormData = {
     title: "",
-    type: "PDF",
+    type: "IMAGE",
     fileUrl: "",
+    thumbnailUrl: "",
     description: "",
     version: "1.0",
   };
-  const [vaForm, setVAForm] = useState(initialVAForm);
+  const [vaForm, setVAForm] = useState<VisualAidFormData>(initialVAForm);
   const [vaFormErrors, setVAFormErrors] = useState<Record<string, string>>({});
 
   const validateProductForm = (): boolean => {

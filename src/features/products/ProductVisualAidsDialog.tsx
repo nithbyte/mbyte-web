@@ -33,7 +33,7 @@ export const ProductVisualAidsDialog: React.FC<ProductVisualAidsDialogProps> = (
               >
                 <div className="h-16 w-16 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white shrink-0">
                   <img
-                    src={va.thumbnailUrl}
+                    src={va.thumbnailUrl || va.fileUrl}
                     alt={va.title}
                     className="h-full w-full object-cover"
                   />
