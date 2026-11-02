@@ -114,13 +114,37 @@ export const productService = {
       ]);
 
       const prodsData = prodsRes.status === "fulfilled" ? prodsRes.value : null;
-      const prodsList = Array.isArray(prodsData) ? prodsData : (Array.isArray(prodsData?.items) ? prodsData.items : null);
+      const prodsList = Array.isArray(prodsData)
+        ? prodsData
+        : Array.isArray(prodsData?.data?.items)
+        ? prodsData.data.items
+        : Array.isArray(prodsData?.data)
+        ? prodsData.data
+        : Array.isArray(prodsData?.items)
+        ? prodsData.items
+        : null;
 
       if (prodsList !== null) {
         const vasData = vasRes.status === "fulfilled" ? vasRes.value : [];
-        const vasList = Array.isArray(vasData) ? vasData : (Array.isArray(vasData?.items) ? vasData.items : []);
+        const vasList = Array.isArray(vasData)
+          ? vasData
+          : Array.isArray(vasData?.data?.items)
+          ? vasData.data.items
+          : Array.isArray(vasData?.data)
+          ? vasData.data
+          : Array.isArray(vasData?.items)
+          ? vasData.items
+          : [];
         const auditsData = auditsRes.status === "fulfilled" ? auditsRes.value : [];
-        const auditsList = Array.isArray(auditsData) ? auditsData : (Array.isArray(auditsData?.items) ? auditsData.items : []);
+        const auditsList = Array.isArray(auditsData)
+          ? auditsData
+          : Array.isArray(auditsData?.data?.items)
+          ? auditsData.data.items
+          : Array.isArray(auditsData?.data)
+          ? auditsData.data
+          : Array.isArray(auditsData?.items)
+          ? auditsData.items
+          : [];
 
         return prodsList.map((p: any) => {
           const item = mapApiProduct(p);
@@ -185,7 +209,8 @@ export const productService = {
 
   async getProductById(id: string): Promise<Product | null> {
     try {
-      const p = await apiClient.get<any>(`/products/${id}`);
+      const res = await apiClient.get<any>(`/products/${id}`);
+      const p = res?.data || res;
       if (p && p.id) {
         const item = mapApiProduct(p);
         const vas = await this.getVisualAids({ productId: id });
@@ -214,7 +239,15 @@ export const productService = {
   async getProductCategories(): Promise<ProductCategory[]> {
     try {
       const res = await apiClient.get<any>("/product-categories", { params: { limit: 100 } });
-      const items = Array.isArray(res) ? res : (Array.isArray(res?.items) ? res.items : null);
+      const items = Array.isArray(res)
+        ? res
+        : Array.isArray(res?.data?.items)
+        ? res.data.items
+        : Array.isArray(res?.data)
+        ? res.data
+        : Array.isArray(res?.items)
+        ? res.items
+        : null;
       if (items !== null && items.length > 0) {
         return items.map((c: any) => ({
           id: c.id,
@@ -282,22 +315,34 @@ export const productService = {
       if (params?.search) queryParams.search = params.search;
 
       const res = await apiClient.get<any>("/visual-aids", { params: queryParams });
-      const list = Array.isArray(res) ? res : (Array.isArray(res?.items) ? res.items : null);
+      const list = Array.isArray(res)
+        ? res
+        : Array.isArray(res?.data?.items)
+        ? res.data.items
+        : Array.isArray(res?.data)
+        ? res.data
+        : Array.isArray(res?.items)
+        ? res.items
+        : null;
       if (list !== null) {
-        return list.map((v: any) => ({
+        let mapped = list.map((v: any) => ({
           id: v.id,
           productId: v.productId,
-          productName: v.product?.brandName || "Product",
+          productName: v.product?.brandName || v.productName || "Product",
           title: v.title,
           type: v.type,
-          fileUrl: v.fileUrl,
-          thumbnailUrl: v.thumbnailUrl,
+          fileUrl: v.signedUrl || v.fileUrl,
+          thumbnailUrl: v.thumbnailUrl || (v.type === 'IMAGE' ? (v.signedUrl || v.fileUrl) : undefined),
           fileSizeBytes: Number(v.fileSizeBytes) || 1024000,
           totalPages: v.totalPages || 12,
           version: v.version || 1,
           isApproved: v.isPublished ?? true,
           approvedDate: v.publishedAt || "2026-01-01",
         }));
+        if (params?.productId) {
+          mapped = mapped.filter((v: any) => v.productId === params.productId);
+        }
+        return mapped;
       }
     } catch {
       // fallback
@@ -407,8 +452,9 @@ export const productService = {
         payload.organizationId = (input as any).organizationId;
       }
       const res = await apiClient.post<any>('/products', payload);
-      if (res && res.id) {
-        const newProduct = mapApiProduct(res);
+      const data = res?.data || res;
+      if (data && data.id) {
+        const newProduct = mapApiProduct(data);
         productsState.unshift(newProduct);
         return newProduct;
       }
@@ -573,19 +619,27 @@ export const productService = {
         payload.thumbnailUrl = input.thumbnailUrl || input.fileUrl;
       }
       const res = await apiClient.post<any>('/visual-aids', payload);
-      if (res && res.id) {
-        return {
-          id: res.id,
-          productId: res.productId,
-          title: res.title,
-          type: res.type,
-          fileUrl: res.fileUrl,
-          thumbnailUrl: res.thumbnailUrl || (input.type === 'IMAGE' ? res.fileUrl : undefined),
-          fileSizeBytes: res.fileSizeBytes,
-          version: res.version || '1.0',
-          isPublished: res.isPublished ?? true,
-          description: res.description,
+      const data = res?.data || res;
+      if (data && data.id) {
+        const createdVA: import('../types').VisualAid = {
+          id: data.id,
+          productId: data.productId,
+          title: data.title,
+          type: data.type,
+          fileUrl: data.signedUrl || data.fileUrl,
+          thumbnailUrl: data.thumbnailUrl || (input.type === 'IMAGE' ? (data.signedUrl || data.fileUrl) : undefined),
+          fileSizeBytes: data.fileSizeBytes,
+          version: data.version || '1.0',
+          isPublished: data.isPublished ?? true,
+          description: data.description,
         };
+        const existingIdx = mockVisualAids.findIndex((v) => v.id === data.id);
+        if (existingIdx >= 0) {
+          mockVisualAids[existingIdx] = createdVA as any;
+        } else {
+          mockVisualAids.push(createdVA as any);
+        }
+        return createdVA;
       }
     } catch (err) {
       console.warn('Real POST /visual-aids failed, using mock:', err);

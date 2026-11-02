@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Product } from "@/types";
+import { useVisualAids } from "@/hooks/useProducts";
 import {
   Tag,
   FileText,
@@ -31,6 +32,13 @@ export const ProductDetailsDialog: React.FC<ProductDetailsDialogProps> = ({
   onViewPresence,
   onViewVisualAids,
 }) => {
+  const { data: fetchedVisualAids } = useVisualAids(
+    product?.id ? { productId: product.id } : undefined
+  );
+
+  const attachedAids = (fetchedVisualAids || product?.visualAids || []).filter(
+    (va) => va.productId === product?.id
+  );
   return (
     <Modal
       isOpen={Boolean(product)}
@@ -156,9 +164,9 @@ export const ProductDetailsDialog: React.FC<ProductDetailsDialogProps> = ({
             <div className="flex items-center justify-between">
               <h4 className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                 <BookOpen className="h-3.5 w-3.5 text-amber-600" />
-                Attached Visual Aids ({product.visualAids?.length || 0})
+                Attached Visual Aids ({attachedAids.length})
               </h4>
-              {product.visualAids && product.visualAids.length > 0 && (
+              {attachedAids.length > 0 && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -170,9 +178,9 @@ export const ProductDetailsDialog: React.FC<ProductDetailsDialogProps> = ({
               )}
             </div>
 
-            {product.visualAids && product.visualAids.length > 0 ? (
+            {attachedAids.length > 0 ? (
               <div className="space-y-2">
-                {product.visualAids.slice(0, 2).map((va) => (
+                {attachedAids.slice(0, 2).map((va) => (
                   <div
                     key={va.id}
                     className="p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex items-center justify-between"

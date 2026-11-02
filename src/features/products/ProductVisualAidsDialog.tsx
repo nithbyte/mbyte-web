@@ -5,7 +5,8 @@ import { Modal } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
 import type { Product } from "@/types";
-import { ExternalLink, Upload } from "lucide-react";
+import { ExternalLink, Upload, Loader2 } from "lucide-react";
+import { useVisualAids } from "@/hooks/useProducts";
 
 interface ProductVisualAidsDialogProps {
   product: Product | null;
@@ -18,6 +19,15 @@ export const ProductVisualAidsDialog: React.FC<ProductVisualAidsDialogProps> = (
   onClose,
   onOpenUploadVA,
 }) => {
+  const { data: fetchedVisualAids, isLoading } = useVisualAids(
+    product?.id ? { productId: product.id } : undefined
+  );
+
+  // Strictly isolate visual aids belonging exclusively to this specific product
+  const productAids = (fetchedVisualAids || product?.visualAids || []).filter(
+    (va) => va.productId === product?.id
+  );
+
   return (
     <Modal
       isOpen={Boolean(product)}
@@ -26,9 +36,14 @@ export const ProductVisualAidsDialog: React.FC<ProductVisualAidsDialogProps> = (
       description="Interactive detailing presentations, clinical trial evidence, and promotional collateral for medical representatives."
     >
       <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
-        {product?.visualAids && product.visualAids.length > 0 ? (
+        {isLoading ? (
+          <div className="py-8 flex flex-col items-center justify-center space-y-2 text-slate-500">
+            <Loader2 className="h-6 w-6 animate-spin text-sky-600" />
+            <p className="text-xs">Loading product visual aids...</p>
+          </div>
+        ) : productAids.length > 0 ? (
           <div className="grid grid-cols-1 gap-3">
-            {product.visualAids.map((va) => (
+            {productAids.map((va) => (
               <div
                 key={va.id}
                 className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex items-start gap-3"
@@ -53,7 +68,7 @@ export const ProductVisualAidsDialog: React.FC<ProductVisualAidsDialogProps> = (
                     {va.title}
                   </h4>
                   <p className="text-[11px] text-slate-500 leading-relaxed">
-                    {va.description}
+                    {va.description || "Product clinical evidence detailing deck for healthcare professional detailing."}
                   </p>
                   <div className="pt-2 flex items-center justify-between">
                     <span className="text-[10px] font-mono text-slate-400">
