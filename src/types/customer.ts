@@ -1,4 +1,5 @@
 export type DoctorTier = "A_PLUS" | "A" | "B";
+export type DoctorApprovalStatus = "PENDING_APPROVAL" | "APPROVED" | "REJECTED";
 
 export interface Doctor {
   id: string;
@@ -6,6 +7,7 @@ export interface Doctor {
   name: string;
   specialty: string;
   qualification?: string;
+  registrationNo?: string;
   clinicName: string;
   address: string;
   phone: string;
@@ -19,6 +21,26 @@ export interface Doctor {
   longitude: number;
   tags?: string[];
   isActive?: boolean;
+  approvalStatus?: DoctorApprovalStatus;
+  createdById?: string;
+  createdBy?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+  };
+  reviewedById?: string;
+  reviewedBy?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  reviewedAt?: string;
+  rejectionReason?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface DoctorInput {

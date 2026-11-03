@@ -1,7 +1,7 @@
 import { apiClient, isMockFallbackAllowed } from "../lib/api-client";
 import { mockDoctors, mockTerritories, mockVisits } from "../mock";
 import { authService } from "./authService";
-import type { Doctor, DoctorInput, CustomerHistoryItem } from "../types";
+import type { Doctor, DoctorInput, CustomerHistoryItem, DoctorApprovalStatus } from "../types";
 
 export interface DoctorQueryParams {
   search?: string;
@@ -9,6 +9,9 @@ export interface DoctorQueryParams {
   specialty?: string;
   tier?: string;
   organizationId?: string;
+  approvalStatus?: DoctorApprovalStatus | "ALL";
+  createdById?: string;
+  myRegistrations?: boolean;
 }
 
 import { isOrgMatch } from "../lib/utils";
@@ -35,6 +38,16 @@ function mapApiDoctor(d: any): Doctor {
     longitude: Number(d.longitude) || 80.2520,
     lastVisitDate: d.lastVisitDate || undefined,
     isActive: d.isActive ?? true,
+    approvalStatus: d.approvalStatus || "APPROVED",
+    createdById: d.createdById || undefined,
+    createdBy: d.createdBy || undefined,
+    reviewedById: d.reviewedById || undefined,
+    reviewedBy: d.reviewedBy || undefined,
+    reviewedAt: d.reviewedAt || undefined,
+    rejectionReason: d.rejectionReason || undefined,
+    registrationNo: d.registrationNo || undefined,
+    createdAt: d.createdAt || undefined,
+    updatedAt: d.updatedAt || undefined,
   };
 }
 
@@ -47,6 +60,9 @@ export const doctorService = {
       if (params?.tier && params.tier !== "ALL") queryParams.tier = params.tier;
       if (params?.search) queryParams.search = params.search;
       if (params?.organizationId) queryParams.organizationId = params.organizationId;
+      if (params?.approvalStatus && params.approvalStatus !== "ALL") queryParams.approvalStatus = params.approvalStatus;
+      if (params?.createdById) queryParams.createdById = params.createdById;
+      if (params?.myRegistrations) queryParams.myRegistrations = params.myRegistrations;
 
       const res = await apiClient.get<any>("/doctors", { params: queryParams });
       const items = Array.isArray(res) ? res : (Array.isArray(res?.items) ? res.items : null);
@@ -262,6 +278,66 @@ export const doctorService = {
 
     history.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     return Promise.resolve(history);
+  },
+
+  async getPendingDoctors(params?: DoctorQueryParams): Promise<Doctor[]> {
+    try {
+      const res = await apiClient.get<any>("/doctors/pending", { params });
+      const items = Array.isArray(res) ? res : (Array.isArray(res?.items) ? res.items : null);
+      if (items !== null) {
+        return items.map(mapApiDoctor);
+      }
+    } catch (err) {
+      if (!isMockFallbackAllowed()) throw err;
+      console.warn("Real /doctors/pending call failed, falling back to mock:", err);
+    }
+    return this.getDoctors({ ...params, approvalStatus: "PENDING_APPROVAL" });
+  },
+
+  async approveDoctor(id: string): Promise<Doctor> {
+    try {
+      const res = await apiClient.patch<any>(`/doctors/${id}/approve`);
+      if (res && res.id) {
+        const approved = mapApiDoctor(res);
+        const idx = doctorsState.findIndex((d) => d.id === id);
+        if (idx !== -1) doctorsState[idx] = approved;
+        return approved;
+      }
+    } catch (err) {
+      if (!isMockFallbackAllowed()) throw err;
+      console.warn("Real approveDoctor call failed, updating local state:", err);
+    }
+    const idx = doctorsState.findIndex((d) => d.id === id);
+    if (idx !== -1) {
+      doctorsState[idx].approvalStatus = "APPROVED";
+      return doctorsState[idx];
+    }
+    throw new Error("Doctor not found");
+  },
+
+  async rejectDoctor(id: string, reason: string): Promise<Doctor> {
+    if (!reason || !reason.trim()) {
+      throw new Error("A rejection reason is mandatory.");
+    }
+    try {
+      const res = await apiClient.patch<any>(`/doctors/${id}/reject`, { reason: reason.trim() });
+      if (res && res.id) {
+        const rejected = mapApiDoctor(res);
+        const idx = doctorsState.findIndex((d) => d.id === id);
+        if (idx !== -1) doctorsState[idx] = rejected;
+        return rejected;
+      }
+    } catch (err) {
+      if (!isMockFallbackAllowed()) throw err;
+      console.warn("Real rejectDoctor call failed, updating local state:", err);
+    }
+    const idx = doctorsState.findIndex((d) => d.id === id);
+    if (idx !== -1) {
+      doctorsState[idx].approvalStatus = "REJECTED";
+      doctorsState[idx].rejectionReason = reason.trim();
+      return doctorsState[idx];
+    }
+    throw new Error("Doctor not found");
   },
 
   async getSpecialties(): Promise<string[]> {

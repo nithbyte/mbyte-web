@@ -53,3 +53,43 @@ export function useUpdateDoctor() {
     },
   });
 }
+export function usePendingDoctors(params?: DoctorQueryParams) {
+  return useQuery({
+    queryKey: ["doctors", "pending", params],
+    queryFn: () => doctorService.getPendingDoctors(params),
+  });
+}
+
+export function useRejectedDoctors(params?: DoctorQueryParams) {
+  return useQuery({
+    queryKey: ["doctors", "rejected", params],
+    queryFn: () => doctorService.getDoctors({ ...params, approvalStatus: "REJECTED" }),
+  });
+}
+
+export function useApproveDoctor() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => doctorService.approveDoctor(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ["doctors"] });
+      queryClient.invalidateQueries({ queryKey: ["doctors", "pending"] });
+      queryClient.invalidateQueries({ queryKey: ["doctors", "rejected"] });
+      queryClient.invalidateQueries({ queryKey: ["doctors", "detail", id] });
+    },
+  });
+}
+
+export function useRejectDoctor() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      doctorService.rejectDoctor(id, reason),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["doctors"] });
+      queryClient.invalidateQueries({ queryKey: ["doctors", "pending"] });
+      queryClient.invalidateQueries({ queryKey: ["doctors", "rejected"] });
+      queryClient.invalidateQueries({ queryKey: ["doctors", "detail", variables.id] });
+    },
+  });
+}
