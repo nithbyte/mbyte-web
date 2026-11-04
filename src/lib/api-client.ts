@@ -23,10 +23,7 @@ export const API_BASE_URL = resolveApiBaseUrl();
  * It is only permitted if explicitly opted into via NEXT_PUBLIC_ENABLE_MOCKS="true" in development or test.
  */
 export function isMockFallbackAllowed(): boolean {
-  if (process.env.NODE_ENV === "production") {
-    return false;
-  }
-  return process.env.NEXT_PUBLIC_ENABLE_MOCKS === "true";
+  return false;
 }
 
 export class ApiError extends Error {

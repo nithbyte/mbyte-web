@@ -3,7 +3,7 @@ import { mockUsers } from "../mock";
 import { normalizeRole, getRoleLabel, type User } from "../types";
 
 // Maintain active user state in memory
-let activeUserId = "usr_mgr_001";
+let activeUserId = "";
 
 function formatUser(rawUser: any): User {
   let firstName = rawUser.firstName;

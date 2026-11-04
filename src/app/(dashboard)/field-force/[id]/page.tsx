@@ -1,12 +1,7 @@
 import React, { Suspense } from "react";
 import { MRDetailsView } from "./MRDetailsView";
-import { mockMRs } from "@/mock";
 
-export function generateStaticParams() {
-  return mockMRs.map((mr) => ({
-    id: mr.id,
-  }));
-}
+export const dynamic = "force-dynamic";
 
 export default async function MRDetailsPage({
   params,
