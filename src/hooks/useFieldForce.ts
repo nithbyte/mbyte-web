@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fieldForceService } from "../services";
 import type { MRListFilterParams } from "../types";
 
@@ -62,3 +62,58 @@ export function useUpdateMRTerritory() {
 }
 
 
+
+
+export function useMRTerritories(mrId: string) {
+  return useQuery({
+    queryKey: ["mr-territories", mrId],
+    queryFn: () => fieldForceService.getMRTerritories(mrId),
+    enabled: Boolean(mrId),
+  });
+}
+
+export function useAssignTerritories() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      mrId,
+      territoryIds,
+      primaryTerritoryId,
+    }: {
+      mrId: string;
+      territoryIds: string[];
+      primaryTerritoryId?: string;
+    }) => fieldForceService.assignTerritories(mrId, territoryIds, primaryTerritoryId),
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["mr-territories", vars.mrId] });
+      queryClient.invalidateQueries({ queryKey: ["mr-list"] });
+      queryClient.invalidateQueries({ queryKey: ["field-force"] });
+    },
+  });
+}
+
+export function useSetPrimaryTerritory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ mrId, territoryId }: { mrId: string; territoryId: string }) =>
+      fieldForceService.setPrimaryTerritory(mrId, territoryId),
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["mr-territories", vars.mrId] });
+      queryClient.invalidateQueries({ queryKey: ["mr-list"] });
+      queryClient.invalidateQueries({ queryKey: ["field-force"] });
+    },
+  });
+}
+
+export function useRevokeTerritory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ mrId, territoryId }: { mrId: string; territoryId: string }) =>
+      fieldForceService.revokeTerritory(mrId, territoryId),
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["mr-territories", vars.mrId] });
+      queryClient.invalidateQueries({ queryKey: ["mr-list"] });
+      queryClient.invalidateQueries({ queryKey: ["field-force"] });
+    },
+  });
+}

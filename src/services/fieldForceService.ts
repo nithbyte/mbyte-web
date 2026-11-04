@@ -11,6 +11,7 @@ import {
   mockProducts,
 } from "../mock";
 import type {
+  TerritoryAssignment,
   MRPerformanceSummary,
   MRListItem,
   MRDetailsData,
@@ -124,6 +125,7 @@ export const fieldForceService = {
             complianceRate,
             ordersBookedValue: ordersValue,
             collectionsValue,
+            assignedTerritories: mr.assignedTerritories || [],
             lastActiveTime: "14:45",
           };
         });
@@ -848,5 +850,72 @@ export const fieldForceService = {
       return { success: true };
     }
   },
-};
+  async getMRTerritories(mrId: string): Promise<TerritoryAssignment[]> {
+    try {
+      const res = await apiClient.get<any>(`/mrs/${mrId}/territories`);
+      const items = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+      return items;
+    } catch (err: any) {
+      console.warn("getMRTerritories API failed, returning mock:", err);
+      const mr = mockMRs.find((m) => m.id === mrId);
+      const t = mockTerritories.find((terr) => terr.id === mr?.territoryId);
+      if (t) {
+        return [
+          {
+            id: `asgn_${t.id}`,
+            territoryId: t.id,
+            territoryName: t.name,
+            territoryCode: t.code,
+            zone: t.zone,
+            region: t.region,
+            isPrimary: true,
+            status: "ACTIVE",
+            assignedAt: new Date().toISOString(),
+            effectiveFrom: new Date().toISOString(),
+          },
+        ];
+      }
+      return [];
+    }
+  },
 
+  async assignTerritories(
+    mrId: string,
+    territoryIds: string[],
+    primaryTerritoryId?: string,
+  ): Promise<TerritoryAssignment[]> {
+    try {
+      const res = await apiClient.post<any>(`/mrs/${mrId}/territories`, {
+        territoryIds,
+        primaryTerritoryId,
+      });
+      const items = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+      return items;
+    } catch (err: any) {
+      console.error("assignTerritories failed:", err);
+      throw err;
+    }
+  },
+
+  async setPrimaryTerritory(mrId: string, territoryId: string): Promise<TerritoryAssignment[]> {
+    try {
+      const res = await apiClient.put<any>(`/mrs/${mrId}/territories/${territoryId}/primary`, {});
+      const items = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+      return items;
+    } catch (err: any) {
+      console.error("setPrimaryTerritory failed:", err);
+      throw err;
+    }
+  },
+
+  async revokeTerritory(mrId: string, territoryId: string): Promise<TerritoryAssignment[]> {
+    try {
+      const res = await apiClient.delete<any>(`/mrs/${mrId}/territories/${territoryId}`);
+      const items = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+      return items;
+    } catch (err: any) {
+      console.error("revokeTerritory failed:", err);
+      throw err;
+    }
+  },
+};

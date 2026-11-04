@@ -76,24 +76,26 @@ export default function VisitsPage() {
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
   const createVisitMutation = useCreateVisit();
 
-  // Effective Territory Filter (Local Page Filter + Shared Header Store)
-  const effectiveTerritory =
-    selectedTerritory !== "ALL"
-      ? selectedTerritory
-      : selectedTerritoryId !== "ALL"
-      ? selectedTerritoryId
-      : "ALL";
+  // Effective Territory Filter: explicit in-page selection
+  const effectiveTerritory = selectedTerritory;
+
+  // Sync in-page dropdown when header territory selector changes
+  useEffect(() => {
+    if (selectedTerritoryId && selectedTerritoryId !== "ALL") {
+      setSelectedTerritory(selectedTerritoryId);
+    }
+  }, [selectedTerritoryId]);
 
   // Query Params
   const queryParams: VisitQueryParams = useMemo(
     () => ({
-      date: selectedDate,
-      mrId: selectedMR,
-      territoryId: effectiveTerritory,
-      customerId: selectedCustomer,
-      status: selectedStatus === "EXCEPTION_REQUESTED" ? undefined : selectedStatus,
+      date: selectedDate === "ALL" ? undefined : selectedDate,
+      mrId: selectedMR === "ALL" ? undefined : selectedMR,
+      territoryId: effectiveTerritory === "ALL" ? undefined : effectiveTerritory,
+      customerId: selectedCustomer === "ALL" ? undefined : selectedCustomer,
+      status: selectedStatus === "EXCEPTION_REQUESTED" || selectedStatus === "ALL" ? undefined : selectedStatus,
       verificationStatus: selectedStatus === "EXCEPTION_REQUESTED" ? "EXCEPTION_REQUESTED" : undefined,
-      search,
+      search: search.trim() || undefined,
     }),
     [selectedDate, selectedMR, effectiveTerritory, selectedCustomer, selectedStatus, search]
   );
@@ -101,9 +103,9 @@ export default function VisitsPage() {
   // Queries
   const { data: visits = [], isLoading } = useVisits(queryParams);
   const { data: counts } = useVisitCounts({
-    date: selectedDate,
-    mrId: selectedMR,
-    territoryId: effectiveTerritory,
+    date: selectedDate === "ALL" ? undefined : selectedDate,
+    mrId: selectedMR === "ALL" ? undefined : selectedMR,
+    territoryId: effectiveTerritory === "ALL" ? undefined : effectiveTerritory,
   });
   const { data: visitDates } = useVisitDates();
   const { data: territories } = useTerritories();
@@ -228,7 +230,7 @@ export default function VisitsPage() {
   };
 
   const hasActiveFilters =
-    selectedDate === "ALL" ||
+    (selectedDate && selectedDate !== todayDate) ||
     selectedMR !== "ALL" ||
     selectedTerritory !== "ALL" ||
     selectedCustomer !== "ALL" ||

@@ -90,6 +90,24 @@ export interface MRPerformanceSummary {
   lastActiveTime?: string;
 }
 
+
+export interface TerritoryAssignment {
+  id: string;
+  territoryId: string;
+  territoryName: string;
+  territoryCode: string;
+  zone?: string | null;
+  region?: string | null;
+  isPrimary: boolean;
+  status: "ACTIVE" | "REVOKED";
+  assignedAt: string;
+  revokedAt?: string | null;
+  effectiveFrom: string;
+  effectiveTo?: string | null;
+  assignedByUser?: { id: string; firstName: string; lastName: string } | null;
+  revokedByUser?: { id: string; firstName: string; lastName: string } | null;
+}
+
 export interface MRListItem {
   id: string;
   employeeId: string;
@@ -119,6 +137,7 @@ export interface MRListItem {
   ordersCount: number;
   ordersValue: number;
   collectionsValue: number;
+  assignedTerritories?: TerritoryAssignment[];
 }
 
 export interface MRProductActivity {

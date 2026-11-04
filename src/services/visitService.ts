@@ -24,9 +24,9 @@ function mapApiVisit(v: any): Visit {
     organizationId: v.organizationId || "",
     mrId: v.mrId || v.mr?.id || "mr_001",
     mrName: v.mr?.name || v.mrName || "Medical Representative",
-    territoryId: v.territoryId || v.mr?.territoryId || "ter_001",
+    territoryId: v.territoryId || v.customer?.territoryId || v.mr?.territoryId || "",
     territoryName: v.territoryName || v.mr?.territoryName || "Central Territory",
-    customerId: v.doctorId || v.pharmacyId || v.distributorId || v.customerId,
+    customerId: v.customer?.id || v.doctorId || v.pharmacyId || v.distributorId || v.customerId,
     customerName,
     customerType: v.customerType || "DOCTOR",
     specialty,
@@ -60,9 +60,11 @@ export const visitService = {
       const queryParams: Record<string, any> = { limit: 100 };
       if (params?.date && params.date !== "ALL") queryParams.date = params.date;
       if (params?.mrId && params.mrId !== "ALL") queryParams.mrId = params.mrId;
+      if (params?.territoryId && params.territoryId !== "ALL") queryParams.territoryId = params.territoryId;
       if (params?.status && params.status !== "ALL") queryParams.status = params.status;
-      if (params?.customerId && params.customerId !== "ALL") queryParams.doctorId = params.customerId;
+      if (params?.customerId && params.customerId !== "ALL") queryParams.customerId = params.customerId;
       if (params?.organizationId) queryParams.organizationId = params.organizationId;
+      if (params?.search && params.search.trim()) queryParams.search = params.search.trim();
 
       const res = await apiClient.get<any>("/visits", { params: queryParams });
       const items = Array.isArray(res) ? res : (Array.isArray(res?.items) ? res.items : null);
@@ -70,7 +72,20 @@ export const visitService = {
         let list = items.map(mapApiVisit);
 
         if (params?.territoryId && params.territoryId !== "ALL") {
-          list = list.filter((v: any) => v.territoryId === params.territoryId);
+          list = list.filter((v: any) =>
+            v.territoryId === params.territoryId ||
+            v.mr?.territoryId === params.territoryId ||
+            v.customer?.territoryId === params.territoryId
+          );
+        }
+
+        if (params?.customerId && params.customerId !== "ALL") {
+          list = list.filter((v: any) =>
+            v.customerId === params.customerId ||
+            v.doctorId === params.customerId ||
+            v.pharmacyId === params.customerId ||
+            v.distributorId === params.customerId
+          );
         }
 
         if (params?.customerType && params.customerType !== "ALL") {

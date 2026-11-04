@@ -26,6 +26,10 @@ import {
   useOrganizations,
   useUserList,
   useUpdateMRTerritory,
+  useMRTerritories,
+  useAssignTerritories,
+  useSetPrimaryTerritory,
+  useRevokeTerritory,
   useCreateTerritory,
 } from "@/hooks";
 import { formatCurrency } from "@/lib/utils";
@@ -48,6 +52,9 @@ import {
   Shield,
   Layers,
   Edit3,
+  Star,
+  Trash2,
+  History,
 } from "lucide-react";
 
 export default function FieldForcePage() {
@@ -89,11 +96,24 @@ export default function FieldForcePage() {
     currentTerritoryId?: string;
     currentManagerId?: string;
     designation?: string;
+    employeeId?: string;
+    assignedTerritories?: any[];
   } | null>(null);
   const [targetTerritoryId, setTargetTerritoryId] = useState("");
   const [targetManagerId, setTargetManagerId] = useState("");
+  const [additionalTerritoryId, setAdditionalTerritoryId] = useState("");
   const [territoryAssignSuccess, setTerritoryAssignSuccess] = useState<string | null>(null);
   const [territoryAssignError, setTerritoryAssignError] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+
+  const {
+    data: repTerritories,
+    refetch: refetchRepTerritories,
+    isLoading: isLoadingRepTerritories,
+  } = useMRTerritories(selectedRepForTerritory?.id || "");
+  const assignTerritoriesMutation = useAssignTerritories();
+  const setPrimaryTerritoryMutation = useSetPrimaryTerritory();
+  const revokeTerritoryMutation = useRevokeTerritory();
 
   // Add Territory Modal state (Company Admin)
   const createTerritoryMutation = useCreateTerritory();
@@ -167,19 +187,97 @@ export default function FieldForcePage() {
     }
   };
 
-  const handleOpenAssignTerritory = (rep: {
-    id: string;
-    name: string;
-    currentTerritoryId?: string;
-    currentManagerId?: string;
-    designation?: string;
-  }) => {
-    setSelectedRepForTerritory(rep);
-    setTargetTerritoryId(rep.currentTerritoryId || territories?.[0]?.id || "");
-    setTargetManagerId(rep.currentManagerId || "");
+  const handleOpenAssignTerritory = (rep: any) => {
+    setSelectedRepForTerritory({
+      id: rep.id,
+      name: rep.name,
+      currentTerritoryId: rep.territoryId || rep.currentTerritoryId,
+      currentManagerId: rep.managerId || rep.currentManagerId,
+      designation: rep.designation,
+      employeeId: rep.employeeId,
+      assignedTerritories: rep.assignedTerritories,
+    });
+    setTargetTerritoryId(rep.territoryId || rep.currentTerritoryId || "");
+    setTargetManagerId(rep.managerId || rep.currentManagerId || "");
+    setAdditionalTerritoryId("");
     setTerritoryAssignError(null);
     setTerritoryAssignSuccess(null);
+    setShowHistory(false);
     setIsAssignTerritoryOpen(true);
+  };
+
+  
+  const handleSetPrimaryTerritory = async (territoryId: string) => {
+    if (!selectedRepForTerritory) return;
+    try {
+      setTerritoryAssignError(null);
+      setTerritoryAssignSuccess(null);
+      await setPrimaryTerritoryMutation.mutateAsync({
+        mrId: selectedRepForTerritory.id,
+        territoryId,
+      });
+      setTerritoryAssignSuccess("Primary territory updated successfully!");
+      refetchRepTerritories();
+      refetchMRs();
+      refetchUsers();
+    } catch (err: any) {
+      setTerritoryAssignError(err?.message || "Failed to set primary territory.");
+    }
+  };
+
+  const handleRevokeTerritory = async (territoryId: string) => {
+    if (!selectedRepForTerritory) return;
+    try {
+      setTerritoryAssignError(null);
+      setTerritoryAssignSuccess(null);
+      await revokeTerritoryMutation.mutateAsync({
+        mrId: selectedRepForTerritory.id,
+        territoryId,
+      });
+      setTerritoryAssignSuccess("Territory removed from active assignments.");
+      refetchRepTerritories();
+      refetchMRs();
+      refetchUsers();
+    } catch (err: any) {
+      setTerritoryAssignError(err?.message || "Failed to revoke territory assignment.");
+    }
+  };
+
+  const handleAddAdditionalTerritory = async () => {
+    if (!selectedRepForTerritory || !additionalTerritoryId) return;
+    try {
+      setTerritoryAssignError(null);
+      setTerritoryAssignSuccess(null);
+      await assignTerritoriesMutation.mutateAsync({
+        mrId: selectedRepForTerritory.id,
+        territoryIds: [additionalTerritoryId],
+      });
+      setTerritoryAssignSuccess("Additional territory successfully assigned!");
+      setAdditionalTerritoryId("");
+      refetchRepTerritories();
+      refetchMRs();
+      refetchUsers();
+    } catch (err: any) {
+      setTerritoryAssignError(err?.message || "Failed to assign additional territory.");
+    }
+  };
+
+  const handleUpdateManager = async () => {
+    if (!selectedRepForTerritory) return;
+    try {
+      setTerritoryAssignError(null);
+      setTerritoryAssignSuccess(null);
+      await updateTerritoryMutation.mutateAsync({
+        mrId: selectedRepForTerritory.id,
+        territoryId: selectedRepForTerritory.currentTerritoryId || targetTerritoryId,
+        managerId: targetManagerId || undefined,
+      });
+      setTerritoryAssignSuccess("Reporting manager updated successfully!");
+      refetchMRs();
+      refetchUsers();
+    } catch (err: any) {
+      setTerritoryAssignError(err?.message || "Failed to update reporting manager.");
+    }
   };
 
   const handleAssignTerritorySubmit = async (e: React.FormEvent) => {
@@ -745,26 +843,35 @@ export default function FieldForcePage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-300 font-medium">
-                          <MapPin className="h-3.5 w-3.5 text-sky-600 shrink-0" />
-                          <span>{mr.territoryName}</span>
-                          {canonicalRole === "ADMIN" && (
-                            <button
-                              onClick={() => handleOpenAssignTerritory({
-                                id: mr.id,
-                                name: mr.name,
-                                currentTerritoryId: mr.territoryId,
-                                currentManagerId: mr.managerId,
-                                designation: mr.designation,
-                              })}
-                              title="Assign/Change Territory"
-                              className="p-1 text-slate-400 hover:text-sky-600 rounded hover:bg-sky-50 dark:hover:bg-slate-800 cursor-pointer"
-                            >
-                              <Edit3 className="h-3 w-3" />
-                            </button>
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-300 font-medium">
+                            <MapPin className="h-3.5 w-3.5 text-sky-600 shrink-0" />
+                            <span className="font-semibold">{mr.territoryName}</span>
+                            <Badge variant="success" className="text-[9px] px-1 py-0 font-normal">Primary</Badge>
+                            {canonicalRole === "ADMIN" && (
+                              <button
+                                onClick={() => handleOpenAssignTerritory(mr)}
+                                title="Manage Assigned Territories"
+                                className="p-1 text-slate-400 hover:text-sky-600 rounded hover:bg-sky-50 dark:hover:bg-slate-800 cursor-pointer"
+                              >
+                                <Edit3 className="h-3 w-3" />
+                              </button>
+                            )}
+                          </div>
+                          {mr.assignedTerritories && mr.assignedTerritories.filter((a: any) => a.status === "ACTIVE" && !a.isPrimary).length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-0.5">
+                              {mr.assignedTerritories.filter((a: any) => a.status === "ACTIVE" && !a.isPrimary).map((a: any) => (
+                                <span
+                                  key={a.id}
+                                  className="inline-flex items-center gap-1 rounded bg-sky-50 dark:bg-sky-950/50 px-1.5 py-0.5 text-[9px] font-medium text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800"
+                                >
+                                  <span>+ {a.territoryName}</span>
+                                </span>
+                              ))}
+                            </div>
                           )}
                         </div>
-                        <div className="text-[10px] text-slate-400">{mr.headquarters}</div>
+                        <div className="text-[10px] text-slate-400 mt-0.5">{mr.headquarters}</div>
                       </TableCell>
                       <TableCell>
                         <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">
@@ -832,16 +939,10 @@ export default function FieldForcePage() {
                               variant="outline"
                               size="sm"
                               className="h-7 text-xs gap-1 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
-                              onClick={() => handleOpenAssignTerritory({
-                                id: mr.id,
-                                name: mr.name,
-                                currentTerritoryId: mr.territoryId,
-                                currentManagerId: mr.managerId,
-                                designation: mr.designation,
-                              })}
+                              onClick={() => handleOpenAssignTerritory(mr)}
                             >
                               <MapPin className="h-3 w-3 text-sky-600" />
-                              <span>Assign Territory</span>
+                              <span>Manage Territories</span>
                             </Button>
                           )}
                           <Link href={`/field-force/${mr.id}`}>
@@ -1079,15 +1180,15 @@ export default function FieldForcePage() {
         </form>
       </Modal>
 
-      {/* ASSIGN TERRITORY MODAL (Company Admin Exclusive) */}
+      {/* MULTI-TERRITORY ASSIGNMENT MODAL (Company Admin Exclusive) */}
       <Modal
         isOpen={isAssignTerritoryOpen}
         onClose={() => setIsAssignTerritoryOpen(false)}
-        title="Assign Territory to Field Personnel"
-        description={`Allocate or change the authorized operational territory and reporting manager for ${selectedRepForTerritory?.name}.`}
-        maxWidth="md"
+        title="Multi-Territory Assignment & Governance"
+        description={`Manage primary and secondary authorized operational sales territories for ${selectedRepForTerritory?.name}.`}
+        maxWidth="lg"
       >
-        <form onSubmit={handleAssignTerritorySubmit} className="space-y-4">
+        <div className="space-y-4">
           {territoryAssignError && (
             <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-400 flex items-center gap-2">
               <AlertCircle className="h-4 w-4 shrink-0" />
@@ -1102,67 +1203,246 @@ export default function FieldForcePage() {
             </div>
           )}
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Select Authorized Territory *
-            </label>
-            <select
-              required
-              value={targetTerritoryId}
-              onChange={(e) => setTargetTerritoryId(e.target.value)}
-              className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 font-semibold"
-            >
-              <option value="">Select Territory…</option>
-              {territories?.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name} ({t.code}) — {t.region}
-                </option>
-              ))}
-            </select>
+          {/* Personnel Quick Header */}
+          <div className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 p-3">
+            <div>
+              <div className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                {selectedRepForTerritory?.name}
+              </div>
+              <div className="text-xs text-slate-500">
+                {selectedRepForTerritory?.designation || "Medical Representative"} · {selectedRepForTerritory?.employeeId || "Field Personnel"}
+              </div>
+            </div>
+            <Badge variant="outline" className="text-xs font-medium bg-white dark:bg-slate-950">
+              Multi-Territory Authorized
+            </Badge>
           </div>
 
+          {/* Active Assigned Territories Section */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+                Currently Assigned Territories ({repTerritories?.filter((t: any) => t.status === "ACTIVE").length || 0})
+              </label>
+              <span className="text-[11px] text-slate-400">
+                1 Primary required · Multiple Secondary authorized
+              </span>
+            </div>
+
+            <div className="space-y-2 max-h-56 overflow-y-auto">
+              {isLoadingRepTerritories ? (
+                <div className="p-4 text-center text-xs text-slate-400">Loading assignments...</div>
+              ) : (!repTerritories || repTerritories.filter((t: any) => t.status === "ACTIVE").length === 0) ? (
+                <div className="p-4 text-center text-xs text-slate-500 border border-dashed rounded-xl">
+                  No active territories found. Add a territory below.
+                </div>
+              ) : (
+                repTerritories
+                  .filter((t: any) => t.status === "ACTIVE")
+                  .map((assignment: any) => (
+                    <div
+                      key={assignment.id}
+                      className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                        assignment.isPrimary
+                          ? "border-emerald-300 dark:border-emerald-800 bg-emerald-50/40 dark:bg-emerald-950/20"
+                          : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className={`p-1.5 rounded-lg ${
+                            assignment.isPrimary
+                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300"
+                              : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                          }`}
+                        >
+                          <MapPin className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                              {assignment.territoryName}
+                            </span>
+                            <span className="text-[10px] text-slate-400">({assignment.territoryCode})</span>
+                            {assignment.isPrimary ? (
+                              <Badge variant="success" className="text-[10px] px-1.5 py-0 gap-1">
+                                <Star className="h-2.5 w-2.5 fill-emerald-600 dark:fill-emerald-400" />
+                                Primary Territory
+                              </Badge>
+                            ) : (
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] px-1.5 py-0 bg-slate-50 text-slate-600 dark:bg-slate-900 dark:text-slate-400"
+                              >
+                                Secondary / Authorized
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                            {assignment.region || assignment.zone ? `${assignment.region || ""} ${assignment.zone ? `· ${assignment.zone}` : ""}` : "Field Coverage"} · Effective from ${new Date(assignment.effectiveFrom || assignment.assignedAt).toLocaleDateString()}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {!assignment.isPrimary ? (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleSetPrimaryTerritory(assignment.territoryId)}
+                              disabled={setPrimaryTerritoryMutation.isPending}
+                              className="h-7 text-xs gap-1 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 cursor-pointer"
+                            >
+                              <Star className="h-3 w-3 text-amber-500" />
+                              <span>Make Primary</span>
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleRevokeTerritory(assignment.territoryId)}
+                              disabled={revokeTerritoryMutation.isPending}
+                              className="h-7 text-xs gap-1 text-rose-600 hover:bg-rose-50 hover:border-rose-300 cursor-pointer"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                              <span>Remove</span>
+                            </Button>
+                          </>
+                        ) : (
+                          <span className="text-[11px] font-medium text-emerald-700 dark:text-emerald-400 pr-1">
+                            Default Primary
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))
+              )}
+            </div>
+          </div>
+
+          {/* Add Additional Territory Section */}
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-3 bg-slate-50/50 dark:bg-slate-900/40">
+            <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-2">
+              Add Authorized Territory
+            </label>
+            <div className="flex items-center gap-2">
+              <select
+                value={additionalTerritoryId}
+                onChange={(e) => setAdditionalTerritoryId(e.target.value)}
+                className="h-9 flex-1 rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 font-semibold"
+              >
+                <option value="">Select territory to add…</option>
+                {territories
+                  ?.filter(
+                    (t: any) =>
+                      !repTerritories?.some(
+                        (a: any) => a.territoryId === t.id && a.status === "ACTIVE"
+                      )
+                  )
+                  .map((t: any) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} ({t.code}) {t.region ? `— ${t.region}` : ""}
+                    </option>
+                  ))}
+              </select>
+              <Button
+                type="button"
+                onClick={handleAddAdditionalTerritory}
+                disabled={!additionalTerritoryId || assignTerritoriesMutation.isPending}
+                className="h-9 bg-sky-600 hover:bg-sky-500 text-white text-xs gap-1 cursor-pointer"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>{assignTerritoriesMutation.isPending ? "Adding..." : "Add Territory"}</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* Reporting Manager Configuration */}
           {!selectedRepForTerritory?.designation?.toLowerCase().includes("manager") && (
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-1.5">
                 Reporting Manager
               </label>
-              <select
-                value={targetManagerId}
-                onChange={(e) => setTargetManagerId(e.target.value)}
-                className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 font-semibold"
-              >
-                <option value="">None / Direct Company Reporting</option>
-                {managers?.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name}
-                  </option>
-                ))}
-              </select>
+              <div className="flex items-center gap-2">
+                <select
+                  value={targetManagerId}
+                  onChange={(e) => setTargetManagerId(e.target.value)}
+                  className="h-9 flex-1 rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 font-semibold"
+                >
+                  <option value="">None / Direct Company Reporting</option>
+                  {managers?.map((m: any) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleUpdateManager}
+                  disabled={updateTerritoryMutation.isPending}
+                  className="h-9 text-xs cursor-pointer"
+                >
+                  <span>{updateTerritoryMutation.isPending ? "Updating..." : "Update Manager"}</span>
+                </Button>
+              </div>
             </div>
           )}
 
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-400">
-            <span className="font-semibold text-slate-800 dark:text-slate-200">Company Governance: </span>
-            This field representative or manager will immediately gain authorized access to doctors, pharmacies, and operational scheduling mapped to this territory.
-          </div>
+          {/* Assignment History Toggle & View */}
+          {repTerritories && repTerritories.some((t: any) => t.status === "REVOKED") && (
+            <div>
+              <button
+                type="button"
+                onClick={() => setShowHistory(!showHistory)}
+                className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 cursor-pointer"
+              >
+                <History className="h-3.5 w-3.5" />
+                <span>
+                  {showHistory
+                    ? "Hide Assignment History"
+                    : `View Assignment History (${repTerritories.filter((t: any) => t.status === "REVOKED").length} past)`}
+                </span>
+              </button>
 
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
-            <button
+              {showHistory && (
+                <div className="mt-2 rounded-xl border border-slate-200 dark:border-slate-800 p-2 max-h-36 overflow-y-auto space-y-1.5 bg-white dark:bg-slate-950">
+                  {repTerritories
+                    .filter((t: any) => t.status === "REVOKED")
+                    .map((hist: any) => (
+                      <div
+                        key={hist.id}
+                        className="flex items-center justify-between text-[11px] p-2 rounded-lg bg-slate-50 dark:bg-slate-900"
+                      >
+                        <div>
+                          <span className="font-semibold text-slate-700 dark:text-slate-300">
+                            {hist.territoryName}
+                          </span>
+                          <span className="text-slate-400 ml-1.5">
+                            Assigned: {new Date(hist.assignedAt).toLocaleDateString()}
+                            {hist.revokedAt ? ` · Revoked: ${new Date(hist.revokedAt).toLocaleDateString()}` : ""}
+                          </span>
+                        </div>
+                        <Badge variant="secondary" className="text-[9px]">
+                          REVOKED
+                        </Badge>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex items-center justify-end pt-3 border-t border-slate-200 dark:border-slate-800">
+            <Button
               type="button"
               onClick={() => setIsAssignTerritoryOpen(false)}
-              className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 cursor-pointer"
+              className="rounded-xl px-5 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-white cursor-pointer"
             >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={updateTerritoryMutation.isPending}
-              className="rounded-xl bg-sky-600 px-4 py-2 text-xs font-semibold text-white hover:bg-sky-500 disabled:opacity-50 transition-colors cursor-pointer"
-            >
-              {updateTerritoryMutation.isPending ? "Assigning..." : "Save Territory Assignment"}
-            </button>
+              Done / Close
+            </Button>
           </div>
-        </form>
+        </div>
       </Modal>
 
       {/* ADD TERRITORY MODAL (Company Admin) */}

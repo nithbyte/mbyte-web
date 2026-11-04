@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -56,6 +57,7 @@ import {
 } from "lucide-react";
 
 export default function DoctorsPage() {
+  const queryClient = useQueryClient();
   const { user } = useAuthStore();
   const isCompanyAdmin =
     user?.role === "COMPANY_ADMIN" ||
