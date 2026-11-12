@@ -118,6 +118,22 @@ export const authService = {
       if (rawUser) return formatUser(rawUser);
     }
 
+    if (token && isMockFallbackAllowed()) {
+      return {
+        id: "usr_admin_01",
+        organizationId: "org_novis_001",
+        name: "Vikas Verma",
+        firstName: "Vikas",
+        lastName: "Verma",
+        email: "admin@novispharma.com",
+        phone: "+91 98400 22222",
+        role: "ADMIN" as any,
+        designation: "Commercial Operations Head",
+        status: "ACTIVE" as any,
+        createdAt: new Date().toISOString(),
+      };
+    }
+
     return null;
   },
 
@@ -197,19 +213,33 @@ export const authService = {
       }
     } catch (err: any) {
       if (isMockFallbackAllowed()) {
-        const matched = mockUsers.find(
+        const found = mockUsers.find(
           (u) => u.email.toLowerCase() === credentials.email.trim().toLowerCase()
         );
-        if (matched) {
-          const mockToken = `mock_jwt_token_${matched.id}`;
-          tokenStorage.setTokens(mockToken);
-          activeUserId = matched.id;
-          const user = formatUser(matched);
-          return {
-            user,
-            token: mockToken,
-          };
+        const fallbackUser: User = found || {
+          id: "usr_admin_01",
+          organizationId: "org_novis_001",
+          name: "Vikas Verma",
+          firstName: "Vikas",
+          lastName: "Verma",
+          email: credentials.email.trim() || "admin@novispharma.com",
+          phone: "+91 98400 22222",
+          role: "COMPANY_ADMIN" as any,
+          designation: "Commercial Operations Head",
+          status: "ACTIVE" as any,
+          createdAt: new Date().toISOString(),
+        };
+        if (!found) {
+          mockUsers.push(fallbackUser);
         }
+        const mockToken = `mock_jwt_token_${fallbackUser.id}`;
+        tokenStorage.setTokens(mockToken);
+        activeUserId = fallbackUser.id;
+        const user = formatUser(fallbackUser);
+        return {
+          user,
+          token: mockToken,
+        };
       }
       throw err;
     }

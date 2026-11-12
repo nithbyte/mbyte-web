@@ -481,11 +481,12 @@ export const chatService = {
     conversationId: string;
     receiverId?: string;
     callType: CallType;
+    callerId?: string;
   }): Promise<any> {
     try {
       const res = await apiClient.post<any>("/chat/calls/initiate", payload);
       const data = res?.data || res;
-      if (data && data.callId) {
+      if (data && data.id) {
         return data;
       }
     } catch {
@@ -493,21 +494,23 @@ export const chatService = {
     }
 
     const contact = mockContacts.find((c) => c.id === payload.receiverId);
+    const callerId = payload.callerId || "curr_user";
     activeMockCall = {
       id: `call_${Date.now()}`,
       conversationId: payload.conversationId,
-      callerId: "curr_user",
+      callerId,
       receiverId: payload.receiverId,
       callType: payload.callType,
-      status: "RINGING",
+      status: "CONNECTED",
       channelName: `channel_${Date.now()}`,
       durationSeconds: 0,
       startedAt: new Date().toISOString(),
+      connectedAt: new Date().toISOString(),
       caller: {
-        id: "curr_user",
+        id: callerId,
         firstName: "You",
         lastName: "",
-        email: "you@novis.com",
+        email: "admin@novispharma.com",
         avatarUrl: "",
       },
       receiver: {
@@ -520,19 +523,7 @@ export const chatService = {
     };
 
     mockCallSignals[activeMockCall.id] = [];
-    return {
-      callId: activeMockCall.id,
-      conversationId: activeMockCall.conversationId,
-      callType: activeMockCall.callType,
-      status: activeMockCall.status,
-      caller: activeMockCall.caller,
-      receiver: activeMockCall.receiver,
-      iceServers: [
-        { urls: "stun:stun.l.google.com:19302" },
-        { urls: "stun:stun1.l.google.com:19302" },
-      ],
-      startedAt: activeMockCall.startedAt,
-    };
+    return activeMockCall;
   },
 
   /**

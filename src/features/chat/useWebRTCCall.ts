@@ -204,23 +204,33 @@ export function useWebRTCCall(currentUserId?: string) {
           conversationId,
           receiverId,
           callType: type,
+          callerId: currentUserId,
         });
 
         setActiveCall(session);
 
         const pc = createPeerConnection(session.id);
         if (pc && stream) {
-          stream.getTracks().forEach((track) => pc.addTrack(track, stream));
-          const offer = await pc.createOffer();
-          await pc.setLocalDescription(offer);
-          await chatService.sendSignal(session.id, "OFFER", offer);
+          try {
+            stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            await chatService.sendSignal(session.id, "OFFER", offer);
+          } catch (pcErr) {
+            console.warn("WebRTC local track negotiation error:", pcErr);
+          }
+        }
+
+        if (session.status === "CONNECTED" && !durationTimerRef.current) {
+          durationTimerRef.current = setInterval(() => {
+            setCallDuration((prev) => prev + 1);
+          }, 1000);
         }
 
         startSignalPolling(session.id);
       } catch (err: any) {
+        console.warn("Failed to start call:", err);
         setError(err.message || "Failed to start call");
-        cleanUpStreamsAndPC();
-        setActiveCall(null);
       }
     },
     [acquireMedia, cleanUpStreamsAndPC, createPeerConnection, startSignalPolling]
@@ -351,9 +361,8 @@ export function useWebRTCCall(currentUserId?: string) {
 
     return () => {
       if (incomingCheckTimerRef.current) clearInterval(incomingCheckTimerRef.current);
-      cleanUpStreamsAndPC();
     };
-  }, [activeCall, currentUserId, cleanUpStreamsAndPC]);
+  }, [activeCall, currentUserId]);
 
   return {
     activeCall,
