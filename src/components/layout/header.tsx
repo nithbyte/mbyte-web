@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import {
   Menu,
   Bell,
@@ -13,6 +14,7 @@ import {
   Briefcase,
   IdCard,
   Calendar,
+  MessageSquare,
 } from "lucide-react";
 import { useSidebarStore, useFilterStore } from "@/store";
 import {
@@ -240,6 +242,16 @@ className="w-[110px] rounded border border-transparent bg-transparent px-1 py-0.
 
           {/* Light / Dark Theme Mode Toggle */}
           <ThemeToggle />
+
+          {/* Team Chat Quick Access */}
+          <Link
+            href="/chat"
+            className="relative rounded-lg p-2 text-slate-600 hover:bg-[#F5F3EE] dark:text-slate-300 dark:hover:bg-[#2C2C2C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] dark:focus-visible:ring-[#FF6B00] shrink-0 transition-colors"
+            title="Team Chat & Calls"
+            aria-label="Open Team Chat & Calls"
+          >
+            <MessageSquare className="h-5 w-5" />
+          </Link>
 
           {/* Notification Bell with Popover Dropdown */}
           <div className="relative shrink-0">

@@ -33,6 +33,7 @@ import {
   Flag,
   GraduationCap,
   ClipboardList,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebarStore } from "@/store";
@@ -73,6 +74,11 @@ function getNavSections(role: CanonicalRole): NavSection[] {
               title: "Company Administrators",
               href: "/field-force",
               icon: Users,
+            },
+            {
+              title: "Team Chat & Calls",
+              href: "/chat",
+              icon: MessageSquare,
             },
           ],
         },
@@ -207,6 +213,13 @@ function getNavSections(role: CanonicalRole): NavSection[] {
         {
           title: "Field & Engagement",
           items: [
+            {
+              title: "Team Chat & Calls",
+              href: "/chat",
+              icon: MessageSquare,
+              badge: "LIVE",
+              badgeVariant: "live",
+            },
             {
               title: "Shift Attendance",
               href: "/attendance",
@@ -356,6 +369,13 @@ function getNavSections(role: CanonicalRole): NavSection[] {
           title: "Field & Engagement",
           items: [
             {
+              title: "Team Chat & Calls",
+              href: "/chat",
+              icon: MessageSquare,
+              badge: "LIVE",
+              badgeVariant: "live",
+            },
+            {
               title: "Shift Attendance",
               href: "/attendance",
               icon: Clock,
@@ -399,6 +419,13 @@ function getNavSections(role: CanonicalRole): NavSection[] {
         {
           title: "My Field Work",
           items: [
+            {
+              title: "Team Chat & Calls",
+              href: "/chat",
+              icon: MessageSquare,
+              badge: "LIVE",
+              badgeVariant: "live",
+            },
             {
               title: "My Call Schedule & Visits",
               href: "/visits",
