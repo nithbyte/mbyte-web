@@ -178,6 +178,12 @@ axiosInstance.interceptors.request.use(
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // When transmitting FormData, remove static Content-Type so browser can attach boundary parameter
+    if (typeof FormData !== "undefined" && config.data instanceof FormData && config.headers) {
+      delete config.headers["Content-Type"];
+    }
+
     return config;
   },
   (error) => Promise.reject(error)

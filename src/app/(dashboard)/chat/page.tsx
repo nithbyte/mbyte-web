@@ -244,6 +244,7 @@ export default function ChatPage() {
     try {
       const conv = await chatService.createConversation({
         type: "DIRECT",
+        recipientId: participantId,
         participantIds: [participantId],
       });
       setConversations((prev) => [conv, ...prev.filter((c) => c.id !== conv.id)]);

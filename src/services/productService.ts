@@ -93,6 +93,7 @@ function mapApiProduct(p: any): Product {
     gstRate: Number(p.gstRate) || 12,
     description: p.description,
     isActive: p.isActive ?? true,
+    imageUrl: p.imageUrl || undefined,
     visualAids: [],
     visualAidsCount: 0,
     presenceSummary: calculatePresenceSummary(p.id),
@@ -109,7 +110,7 @@ export const productService = {
 
       const [prodsRes, vasRes, auditsRes] = await Promise.allSettled([
         apiClient.get<any>("/products", { params: queryParams }),
-        apiClient.get<any>("/visual-aids", { params: { limit: 50 } }),
+        apiClient.get<any>("/visual-aids", { params: { limit: 1000 } }),
         apiClient.get<any>("/product-presence", { params: { limit: 100 } }),
       ]);
 
@@ -148,7 +149,7 @@ export const productService = {
 
         return prodsList.map((p: any) => {
           const item = mapApiProduct(p);
-          const va = vasList.filter((v: any) => v.productId === p.id);
+          const va = vasList.filter((v: any) => v.productId === p.id && Boolean(v.productId));
           return {
             ...item,
             visualAids: va,
@@ -310,7 +311,7 @@ export const productService = {
 
   async getVisualAids(params?: { productId?: string; search?: string }): Promise<VisualAid[]> {
     try {
-      const queryParams: Record<string, any> = { limit: 50 };
+      const queryParams: Record<string, any> = { limit: 1000 };
       if (params?.productId) queryParams.productId = params.productId;
       if (params?.search) queryParams.search = params.search;
 
@@ -562,15 +563,16 @@ export const productService = {
     const formData = new FormData();
     formData.append('file', file);
     try {
-      const res = await apiClient.post<any>('/visual-aids/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      const res = await apiClient.post<any>('/visual-aids/upload', formData);
       if (res && (res.fileUrl || res.data?.fileUrl)) {
         const data = res.fileUrl ? res : res.data;
+        let resolvedUrl = data.fileUrl || '';
+        if (resolvedUrl.startsWith('/') && !resolvedUrl.startsWith('//')) {
+          const base = (apiClient.axios.defaults.baseURL || '').replace(/\/api\/v1\/?$/, '');
+          resolvedUrl = base ? `${base}${resolvedUrl}` : resolvedUrl;
+        }
         return {
-          fileUrl: data.fileUrl,
+          fileUrl: resolvedUrl,
           filename: data.filename || file.name,
           sizeBytes: data.sizeBytes || file.size,
           mimeType: data.mimeType || file.type,

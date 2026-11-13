@@ -348,21 +348,37 @@ export const chatService = {
     participantIds?: string[];
     title?: string;
   }): Promise<Conversation> {
+    const targetRecipientId =
+      payload.recipientId ||
+      (payload.type === "DIRECT" && payload.participantIds?.length === 1 ? payload.participantIds[0] : undefined) ||
+      (payload.participantIds?.length === 1 && !payload.title ? payload.participantIds[0] : undefined);
+
+    const isDirect = payload.type === "DIRECT" || Boolean(targetRecipientId && !payload.title);
+
+    const normalizedPayload = {
+      type: isDirect ? "DIRECT" : "GROUP",
+      recipientId: isDirect ? targetRecipientId : undefined,
+      participantIds: isDirect
+        ? (targetRecipientId ? [targetRecipientId] : payload.participantIds)
+        : (payload.participantIds || []),
+      title: isDirect ? undefined : (payload.title?.trim() || "Team Channel"),
+    };
+
     try {
-      const res = await apiClient.post<any>("/chat/conversations", payload);
+      const res = await apiClient.post<any>("/chat/conversations", normalizedPayload);
       const data = res?.data || res;
       if (data && data.id) {
         return data;
       }
-    } catch {
-      // fallback
+    } catch (err) {
+      console.warn("Real POST /chat/conversations failed, using fallback:", err);
     }
 
-    if (payload.recipientId) {
-      const contact = mockContacts.find((c) => c.id === payload.recipientId);
+    if (isDirect && targetRecipientId) {
+      const contact = mockContacts.find((c) => c.id === targetRecipientId);
       const title = contact ? contact.name : "Colleague";
       const existing = mockConversations.find(
-        (c) => c.type === "DIRECT" && c.participants.some((p) => p.userId === payload.recipientId)
+        (c) => c.type === "DIRECT" && c.participants.some((p) => p.userId === targetRecipientId)
       );
       if (existing) return existing;
 
@@ -381,7 +397,7 @@ export const chatService = {
         participants: [
           { userId: "curr_user", name: "You", email: "you@novis.com", role: "MEMBER" },
           {
-            userId: payload.recipientId,
+            userId: targetRecipientId,
             name: title,
             email: contact?.email || "",
             role: "MEMBER",
@@ -401,7 +417,7 @@ export const chatService = {
       id: `conv_grp_${Date.now()}`,
       organizationId: "org_novis",
       type: "GROUP",
-      title: payload.title || "Team Channel",
+      title: payload.title?.trim() || "Team Channel",
       subtitle: `${(payload.participantIds?.length || 0) + 1} members`,
       isOnline: false,
       lastMessageText: "Channel created",
