@@ -51,21 +51,34 @@ export function CallOverlay({
 }: CallOverlayProps) {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement>(null);
   const [isMinimized, setIsMinimized] = React.useState(false);
 
   // Bind local stream
   useEffect(() => {
     if (localVideoRef.current && localStream) {
       localVideoRef.current.srcObject = localStream;
+      localVideoRef.current.play().catch(() => {});
     }
-  }, [localStream]);
+  }, [localStream, activeCall?.callType]);
 
-  // Bind remote stream
+  // Bind remote stream for both audio and video playback
   useEffect(() => {
-    if (remoteVideoRef.current && remoteStream) {
-      remoteVideoRef.current.srcObject = remoteStream;
+    if (remoteStream) {
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = remoteStream;
+        remoteVideoRef.current.play().catch((err) => {
+          console.log("Remote video play caught (autoplay policy):", err);
+        });
+      }
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = remoteStream;
+        remoteAudioRef.current.play().catch((err) => {
+          console.log("Remote audio play caught (autoplay policy):", err);
+        });
+      }
     }
-  }, [remoteStream]);
+  }, [remoteStream, activeCall?.callType, activeCall?.status]);
 
   if (!activeCall) return null;
 
@@ -88,6 +101,7 @@ export function CallOverlay({
   if (isIncoming) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-in fade-in">
+        <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
         <div className="w-full max-w-sm rounded-3xl bg-slate-900 border border-slate-700/60 p-6 text-white text-center shadow-2xl relative overflow-hidden">
           <div className="absolute -top-16 -left-16 w-48 h-48 bg-orange-500/20 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute -bottom-16 -right-16 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
@@ -124,7 +138,7 @@ export function CallOverlay({
               <div className="w-14 h-14 rounded-full bg-red-600 hover:bg-red-500 flex items-center justify-center text-white shadow-lg transition-transform active:scale-95 group-hover:scale-105">
                 <PhoneOff className="w-6 h-6" />
               </div>
-              <span className="text-xs text-slate-300 font-medium">Decline</span>
+              <span className="text-xs text-red-400 font-medium">Decline</span>
             </button>
 
             {/* Accept Button */}
@@ -153,6 +167,9 @@ export function CallOverlay({
           : "fixed inset-0 sm:inset-6 md:inset-10 lg:inset-14 max-w-5xl max-h-[85vh] m-auto rounded-3xl border border-slate-800 bg-slate-950 flex flex-col"
       )}
     >
+      {/* Hidden audio element dedicated to playing remote audio continuously */}
+      <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
+
       {/* Top Header Bar */}
       <div className="flex items-center justify-between px-5 py-3.5 bg-slate-900/80 backdrop-blur border-b border-slate-800 z-10 shrink-0">
         <div className="flex items-center gap-3">
@@ -162,7 +179,7 @@ export function CallOverlay({
               {partnerName}
             </h4>
             <div className="flex items-center gap-2 text-xs text-slate-400">
-              <span>{activeCall.status === "CONNECTED" ? formatDuration(callDuration) : "Connecting..."}</span>
+              <span>{activeCall.status === "CONNECTED" ? formatDuration(callDuration) : "Ringing..."}</span>
               <span>•</span>
               <span className="capitalize">{activeCall.callType.toLowerCase()} Call</span>
             </div>

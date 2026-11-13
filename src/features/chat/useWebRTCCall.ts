@@ -42,6 +42,7 @@ export function useWebRTCCall(currentUserId?: string) {
   const signalPollerRef = useRef<NodeJS.Timeout | null>(null);
   const incomingCheckTimerRef = useRef<NodeJS.Timeout | null>(null);
   const processedSignalIdsRef = useRef<Set<string>>(new Set());
+  const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
 
   // Cleanup helper
   const cleanUpStreamsAndPC = useCallback(() => {
@@ -67,11 +68,26 @@ export function useWebRTCCall(currentUserId?: string) {
       pcRef.current.close();
       pcRef.current = null;
     }
+    pendingCandidatesRef.current = [];
     processedSignalIdsRef.current.clear();
     setConnectionState("idle");
     setCallDuration(0);
     setIsMuted(false);
     setIsScreenSharing(false);
+  }, []);
+
+  // Flush queued ICE candidates after remote description is set
+  const flushPendingCandidates = useCallback(async (pc: RTCPeerConnection) => {
+    while (pendingCandidatesRef.current.length > 0) {
+      const candidate = pendingCandidatesRef.current.shift();
+      if (candidate) {
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (err) {
+          console.warn("Flushing ICE candidate error:", err);
+        }
+      }
+    }
   }, []);
 
   // Setup PeerConnection
@@ -92,13 +108,19 @@ export function useWebRTCCall(currentUserId?: string) {
         setConnectionState(pc.connectionState);
       }
       if (pc.connectionState === "connected") {
+        setActiveCall((prev) => (prev && prev.status !== "CONNECTED" ? { ...prev, status: "CONNECTED" } : prev));
         if (!durationTimerRef.current) {
           durationTimerRef.current = setInterval(() => {
             setCallDuration((prev) => prev + 1);
           }, 1000);
         }
-      } else if (pc.connectionState === "disconnected" || pc.connectionState === "failed" || pc.connectionState === "closed") {
-        // Disconnected
+      } else if (
+        pc.connectionState === "disconnected" ||
+        pc.connectionState === "failed" ||
+        pc.connectionState === "closed"
+      ) {
+        cleanUpStreamsAndPC();
+        setActiveCall(null);
       }
     };
 
@@ -107,19 +129,21 @@ export function useWebRTCCall(currentUserId?: string) {
         remoteStreamRef.current = event.streams[0];
         setRemoteStream(event.streams[0]);
       } else {
-        const stream = new MediaStream([event.track]);
-        remoteStreamRef.current = stream;
-        setRemoteStream(stream);
+        if (!remoteStreamRef.current) {
+          remoteStreamRef.current = new MediaStream();
+        }
+        remoteStreamRef.current.addTrack(event.track);
+        setRemoteStream(new MediaStream(remoteStreamRef.current.getTracks()));
       }
     };
 
     return pc;
-  }, []);
+  }, [cleanUpStreamsAndPC]);
 
-  // Request user media safely
+  // Request user media safely with animated canvas and audio fallback
   const acquireMedia = useCallback(async (callType: CallType) => {
-    try {
-      if (typeof navigator !== "undefined" && navigator.mediaDevices?.getUserMedia) {
+    if (typeof navigator !== "undefined" && navigator.mediaDevices?.getUserMedia) {
+      try {
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
           video: callType === "VIDEO" ? { width: { ideal: 1280 }, height: { ideal: 720 } } : false,
@@ -128,24 +152,59 @@ export function useWebRTCCall(currentUserId?: string) {
         setLocalStream(stream);
         setIsVideoEnabled(callType === "VIDEO");
         return stream;
+      } catch (err: any) {
+        console.warn("Hardware media access failed, trying audio-only + simulated video:", err);
       }
-    } catch (err: any) {
-      console.warn("Could not acquire actual media hardware (fallback simulation used):", err);
     }
 
-    // Mock/Simulated stream canvas/audio for demo environments without webcam
+    // Fallback: animated canvas & audio synth so WebRTC peer connection always has active tracks
     const canvas = document.createElement("canvas");
     canvas.width = 640;
     canvas.height = 480;
     const ctx = canvas.getContext("2d");
-    if (ctx) {
-      ctx.fillStyle = "#1e293b";
+    let frame = 0;
+    const draw = () => {
+      if (!ctx) return;
+      frame++;
+      ctx.fillStyle = "#0f172a";
       ctx.fillRect(0, 0, 640, 480);
+      const radius = 55 + Math.sin(frame * 0.1) * 15;
+      ctx.beginPath();
+      ctx.arc(320, 200, radius, 0, Math.PI * 2);
+      ctx.fillStyle = "#ff6b00";
+      ctx.fill();
       ctx.fillStyle = "#ffffff";
-      ctx.font = "24px sans-serif";
-      ctx.fillText(callType === "VIDEO" ? "Camera Preview" : "Audio Active", 220, 240);
+      ctx.font = "bold 24px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(callType === "VIDEO" ? "Video Active" : "Audio Active", 320, 310);
+      ctx.font = "14px sans-serif";
+      ctx.fillStyle = "#94a3b8";
+      ctx.fillText("Connected", 320, 345);
+      if (localStreamRef.current) {
+        requestAnimationFrame(draw);
+      }
+    };
+    draw();
+
+    const mockVideoStream = canvas.captureStream ? canvas.captureStream(25) : new MediaStream();
+
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      gain.gain.value = 0.001;
+      osc.connect(gain);
+      const dst = audioCtx.createMediaStreamDestination();
+      gain.connect(dst);
+      osc.start();
+      const audioTrack = dst.stream.getAudioTracks()[0];
+      if (audioTrack) {
+        mockVideoStream.addTrack(audioTrack);
+      }
+    } catch (e) {
+      // AudioContext unavailable
     }
-    const mockVideoStream = canvas.captureStream ? canvas.captureStream(10) : new MediaStream();
+
     localStreamRef.current = mockVideoStream;
     setLocalStream(mockVideoStream);
     setIsVideoEnabled(callType === "VIDEO");
@@ -196,31 +255,43 @@ export function useWebRTCCall(currentUserId?: string) {
           const pc = pcRef.current;
           if (!pc) continue;
 
+          if (sig.type === "END" || sig.type === "REJECT" || sig.type === "BYE" || sig.type === "END_CALL") {
+            cleanUpStreamsAndPC();
+            setActiveCall(null);
+            return;
+          }
+
           if (sig.type === "OFFER" && sig.payload) {
             await pc.setRemoteDescription(new RTCSessionDescription(sig.payload));
+            await flushPendingCandidates(pc);
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
             await chatService.sendSignal(callId, "ANSWER", answer);
           } else if (sig.type === "ANSWER" && sig.payload) {
             await pc.setRemoteDescription(new RTCSessionDescription(sig.payload));
+            await flushPendingCandidates(pc);
             setActiveCall((prev) =>
               prev && prev.status !== "CONNECTED"
                 ? { ...prev, status: "CONNECTED" }
                 : prev
             );
           } else if (sig.type === "ICE_CANDIDATE" && sig.payload) {
-            try {
-              await pc.addIceCandidate(new RTCIceCandidate(sig.payload));
-            } catch (iceErr) {
-              console.warn("ICE candidate addition error:", iceErr);
+            if (!pc.remoteDescription) {
+              pendingCandidatesRef.current.push(sig.payload);
+            } else {
+              try {
+                await pc.addIceCandidate(new RTCIceCandidate(sig.payload));
+              } catch (iceErr) {
+                console.warn("ICE candidate addition error:", iceErr);
+              }
             }
           }
         }
       } catch (err) {
         // Suppress transient network poll errors
       }
-    }, 1500);
-  }, [cleanUpStreamsAndPC, currentUserId]);
+    }, 1200);
+  }, [cleanUpStreamsAndPC, currentUserId, flushPendingCandidates]);
 
   // Initiate an Outgoing Call
   const startCall = useCallback(
@@ -286,15 +357,16 @@ export function useWebRTCCall(currentUserId?: string) {
     try {
       setConnectionState("connecting");
       const stream = await acquireMedia(activeCall.callType);
-      const updated = await chatService.respondToCall(activeCall.id, "CONNECTED");
+      const callId = activeCall.id || (activeCall as any).callId;
+      const updated = await chatService.respondToCall(callId, "CONNECTED");
       setActiveCall((prev) => (prev ? { ...prev, status: "CONNECTED" } : updated));
 
-      const pc = createPeerConnection(activeCall.id);
+      const pc = createPeerConnection(callId);
       if (pc && stream) {
         stream.getTracks().forEach((track) => pc.addTrack(track, stream));
       }
 
-      startSignalPolling(activeCall.id);
+      startSignalPolling(callId);
 
       // Start duration timer
       if (!durationTimerRef.current) {
@@ -310,19 +382,23 @@ export function useWebRTCCall(currentUserId?: string) {
   // Reject Incoming Call
   const rejectCall = useCallback(async () => {
     if (!activeCall) return;
+    const callId = activeCall.id || (activeCall as any).callId;
     try {
-      await chatService.respondToCall(activeCall.id, "REJECTED");
+      await chatService.sendSignal(callId, "REJECT", { reason: "rejected" });
+      await chatService.respondToCall(callId, "REJECTED");
     } finally {
       cleanUpStreamsAndPC();
       setActiveCall(null);
     }
   }, [activeCall, cleanUpStreamsAndPC]);
 
-  // End Active Call
+  // End Active Call (Hangs up on both sides)
   const endCall = useCallback(async () => {
     if (activeCall) {
+      const callId = activeCall.id || (activeCall as any).callId;
       try {
-        await chatService.endCall(activeCall.id);
+        await chatService.sendSignal(callId, "END", { reason: "ended" });
+        await chatService.endCall(callId);
       } catch (err) {
         console.warn("End call remote failed:", err);
       }
@@ -356,7 +432,6 @@ export function useWebRTCCall(currentUserId?: string) {
   // Toggle Screen Share
   const toggleScreenShare = useCallback(async () => {
     if (isScreenSharing) {
-      // Revert to camera
       if (activeCall) {
         await acquireMedia(activeCall.callType);
         setIsScreenSharing(false);
@@ -390,27 +465,39 @@ export function useWebRTCCall(currentUserId?: string) {
     }
   }, [isScreenSharing, activeCall, acquireMedia]);
 
-  // Periodic check for incoming calls
+  // Periodic check for incoming calls and remote hangup while ringing
   useEffect(() => {
+    if (!currentUserId) return;
+
     incomingCheckTimerRef.current = setInterval(async () => {
-      // If we don't have an active call, check if one is ringing for us
       if (!activeCall) {
+        // No active call: check if one is ringing for us
         const incoming = await chatService.getActiveCall();
         if (
           incoming &&
           incoming.status === "RINGING" &&
-          (incoming.receiverId === currentUserId || (currentUserId && incoming.callerId !== currentUserId))
+          (incoming.receiverId === currentUserId || incoming.callerId !== currentUserId)
         ) {
           setActiveCall(incoming);
           setConnectionState("ringing");
         }
+      } else if (activeCall.status === "RINGING") {
+        // Call is ringing: check if caller cancelled or call ended remotely
+        const callId = activeCall.id || (activeCall as any).callId;
+        if (callId) {
+          const remote = await chatService.getCallSession(callId);
+          if (!remote || remote.status === "ENDED" || remote.status === "REJECTED" || remote.status === "MISSED") {
+            cleanUpStreamsAndPC();
+            setActiveCall(null);
+          }
+        }
       }
-    }, 2000);
+    }, 1200);
 
     return () => {
       if (incomingCheckTimerRef.current) clearInterval(incomingCheckTimerRef.current);
     };
-  }, [activeCall, currentUserId]);
+  }, [activeCall, cleanUpStreamsAndPC, currentUserId]);
 
   return {
     activeCall,
@@ -431,4 +518,3 @@ export function useWebRTCCall(currentUserId?: string) {
     toggleScreenShare,
   };
 }
-

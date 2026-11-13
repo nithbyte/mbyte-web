@@ -48,7 +48,7 @@ export default function ChatPage() {
   const [contacts, setContacts] = useState<ColleagueContact[]>([]);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterTab, setFilterTab] = useState<"ALL" | "DIRECT" | "GROUP">("ALL");
+  const [filterTab, setFilterTab] = useState<"ALL" | "DIRECT" | "GROUP" | "CONTACTS">("ALL");
   const [inputText, setInputText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false);
@@ -75,15 +75,15 @@ export default function ChatPage() {
         setConversations(convList);
         setContacts(contactList);
 
-        if (convList.length > 0 && !selectedConversationId) {
-          setSelectedConversationId(convList[0].id);
+        if (convList.length > 0) {
+          setSelectedConversationId((prev) => prev || convList[0].id);
         }
       } catch (err) {
         console.error("Failed to load chat data", err);
       }
     }
     loadData();
-  }, [selectedConversationId]);
+  }, []);
 
   // Load messages when selected conversation changes
   useEffect(() => {
@@ -232,7 +232,24 @@ export default function ChatPage() {
     }
   };
 
-  // Start Call
+  // Call colleague directly from roster or modal
+  const handleCallColleague = async (colleague: ColleagueContact, type: "AUDIO" | "VIDEO") => {
+    setIsNewChatModalOpen(false);
+    try {
+      const conv = await chatService.createConversation({
+        type: "DIRECT",
+        recipientId: colleague.id,
+        participantIds: [colleague.id],
+      });
+      setConversations((prev) => [conv, ...prev.filter((c) => c.id !== conv.id)]);
+      setSelectedConversationId(conv.id);
+      callState.startCall(conv.id, colleague.id, colleague.name, type);
+    } catch (err) {
+      console.error("Failed to call colleague", err);
+    }
+  };
+
+  // Start Call from conversation header
   const handleInitiateCall = (type: "AUDIO" | "VIDEO") => {
     if (!activeConversation) return;
     const partner = activeConversation.participants?.find(
@@ -351,27 +368,76 @@ export default function ChatPage() {
           </div>
 
           {/* Filter Pills */}
-          <div className="flex items-center gap-1.5 mt-3">
-            {(["ALL", "DIRECT", "GROUP"] as const).map((tab) => (
+          <div className="flex items-center gap-1.5 mt-3 overflow-x-auto pb-1">
+            {(["ALL", "DIRECT", "GROUP", "CONTACTS"] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setFilterTab(tab)}
                 className={cn(
-                  "px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer",
+                  "px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer shrink-0",
                   filterTab === tab
                     ? "bg-[#FF6B00] text-white font-semibold"
                     : "bg-slate-200/60 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200"
                 )}
               >
-                {tab === "ALL" ? "All" : tab === "DIRECT" ? "Direct" : "Groups"}
+                {tab === "ALL" ? "All" : tab === "DIRECT" ? "Direct" : tab === "GROUP" ? "Groups" : "Colleagues (" + contacts.length + ")"}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Conversation List */}
-        <div className="flex-1 overflow-y-auto divide-y divide-[#E5E1D9]/40 dark:divide-[#333333]/40">
-          {filteredConversations.length === 0 ? (
+        {/* Directory or Conversation List */}
+        {filterTab === "CONTACTS" ? (
+          <div className="flex-1 overflow-y-auto divide-y divide-[#E5E1D9]/40 dark:divide-[#333333]/40">
+            {filteredContacts.length === 0 ? (
+              <div className="p-8 text-center text-slate-400 text-xs">No team colleagues found.</div>
+            ) : (
+              filteredContacts.map((c) => (
+                <div
+                  key={c.id}
+                  className="flex items-center justify-between p-3.5 hover:bg-slate-100/70 dark:hover:bg-[#2a2a2a] transition-colors gap-2"
+                >
+                  <div
+                    onClick={() => handleCreateConversation(c.id)}
+                    className="flex items-center gap-3 min-w-0 cursor-pointer flex-1"
+                  >
+                    <div className="relative shrink-0">
+                      <div className="w-10 h-10 rounded-2xl bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center font-bold text-xs shadow-xs">
+                        {c.firstName?.[0] || ""}{c.lastName?.[0] || ""}
+                      </div>
+                      {c.isOnline && (
+                        <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-[#1E1E1E]" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">{c.name}</h4>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{c.roleLabel} • {c.headquarters || "Field"}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      onClick={() => handleCallColleague(c, "AUDIO")}
+                      className="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 cursor-pointer transition-colors"
+                      title={"Call " + c.name}
+                    >
+                      <Phone className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleCallColleague(c, "VIDEO")}
+                      className="p-2 rounded-xl bg-orange-50 hover:bg-orange-100 text-[#FF6B00] dark:bg-orange-950/40 cursor-pointer transition-colors"
+                      title={"Video Call " + c.name}
+                    >
+                      <Video className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        ) : (
+          <div className="flex-1 overflow-y-auto divide-y divide-[#E5E1D9]/40 dark:divide-[#333333]/40">
+            {filteredConversations.length === 0 ? (
             <div className="p-8 text-center text-slate-400 text-xs">
               No conversations found. Click &quot;New&quot; to connect with a colleague.
             </div>
@@ -441,6 +507,7 @@ export default function ChatPage() {
             })
           )}
         </div>
+        )}
       </div>
 
       {/* RIGHT MAIN PANEL: Active Conversation & Messages */}
@@ -816,9 +883,31 @@ export default function ChatPage() {
                         {isSelected && <Check className="w-3.5 h-3.5" />}
                       </div>
                     ) : (
-                      <span className="text-xs text-[#FF6B00] font-semibold hover:underline">
-                        Message &rarr;
-                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCallColleague(c, "AUDIO");
+                          }}
+                          className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-600 transition-colors"
+                          title="Call"
+                        >
+                          <Phone className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCallColleague(c, "VIDEO");
+                          }}
+                          className="p-1.5 rounded-lg bg-orange-50 hover:bg-orange-100 text-[#FF6B00] transition-colors"
+                          title="Video Call"
+                        >
+                          <Video className="w-3.5 h-3.5" />
+                        </button>
+                        <span className="text-xs text-[#FF6B00] font-semibold hover:underline ml-1">
+                          Message &rarr;
+                        </span>
+                      </div>
                     )}
                   </div>
                 );
