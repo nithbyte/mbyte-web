@@ -502,8 +502,11 @@ export const chatService = {
     try {
       const res = await apiClient.post<any>("/chat/calls/initiate", payload);
       const data = res?.data || res;
-      if (data && data.id) {
-        return data;
+      if (data && (data.id || data.callId)) {
+        return {
+          ...data,
+          id: data.id || data.callId,
+        };
       }
     } catch {
       // fallback
@@ -549,14 +552,36 @@ export const chatService = {
     try {
       const res = await apiClient.get<any>("/chat/calls/active");
       const data = res?.data || res;
-      if (data && data.id) {
-        return data;
+      if (data && (data.id || data.callId)) {
+        return {
+          ...data,
+          id: data.id || data.callId,
+        };
       }
       return null;
     } catch {
       // fallback
     }
     return activeMockCall;
+  },
+
+  /**
+   * Fetch a specific call session by ID
+   */
+  async getCallSession(callId: string): Promise<CallSession | null> {
+    try {
+      const res = await apiClient.get<any>(`/chat/calls/${callId}`);
+      const data = res?.data || res;
+      if (data && (data.id || data.callId)) {
+        return {
+          ...data,
+          id: data.id || data.callId,
+        };
+      }
+    } catch {
+      // fallback
+    }
+    return null;
   },
 
   /**

@@ -31,12 +31,15 @@ import {
   ChatMessageType,
 } from "@/types/chat";
 import { useCurrentUser } from "@/hooks";
+import { useAuthStore } from "@/store/useAuthStore";
 import { cn } from "@/lib/utils";
 import { useWebRTCCall } from "@/features/chat/useWebRTCCall";
 import { CallOverlay } from "@/features/chat/CallOverlay";
 
 export default function ChatPage() {
-  const { data: currentUser } = useCurrentUser();
+  const { data: currentUserQuery } = useCurrentUser();
+  const authStoreUser = useAuthStore((s) => s.user);
+  const currentUser = currentUserQuery || authStoreUser;
   const currentUserId = currentUser?.id || "curr_user";
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -232,9 +235,16 @@ export default function ChatPage() {
   // Start Call
   const handleInitiateCall = (type: "AUDIO" | "VIDEO") => {
     if (!activeConversation) return;
-    const partner = activeConversation.participants.find((p) => p.userId !== currentUserId);
-    const receiverId = partner?.userId || "usr_mr_01";
-    const receiverName = partner?.name || activeConversation.title;
+    const partner = activeConversation.participants?.find(
+      (p: any) => (p.userId || p.user?.id) !== currentUserId
+    );
+    const receiverId = partner?.userId || (partner as any)?.user?.id;
+    const receiverName =
+      partner?.name ||
+      ((partner as any)?.user
+        ? `${(partner as any).user.firstName} ${(partner as any).user.lastName}`.trim()
+        : null) ||
+      activeConversation.title;
 
     callState.startCall(activeConversation.id, receiverId, receiverName, type);
   };

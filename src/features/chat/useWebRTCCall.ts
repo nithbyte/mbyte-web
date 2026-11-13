@@ -152,12 +152,38 @@ export function useWebRTCCall(currentUserId?: string) {
     return mockVideoStream;
   }, []);
 
-  // Poll for peer signals (SDP Offer/Answer/ICE)
+  // Poll for peer signals (SDP Offer/Answer/ICE) and remote call state
   const startSignalPolling = useCallback((callId: string) => {
     if (signalPollerRef.current) clearInterval(signalPollerRef.current);
 
     signalPollerRef.current = setInterval(async () => {
       try {
+        // Synchronize remote call status from backend
+        const remoteSession = await chatService.getCallSession(callId);
+        if (remoteSession) {
+          if (
+            remoteSession.status === "REJECTED" ||
+            remoteSession.status === "ENDED" ||
+            remoteSession.status === "MISSED"
+          ) {
+            cleanUpStreamsAndPC();
+            setActiveCall(null);
+            return;
+          }
+          if (remoteSession.status === "CONNECTED") {
+            setActiveCall((prev) =>
+              prev && prev.status !== "CONNECTED"
+                ? { ...prev, status: "CONNECTED" }
+                : prev
+            );
+            if (!durationTimerRef.current) {
+              durationTimerRef.current = setInterval(() => {
+                setCallDuration((prev) => prev + 1);
+              }, 1000);
+            }
+          }
+        }
+
         const signals = await chatService.getSignals(callId);
         if (!Array.isArray(signals)) return;
 
@@ -177,6 +203,11 @@ export function useWebRTCCall(currentUserId?: string) {
             await chatService.sendSignal(callId, "ANSWER", answer);
           } else if (sig.type === "ANSWER" && sig.payload) {
             await pc.setRemoteDescription(new RTCSessionDescription(sig.payload));
+            setActiveCall((prev) =>
+              prev && prev.status !== "CONNECTED"
+                ? { ...prev, status: "CONNECTED" }
+                : prev
+            );
           } else if (sig.type === "ICE_CANDIDATE" && sig.payload) {
             try {
               await pc.addIceCandidate(new RTCIceCandidate(sig.payload));
@@ -189,7 +220,7 @@ export function useWebRTCCall(currentUserId?: string) {
         // Suppress transient network poll errors
       }
     }, 1500);
-  }, [currentUserId]);
+  }, [cleanUpStreamsAndPC, currentUserId]);
 
   // Initiate an Outgoing Call
   const startCall = useCallback(
@@ -207,33 +238,46 @@ export function useWebRTCCall(currentUserId?: string) {
           callerId: currentUserId,
         });
 
-        setActiveCall(session);
+        const callId = session?.id || session?.callId;
+        const enrichedSession: CallSession = {
+          ...session,
+          id: callId,
+          callerId: session?.callerId || currentUserId,
+          receiverId: session?.receiverId || receiverId,
+          status: session?.status || "RINGING",
+          receiver: session?.receiver || {
+            firstName: receiverName.split(" ")[0] || receiverName,
+            lastName: receiverName.split(" ").slice(1).join(" ") || "",
+          },
+        };
 
-        const pc = createPeerConnection(session.id);
+        setActiveCall(enrichedSession);
+
+        const pc = createPeerConnection(callId);
         if (pc && stream) {
           try {
             stream.getTracks().forEach((track) => pc.addTrack(track, stream));
             const offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
-            await chatService.sendSignal(session.id, "OFFER", offer);
+            await chatService.sendSignal(callId, "OFFER", offer);
           } catch (pcErr) {
             console.warn("WebRTC local track negotiation error:", pcErr);
           }
         }
 
-        if (session.status === "CONNECTED" && !durationTimerRef.current) {
+        if (enrichedSession.status === "CONNECTED" && !durationTimerRef.current) {
           durationTimerRef.current = setInterval(() => {
             setCallDuration((prev) => prev + 1);
           }, 1000);
         }
 
-        startSignalPolling(session.id);
+        startSignalPolling(callId);
       } catch (err: any) {
         console.warn("Failed to start call:", err);
         setError(err.message || "Failed to start call");
       }
     },
-    [acquireMedia, cleanUpStreamsAndPC, createPeerConnection, startSignalPolling]
+    [acquireMedia, cleanUpStreamsAndPC, createPeerConnection, currentUserId, startSignalPolling]
   );
 
   // Accept Incoming Call
@@ -352,12 +396,16 @@ export function useWebRTCCall(currentUserId?: string) {
       // If we don't have an active call, check if one is ringing for us
       if (!activeCall) {
         const incoming = await chatService.getActiveCall();
-        if (incoming && incoming.status === "RINGING" && incoming.receiverId === currentUserId) {
+        if (
+          incoming &&
+          incoming.status === "RINGING" &&
+          (incoming.receiverId === currentUserId || (currentUserId && incoming.callerId !== currentUserId))
+        ) {
           setActiveCall(incoming);
           setConnectionState("ringing");
         }
       }
-    }, 4000);
+    }, 2000);
 
     return () => {
       if (incomingCheckTimerRef.current) clearInterval(incomingCheckTimerRef.current);
