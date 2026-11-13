@@ -30,69 +30,57 @@ export function MByteLogo({
   const getDefaultDimensions = () => {
     switch (variant) {
       case "full":
-        return { width: width || 220, height: height || 52 };
+        return { width: width || 220, height: height || 90 };
       case "compact":
-        return { width: width || 170, height: height || 40 };
+        return { width: width || 170, height: height || 46 };
       case "symbol":
-        return { width: width || 40, height: height || 40 };
+        return { width: width || 42, height: height || 40 };
       case "icon":
-        return { width: width || 36, height: height || 36 };
+        return { width: width || 36, height: height || 34 };
     }
   };
 
   const dims = getDefaultDimensions();
   const isEmblem = variant === "symbol" || variant === "icon";
 
-  // Dedicated minimal geometric M-Pulse SVG for icons and symbols
+  // Dedicated 3D M-Capsule Emblem
   if (isEmblem) {
     return (
       <div
         className={cn(
-          "inline-flex items-center justify-center rounded-xl bg-[#F5F3EE] p-1.5 border border-[#E5E1D9] dark:bg-[#1E1E1E] dark:border-[#333333] shadow-xs select-none shrink-0",
+          "inline-flex items-center justify-center select-none shrink-0",
           className
         )}
         style={{ width: dims.width, height: dims.height }}
       >
-        <svg
-          viewBox="0 0 100 100"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="w-full h-full"
-        >
-          {/* M Uprights */}
-          <path
-            d="M22 78V22L40 46"
-            className="stroke-[#171717] dark:stroke-white transition-colors"
-            strokeWidth="8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M78 78V36L64 50"
-            className="stroke-[#171717] dark:stroke-white transition-colors"
-            strokeWidth="8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          {/* Medical Telemetry / Pulse */}
-          <path
-            d="M22 52H36L44 32L54 74L78 22"
-            stroke="#FF6B00"
-            strokeWidth="8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+        <Image
+          src="/mbyte-emblem.png"
+          alt={alt}
+          width={dims.width}
+          height={dims.height}
+          priority={priority}
+          className="w-full h-full object-contain filter drop-shadow(0 2px 8px rgba(255,107,0,0.2))"
+        />
       </div>
     );
   }
 
-  // Full / Compact horizontal logo presentation
+  const lightSrc =
+    variant === "full"
+      ? "/brand/mbyte-logo-light.png"
+      : "/brand/mbyte-logo-compact-light.png";
+
+  const darkSrc =
+    variant === "full"
+      ? "/brand/mbyte-logo-dark.png"
+      : "/brand/mbyte-logo-compact-dark.png";
+
+  // Explicit theme
   if (theme === "dark") {
     return (
       <div className={cn("inline-flex items-center select-none shrink-0", className)}>
         <Image
-          src="/brand/mbyte-logo-dark.svg"
+          src={darkSrc}
           alt={alt}
           width={dims.width}
           height={dims.height}
@@ -107,7 +95,7 @@ export function MByteLogo({
     return (
       <div className={cn("inline-flex items-center select-none shrink-0", className)}>
         <Image
-          src="/brand/mbyte-logo.svg"
+          src={lightSrc}
           alt={alt}
           width={dims.width}
           height={dims.height}
@@ -122,7 +110,7 @@ export function MByteLogo({
   return (
     <div className={cn("inline-flex items-center select-none shrink-0", className)}>
       <Image
-        src="/brand/mbyte-logo.svg"
+        src={lightSrc}
         alt={alt}
         width={dims.width}
         height={dims.height}
@@ -130,7 +118,7 @@ export function MByteLogo({
         className="block dark:hidden h-auto max-w-full object-contain"
       />
       <Image
-        src="/brand/mbyte-logo-dark.svg"
+        src={darkSrc}
         alt={alt}
         width={dims.width}
         height={dims.height}
