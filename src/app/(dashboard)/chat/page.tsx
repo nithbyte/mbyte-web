@@ -140,14 +140,39 @@ export default function ChatPage() {
     });
   }, [conversations, searchQuery, filterTab]);
 
-  // Filter contacts in modal
-  const filteredContacts = useMemo(() => {
+  // Filter contacts for main panel "Colleagues" tab
+  const filteredDirectoryContacts = useMemo(() => {
+    if (!searchQuery.trim()) return contacts;
+    const q = searchQuery.trim().toLowerCase();
     return contacts.filter(
       (c) =>
-        c.name.toLowerCase().includes(contactSearchQuery.toLowerCase()) ||
-        c.roleLabel.toLowerCase().includes(contactSearchQuery.toLowerCase()) ||
-        (c.headquarters &&
-          c.headquarters.toLowerCase().includes(contactSearchQuery.toLowerCase()))
+        (c.name && c.name.toLowerCase().includes(q)) ||
+        (c.firstName && c.firstName.toLowerCase().includes(q)) ||
+        (c.lastName && c.lastName.toLowerCase().includes(q)) ||
+        (c.email && c.email.toLowerCase().includes(q)) ||
+        (c.phone && c.phone.toLowerCase().includes(q)) ||
+        (c.roleLabel && c.roleLabel.toLowerCase().includes(q)) ||
+        (c.role && c.role.toLowerCase().includes(q)) ||
+        (c.headquarters && c.headquarters.toLowerCase().includes(q)) ||
+        (c.designation && c.designation.toLowerCase().includes(q))
+    );
+  }, [contacts, searchQuery]);
+
+  // Filter contacts in New Chat modal
+  const modalFilteredContacts = useMemo(() => {
+    if (!contactSearchQuery.trim()) return contacts;
+    const q = contactSearchQuery.trim().toLowerCase();
+    return contacts.filter(
+      (c) =>
+        (c.name && c.name.toLowerCase().includes(q)) ||
+        (c.firstName && c.firstName.toLowerCase().includes(q)) ||
+        (c.lastName && c.lastName.toLowerCase().includes(q)) ||
+        (c.email && c.email.toLowerCase().includes(q)) ||
+        (c.phone && c.phone.toLowerCase().includes(q)) ||
+        (c.roleLabel && c.roleLabel.toLowerCase().includes(q)) ||
+        (c.role && c.role.toLowerCase().includes(q)) ||
+        (c.headquarters && c.headquarters.toLowerCase().includes(q)) ||
+        (c.designation && c.designation.toLowerCase().includes(q))
     );
   }, [contacts, contactSearchQuery]);
 
@@ -308,6 +333,19 @@ export default function ChatPage() {
     );
   };
 
+  const handleOpenNewChatModal = async () => {
+    setIsNewChatModalOpen(true);
+    setContactSearchQuery("");
+    try {
+      const fresh = await chatService.getContacts();
+      if (Array.isArray(fresh) && fresh.length > 0) {
+        setContacts(fresh);
+      }
+    } catch {
+      // Keep existing contacts
+    }
+  };
+
   return (
     <div className="flex h-[calc(100vh-5.5rem)] overflow-hidden rounded-3xl border border-[#E5E1D9] bg-white shadow-xl dark:border-[#333333] dark:bg-[#1E1E1E]">
       {/* Global Call Overlay (Mounts Audio/Video Call View) */}
@@ -347,7 +385,7 @@ export default function ChatPage() {
               </h1>
             </div>
             <button
-              onClick={() => setIsNewChatModalOpen(true)}
+              onClick={handleOpenNewChatModal}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FF6B00] hover:bg-[#e66000] text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
             >
               <Plus className="w-4 h-4" />
@@ -389,10 +427,14 @@ export default function ChatPage() {
         {/* Directory or Conversation List */}
         {filterTab === "CONTACTS" ? (
           <div className="flex-1 overflow-y-auto divide-y divide-[#E5E1D9]/40 dark:divide-[#333333]/40">
-            {filteredContacts.length === 0 ? (
-              <div className="p-8 text-center text-slate-400 text-xs">No team colleagues found.</div>
+            {filteredDirectoryContacts.length === 0 ? (
+              <div className="p-8 text-center text-slate-400 text-xs">
+                {searchQuery.trim()
+                  ? `No colleagues matching "${searchQuery.trim()}".`
+                  : "No team colleagues found."}
+              </div>
             ) : (
-              filteredContacts.map((c) => (
+              filteredDirectoryContacts.map((c) => (
                 <div
                   key={c.id}
                   className="flex items-center justify-between p-3.5 hover:bg-slate-100/70 dark:hover:bg-[#2a2a2a] transition-colors gap-2"
@@ -403,7 +445,7 @@ export default function ChatPage() {
                   >
                     <div className="relative shrink-0">
                       <div className="w-10 h-10 rounded-2xl bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center font-bold text-xs shadow-xs">
-                        {c.firstName?.[0] || ""}{c.lastName?.[0] || ""}
+                        {((c.name || c.firstName || "C").trim().slice(0, 2)).toUpperCase()}
                       </div>
                       {c.isOnline && (
                         <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-[#1E1E1E]" />
@@ -831,45 +873,51 @@ export default function ChatPage() {
 
             {/* Contact List */}
             <div className="flex-1 overflow-y-auto px-6 divide-y divide-[#E5E1D9]/50 dark:divide-[#333333]/50">
-              {filteredContacts.map((c) => {
-                const isSelected = selectedContactIds.includes(c.id);
+              {modalFilteredContacts.length === 0 ? (
+                <div className="py-12 text-center text-xs text-slate-500">
+                  {contactSearchQuery.trim()
+                    ? `No colleagues matching "${contactSearchQuery.trim()}". Check the name, role, or territory.`
+                    : "No colleagues found in the directory."}
+                </div>
+              ) : (
+                modalFilteredContacts.map((c) => {
+                  const isSelected = selectedContactIds.includes(c.id);
 
-                return (
-                  <div
-                    key={c.id}
-                    onClick={() => {
-                      if (isGroupMode) {
-                        toggleSelectContact(c.id);
-                      } else {
-                        handleCreateConversation(c.id);
-                      }
-                    }}
-                    className={cn(
-                      "py-3 flex items-center justify-between gap-3 cursor-pointer transition-colors px-2 rounded-xl",
-                      isSelected
-                        ? "bg-orange-50/80 dark:bg-orange-950/20"
-                        : "hover:bg-slate-50 dark:hover:bg-slate-800/50"
-                    )}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="relative">
-                        <div className="w-10 h-10 rounded-2xl bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center font-bold text-xs shadow-xs">
-                          {c.firstName[0]}
-                          {c.lastName ? c.lastName[0] : ""}
+                  return (
+                    <div
+                      key={c.id}
+                      onClick={() => {
+                        if (isGroupMode) {
+                          toggleSelectContact(c.id);
+                        } else {
+                          handleCreateConversation(c.id);
+                        }
+                      }}
+                      className={cn(
+                        "py-3 flex items-center justify-between gap-3 cursor-pointer transition-colors px-2 rounded-xl",
+                        isSelected
+                          ? "bg-orange-50/80 dark:bg-orange-950/20"
+                          : "hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="relative">
+                          <div className="w-10 h-10 rounded-2xl bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center font-bold text-xs shadow-xs">
+                            {((c.name || c.firstName || "C").trim().slice(0, 2)).toUpperCase()}
+                          </div>
+                          {c.isOnline && (
+                            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-[#1E1E1E]" />
+                          )}
                         </div>
-                        {c.isOnline && (
-                          <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-[#1E1E1E]" />
-                        )}
+                        <div>
+                          <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                            {c.name}
+                          </h4>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                            {c.roleLabel} • {c.headquarters || "Field"}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                          {c.name}
-                        </h4>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                          {c.roleLabel} • {c.headquarters || "Field"}
-                        </p>
-                      </div>
-                    </div>
 
                     {isGroupMode ? (
                       <div
@@ -911,7 +959,7 @@ export default function ChatPage() {
                     )}
                   </div>
                 );
-              })}
+              }))}
             </div>
 
             {/* Group Submit Footer */}

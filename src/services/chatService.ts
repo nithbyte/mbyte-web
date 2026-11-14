@@ -78,6 +78,62 @@ let mockContacts: ColleagueContact[] = [
   },
 ];
 
+const directoryContactsMap = new Map<string, ColleagueContact>();
+
+// Seed directory map with default mock contacts
+mockContacts.forEach((c) => {
+  directoryContactsMap.set(c.id, c);
+  if (c.email) directoryContactsMap.set(c.email.toLowerCase(), c);
+});
+
+function mapMrToContact(mr: any): ColleagueContact {
+  const user = mr.user || {};
+  const firstName = (user.firstName || "").trim();
+  const lastName = (user.lastName || "").trim();
+  const fullName = `${firstName} ${lastName}`.trim() || user.email || "Colleague";
+  const role = mr.designation?.toLowerCase().includes("manager") ? "MANAGER" : "MR";
+  const designation = mr.designation || "Medical Representative";
+  const headquarters = mr.headquarters || mr.territory?.name || "Field";
+
+  return {
+    id: mr.userId || user.id || mr.id,
+    name: fullName,
+    firstName: firstName || (user.email ? user.email.split("@")[0] : "Colleague"),
+    lastName: lastName,
+    email: user.email || "",
+    phone: user.phone || "",
+    avatarUrl: user.avatarUrl,
+    role,
+    roleLabel: designation,
+    headquarters,
+    designation,
+    isOnline: true,
+  };
+}
+
+function mapUserToContact(user: any): ColleagueContact {
+  const firstName = (user.firstName || "").trim();
+  const lastName = (user.lastName || "").trim();
+  const fullName = `${firstName} ${lastName}`.trim() || user.email || "Colleague";
+  const primaryRole = Array.isArray(user.roles) && user.roles.length > 0 ? user.roles[0] : "MR";
+  const roleLabel = primaryRole.replace(/_/g, " ");
+
+  return {
+    id: user.id,
+    name: fullName,
+    firstName: firstName || (user.email ? user.email.split("@")[0] : "Colleague"),
+    lastName: lastName,
+    email: user.email || "",
+    phone: user.phone || "",
+    avatarUrl: user.avatarUrl,
+    role: primaryRole,
+    roleLabel: roleLabel,
+    headquarters: user.headquarters || "Corporate HQ",
+    designation: user.designation || roleLabel,
+    isOnline: true,
+  };
+}
+
 let mockConversations: Conversation[] = [
   {
     id: "conv_01",
@@ -375,7 +431,9 @@ export const chatService = {
     }
 
     if (isDirect && targetRecipientId) {
-      const contact = mockContacts.find((c) => c.id === targetRecipientId);
+      const contact =
+        directoryContactsMap.get(targetRecipientId) ||
+        mockContacts.find((c) => c.id === targetRecipientId);
       const title = contact ? contact.name : "Colleague";
       const existing = mockConversations.find(
         (c) => c.type === "DIRECT" && c.participants.some((p) => p.userId === targetRecipientId)
@@ -387,9 +445,9 @@ export const chatService = {
         organizationId: "org_novis",
         type: "DIRECT",
         title,
-        subtitle: contact?.roleLabel || "Colleague",
+        subtitle: contact ? `${contact.roleLabel} • ${contact.headquarters || "Field"}` : "Colleague",
         avatarUrl: contact?.avatarUrl,
-        isOnline: contact?.isOnline || false,
+        isOnline: contact?.isOnline ?? true,
         lastMessageText: null,
         lastMessageAt: new Date().toISOString(),
         hasUnread: false,
@@ -427,7 +485,7 @@ export const chatService = {
       participants: [
         { userId: "curr_user", name: "You", email: "you@novis.com", role: "ADMIN" },
         ...(payload.participantIds || []).map((id) => {
-          const ct = mockContacts.find((c) => c.id === id);
+          const ct = directoryContactsMap.get(id) || mockContacts.find((c) => c.id === id);
           return {
             userId: id,
             name: ct?.name || "Colleague",
@@ -459,31 +517,99 @@ export const chatService = {
   },
 
   /**
-   * Get enterprise contacts / team directory
+   * Get enterprise contacts / team directory with multi-tier live directory fallback
    */
   async getContacts(search?: string): Promise<ColleagueContact[]> {
+    let rawContacts: ColleagueContact[] = [];
+
+    // 1. Dedicated chat contacts endpoint
     try {
       const res = await apiClient.get<any>("/chat/contacts", {
         params: search ? { search } : undefined,
       });
-      const data = res?.data || res;
-      if (Array.isArray(data)) {
-        return data;
+      const data = Array.isArray(res) ? res : (res?.data || res?.items);
+      if (Array.isArray(data) && data.length > 0) {
+        rawContacts = data;
       }
     } catch {
-      // fallback
+      // Fallback to enterprise personnel directory
     }
 
-    if (search && search.trim()) {
-      const q = search.toLowerCase().trim();
-      return mockContacts.filter(
-        (c) =>
-          c.name.toLowerCase().includes(q) ||
-          c.roleLabel.toLowerCase().includes(q) ||
-          (c.headquarters && c.headquarters.toLowerCase().includes(q))
-      );
+    // 2. Fetch live organization personnel directory (Users and MRs)
+    if (rawContacts.length === 0) {
+      const contactsMap = new Map<string, ColleagueContact>();
+
+      // Fetch users (available to Company Admin, Managers)
+      try {
+        const usersRes = await apiClient.get<any>("/users", {
+          params: { limit: 100, search: search || undefined },
+        });
+        const usersList = Array.isArray(usersRes) ? usersRes : (usersRes?.data || usersRes?.items || []);
+        if (Array.isArray(usersList)) {
+          for (const u of usersList) {
+            if (u && (u.id || u.email)) {
+              const contact = mapUserToContact(u);
+              contactsMap.set(contact.id, contact);
+            }
+          }
+        }
+      } catch {
+        // Users endpoint restricted for non-admin roles
+      }
+
+      // Fetch MRs (available to all roles)
+      try {
+        const mrsRes = await apiClient.get<any>("/mrs", {
+          params: { limit: 100, search: search || undefined },
+        });
+        const mrsList = Array.isArray(mrsRes) ? mrsRes : (mrsRes?.data || mrsRes?.items || []);
+        if (Array.isArray(mrsList)) {
+          for (const m of mrsList) {
+            if (m && (m.userId || m.user?.id || m.id)) {
+              const contact = mapMrToContact(m);
+              contactsMap.set(contact.id, contact);
+            }
+          }
+        }
+      } catch {
+        // Fallback
+      }
+
+      if (contactsMap.size > 0) {
+        rawContacts = Array.from(contactsMap.values());
+      }
     }
-    return [...mockContacts];
+
+    // 3. Fallback: Mock contacts if offline/unreachable
+    if (rawContacts.length === 0) {
+      rawContacts = [...mockContacts];
+    }
+
+    // Store in directoryContactsMap for conversation and call lookups
+    for (const c of rawContacts) {
+      directoryContactsMap.set(c.id, c);
+      if (c.email) directoryContactsMap.set(c.email.toLowerCase(), c);
+    }
+
+    // Filter by search query if provided
+    if (search && search.trim()) {
+      const q = search.trim().toLowerCase();
+      return rawContacts.filter((c) => {
+        return (
+          (c.name && c.name.toLowerCase().includes(q)) ||
+          (c.firstName && c.firstName.toLowerCase().includes(q)) ||
+          (c.lastName && c.lastName.toLowerCase().includes(q)) ||
+          (c.email && c.email.toLowerCase().includes(q)) ||
+          (c.phone && c.phone.toLowerCase().includes(q)) ||
+          (c.roleLabel && c.roleLabel.toLowerCase().includes(q)) ||
+          (c.role && c.role.toLowerCase().includes(q)) ||
+          (c.headquarters && c.headquarters.toLowerCase().includes(q)) ||
+          (c.designation && c.designation.toLowerCase().includes(q))
+        );
+      });
+    }
+
+    return rawContacts;
   },
 
   // ==========================================
@@ -512,7 +638,9 @@ export const chatService = {
       // fallback
     }
 
-    const contact = mockContacts.find((c) => c.id === payload.receiverId);
+    const contact =
+      (payload.receiverId ? directoryContactsMap.get(payload.receiverId) : undefined) ||
+      mockContacts.find((c) => c.id === payload.receiverId);
     const callerId = payload.callerId || "curr_user";
     activeMockCall = {
       id: `call_${Date.now()}`,
