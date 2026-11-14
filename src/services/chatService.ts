@@ -284,22 +284,28 @@ let mockMessages: Record<string, ChatMessage[]> = {
 
 let activeMockCall: CallSession | null = null;
 let mockCallSignals: Record<string, any[]> = {};
+let chatEndpointsSupported: boolean | null = null;
 
 export const chatService = {
   /**
    * Get all active conversations
    */
   async getConversations(search?: string): Promise<Conversation[]> {
-    try {
-      const res = await apiClient.get<any>("/chat/conversations", {
-        params: search ? { search } : undefined,
-      });
-      const data = res?.data || res;
-      if (Array.isArray(data)) {
-        return data;
+    if (chatEndpointsSupported !== false) {
+      try {
+        const res = await apiClient.get<any>("/chat/conversations", {
+          params: search ? { search } : undefined,
+        });
+        const data = res?.data || res;
+        if (Array.isArray(data)) {
+          chatEndpointsSupported = true;
+          return data;
+        }
+      } catch (err: any) {
+        if (err?.response?.status === 404 || err?.statusCode === 404 || err?.status === 404) {
+          chatEndpointsSupported = false;
+        }
       }
-    } catch {
-      // fallback
     }
 
     if (search && search.trim()) {
@@ -317,19 +323,22 @@ export const chatService = {
    * Get messages for conversation
    */
   async getMessages(conversationId: string, page = 1, limit = 50): Promise<ChatMessage[]> {
-    try {
-      const res = await apiClient.get<any>(`/chat/conversations/${conversationId}/messages`, {
-        params: { page, limit },
-      });
-      const data = res?.data || res;
-      if (Array.isArray(data?.items)) {
-        return data.items;
+    const isMockConv = conversationId.startsWith("conv_") || conversationId.startsWith("mock_");
+    if (!isMockConv && chatEndpointsSupported !== false) {
+      try {
+        const res = await apiClient.get<any>(`/chat/conversations/${conversationId}/messages`, {
+          params: { page, limit },
+        });
+        const data = res?.data || res;
+        if (Array.isArray(data?.items)) {
+          return data.items;
+        }
+        if (Array.isArray(data)) {
+          return data;
+        }
+      } catch {
+        // fallback
       }
-      if (Array.isArray(data)) {
-        return data;
-      }
-    } catch {
-      // fallback
     }
 
     return mockMessages[conversationId] || [];
@@ -349,14 +358,17 @@ export const chatService = {
       metadata?: any;
     }
   ): Promise<ChatMessage> {
-    try {
-      const res = await apiClient.post<any>(`/chat/conversations/${conversationId}/messages`, payload);
-      const data = res?.data || res;
-      if (data && data.id) {
-        return data;
+    const isMockConv = conversationId.startsWith("conv_") || conversationId.startsWith("mock_");
+    if (!isMockConv && chatEndpointsSupported !== false) {
+      try {
+        const res = await apiClient.post<any>(`/chat/conversations/${conversationId}/messages`, payload);
+        const data = res?.data || res;
+        if (data && data.id) {
+          return data;
+        }
+      } catch {
+        // fallback
       }
-    } catch {
-      // fallback
     }
 
     const newMsg: ChatMessage = {
@@ -507,10 +519,13 @@ export const chatService = {
    * Mark as read
    */
   async markAsRead(conversationId: string): Promise<void> {
-    try {
-      await apiClient.post(`/chat/conversations/${conversationId}/read`);
-    } catch {
-      // fallback
+    const isMockConv = conversationId.startsWith("conv_") || conversationId.startsWith("mock_");
+    if (!isMockConv && chatEndpointsSupported !== false) {
+      try {
+        await apiClient.post(`/chat/conversations/${conversationId}/read`);
+      } catch {
+        // fallback
+      }
     }
     const conv = mockConversations.find((c) => c.id === conversationId);
     if (conv) conv.hasUnread = false;
@@ -677,18 +692,23 @@ export const chatService = {
    * Check for active incoming or ongoing call
    */
   async getActiveCall(): Promise<CallSession | null> {
-    try {
-      const res = await apiClient.get<any>("/chat/calls/active");
-      const data = res?.data || res;
-      if (data && (data.id || data.callId)) {
-        return {
-          ...data,
-          id: data.id || data.callId,
-        };
+    if (chatEndpointsSupported !== false) {
+      try {
+        const res = await apiClient.get<any>("/chat/calls/active");
+        chatEndpointsSupported = true;
+        const data = res?.data || res;
+        if (data && (data.id || data.callId)) {
+          return {
+            ...data,
+            id: data.id || data.callId,
+          };
+        }
+        return null;
+      } catch (err: any) {
+        if (err?.response?.status === 404 || err?.statusCode === 404 || err?.status === 404) {
+          chatEndpointsSupported = false;
+        }
       }
-      return null;
-    } catch {
-      // fallback
     }
     return activeMockCall;
   },
