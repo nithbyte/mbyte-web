@@ -1,6 +1,6 @@
 export type CampaignStatus = 'DRAFT' | 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
 export type ParticipantStatus = 'ENROLLED' | 'IN_PROGRESS' | 'COMPLETED' | 'OPTED_OUT';
-export type AttendanceStatus = 'PRESENT' | 'HALF_DAY' | 'LATE' | 'ON_DUTY' | 'ABSENT';
+export type AttendanceStatus = 'PRESENT' | 'HALF_DAY' | 'LATE' | 'ON_DUTY' | 'ABSENT' | 'ON_LEAVE';
 export type CorrectionStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
 // ==========================================
@@ -267,10 +267,51 @@ export interface AttendanceRecord {
   corrections?: AttendanceCorrection[];
 }
 
+export type LeaveType = "CASUAL" | "SICK" | "EARNED" | "HALF_DAY" | "EMERGENCY" | "UNPAID";
+export type LeaveStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
+
+export interface LeaveRequest {
+  id: string;
+  organizationId: string;
+  mrId: string;
+  userId: string;
+  leaveType: LeaveType;
+  startDate: string;
+  endDate: string;
+  totalDays: number;
+  isHalfDay: boolean;
+  reason: string;
+  status: LeaveStatus;
+  reviewedById?: string | null;
+  reviewedAt?: string | null;
+  reviewComments?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  user?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  mr?: {
+    id: string;
+    employeeCode: string;
+    territory?: string | { id: string; name: string; code?: string };
+  };
+  reviewedBy?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email?: string;
+  } | null;
+}
+
 export interface AttendanceSummary {
   totalRecords: number;
   presentCount: number;
   halfDayCount: number;
+  onLeaveCount?: number;
+  pendingLeavesCount?: number;
   totalHours: number;
   averageDailyHours: number;
 }

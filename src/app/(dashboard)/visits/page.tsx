@@ -101,8 +101,8 @@ export default function VisitsPage() {
   );
 
   // Queries
-  const { data: visits = [], isLoading } = useVisits(queryParams);
-  const { data: counts } = useVisitCounts({
+  const { data: visits = [], isLoading, isFetching: visitsFetching, refetch: refetchVisits } = useVisits(queryParams);
+  const { data: counts, refetch: refetchCounts } = useVisitCounts({
     date: selectedDate === "ALL" ? undefined : selectedDate,
     mrId: selectedMR === "ALL" ? undefined : selectedMR,
     territoryId: effectiveTerritory === "ALL" ? undefined : effectiveTerritory,
@@ -179,6 +179,11 @@ export default function VisitsPage() {
     return pharmacies;
   }, [pharmacies, isTerritoryManager, managerTerritoryId]);
 
+  const handleRefresh = () => {
+    refetchVisits();
+    refetchCounts();
+  };
+
   const handleResetFilters = () => {
     setSelectedDate(getLocalTodayDate());
     setSelectedMR("ALL");
@@ -186,6 +191,7 @@ export default function VisitsPage() {
     setSelectedCustomer("ALL");
     setSelectedStatus("ALL");
     setSearch("");
+    setTimeout(() => handleRefresh(), 0);
   };
 
   // Geofence exception approval / rejection
@@ -382,17 +388,29 @@ export default function VisitsPage() {
               <Filter className="h-3.5 w-3.5 text-sky-600" />
               Field Visit Search & Filter Criteria
             </span>
-            {hasActiveFilters && (
+            <div className="flex items-center gap-1.5">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={handleResetFilters}
+                onClick={handleRefresh}
+                disabled={visitsFetching}
                 className="h-6 text-[11px] gap-1 text-slate-500 hover:text-slate-900 dark:hover:text-slate-100"
               >
-                <RotateCcw className="h-3 w-3" />
-                Reset Filters
+                <RotateCcw className={`h-3 w-3 ${visitsFetching ? "animate-spin" : ""}`} />
+                Refresh
               </Button>
-            )}
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleResetFilters}
+                  className="h-6 text-[11px] gap-1 text-rose-600 hover:text-rose-700"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                  Reset Filters
+                </Button>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5">

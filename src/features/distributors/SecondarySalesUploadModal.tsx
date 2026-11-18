@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Modal } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,7 @@ import {
   RefreshCw,
   ArrowRight,
   Building2,
+  Info,
 } from "lucide-react";
 import { useAnalyzeSecondarySales, useApplySecondarySales } from "@/hooks";
 import type { Distributor, Product } from "@/types";
@@ -28,6 +29,7 @@ interface EditableRow extends AnalyzedSecondarySalesItem {
   selected: boolean;
   selectedProductId: string;
   editedClosingStock: number;
+  synced: boolean;
 }
 
 interface SecondarySalesUploadModalProps {
@@ -36,6 +38,23 @@ interface SecondarySalesUploadModalProps {
   distributors: Distributor[];
   products: Product[];
   initialDistributor?: Distributor | null;
+}
+
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+const MAX_CLOSING_STOCK = 10_000_000;
+
+function extractErrorMessage(err: any, fallback: string): string {
+  const details = err?.details || err?.response?.data?.error?.details;
+  if (Array.isArray(details) && details.length > 0) {
+    return details.join(" • ");
+  }
+  const nestedMsg =
+    err?.response?.data?.error?.message ||
+    err?.response?.data?.message ||
+    err?.message;
+  if (Array.isArray(nestedMsg)) return nestedMsg.join(" • ");
+  if (typeof nestedMsg === "string" && nestedMsg.trim().length > 0) return nestedMsg;
+  return fallback;
 }
 
 export function SecondarySalesUploadModal({
@@ -75,8 +94,18 @@ export function SecondarySalesUploadModal({
   const handleFilePicked = (file: File | null | undefined) => {
     if (!file) return;
     const ext = file.name.split(".").pop()?.toLowerCase() || "";
-    if (!["pdf", "xlsx", "xls", "csv"].includes(ext)) {
-      setErrorMessage("Unsupported file type. Please upload a PDF (.pdf), Excel (.xlsx / .xls), or CSV (.csv) report.");
+    if (!["pdf", "xlsx", "xls", "xlsm", "xlsb", "csv", "tsv"].includes(ext)) {
+      setErrorMessage(
+        "Unsupported file type. Please upload a PDF (.pdf), Excel (.xlsx / .xls), or CSV (.csv) report."
+      );
+      return;
+    }
+    if (file.size === 0) {
+      setErrorMessage("The selected file is empty (0 bytes). Please select a valid stockist report.");
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      setErrorMessage("File exceeds the 10 MB upload limit. Please split or compress the report.");
       return;
     }
     setErrorMessage(null);
@@ -135,26 +164,35 @@ export function SecondarySalesUploadModal({
         autoApply,
       });
 
+      const appliedIds = new Set(result.appliedRowIds || []);
       setAnalysis(result);
       setEditableRows(
-        (result.items || []).map((item) => ({
-          ...item,
-          selected: Boolean(item.matchedProductId),
-          selectedProductId: item.matchedProductId || "",
-          editedClosingStock: item.closingStock,
-        }))
+        (result.items || []).map((item) => {
+          const wasSynced = appliedIds.has(item.rowId);
+          return {
+            ...item,
+            selected: Boolean(item.matchedProductId) && !wasSynced,
+            selectedProductId: item.matchedProductId || "",
+            editedClosingStock: Math.min(MAX_CLOSING_STOCK, Math.max(0, Number(item.closingStock) || 0)),
+            synced: wasSynced,
+          };
+        })
       );
 
-      if (result.autoApplied) {
+      if (result.autoApplied && (result.appliedCount || 0) > 0) {
+        const remaining = (result.items || []).length - appliedIds.size;
         setSuccessMessage(
-          `Analyzed ${result.summary.totalRows} rows and automatically updated stock for ${result.appliedCount || result.summary.matchedCount} matched product(s) at ${result.distributor.name}!`
+          remaining > 0
+            ? `Automatically updated live stock for ${result.appliedCount} high-confidence product(s) at ${result.distributor.name}. You can review and apply the remaining ${remaining} row(s) below.`
+            : `Analyzed ${result.summary.totalRows} rows and automatically updated stock for ${result.appliedCount} matched product(s) at ${result.distributor.name}!`
         );
       }
     } catch (err: any) {
       setErrorMessage(
-        err?.response?.data?.message ||
-          err?.message ||
+        extractErrorMessage(
+          err,
           "Failed to analyze the secondary sales report. Verify the file format and try again."
+        )
       );
     }
   };
@@ -162,10 +200,24 @@ export function SecondarySalesUploadModal({
   const handleApplyStocks = async () => {
     if (!analysis || !selectedDistributorId) return;
 
-    const readyItems = editableRows.filter((r) => r.selected && r.selectedProductId);
+    const readyItems = editableRows.filter((r) => !r.synced && r.selected && r.selectedProductId);
     if (readyItems.length === 0) {
-      setErrorMessage("Select and match at least one product row before updating stockist inventory.");
+      setErrorMessage("Select and match at least one unsynced product row before updating stockist inventory.");
       return;
+    }
+
+    // Client-side aggregate cap guard (matches backend MAX_REASONABLE_STOCK_QTY)
+    const totalsByProduct = new Map<string, number>();
+    for (const r of readyItems) {
+      const qty = Math.min(MAX_CLOSING_STOCK, Math.max(0, Math.round(Number(r.editedClosingStock) || 0)));
+      const next = (totalsByProduct.get(r.selectedProductId) || 0) + qty;
+      if (next > MAX_CLOSING_STOCK) {
+        setErrorMessage(
+          `Combined closing stock (${next.toLocaleString()}) for one of the selected products exceeds the maximum limit of ${MAX_CLOSING_STOCK.toLocaleString()}.`
+        );
+        return;
+      }
+      totalsByProduct.set(r.selectedProductId, next);
     }
 
     setErrorMessage(null);
@@ -177,15 +229,22 @@ export function SecondarySalesUploadModal({
           reportPeriod: analysis.reportPeriod,
           items: readyItems.map((r) => ({
             productId: r.selectedProductId,
-            closingStock: Math.max(0, Number(r.editedClosingStock) || 0),
-            openingQty: r.openingQty,
-            purchaseQty: r.purchaseQty,
-            salesQty: r.salesQty,
-            batchNumber: r.batchNumber,
-            expiryDate: r.expiryDate,
+            closingStock: Math.min(MAX_CLOSING_STOCK, Math.max(0, Math.round(Number(r.editedClosingStock) || 0))),
+            ...(r.openingQty !== null && r.openingQty !== undefined ? { openingQty: r.openingQty } : {}),
+            ...(r.purchaseQty !== null && r.purchaseQty !== undefined ? { purchaseQty: r.purchaseQty } : {}),
+            ...(r.salesQty !== null && r.salesQty !== undefined ? { salesQty: r.salesQty } : {}),
+            ...(r.batchNumber ? { batchNumber: r.batchNumber } : {}),
+            ...(r.expiryDate ? { expiryDate: r.expiryDate } : {}),
           })),
         },
       });
+
+      const appliedSet = new Set(readyItems.map((r) => r.rowId));
+      setEditableRows((prev) =>
+        prev.map((row) =>
+          appliedSet.has(row.rowId) ? { ...row, synced: true, selected: false } : row
+        )
+      );
 
       setSuccessMessage(
         `Successfully updated live stocks for ${res.updatedCount} product(s) at ${res.distributorName}!`
@@ -194,9 +253,7 @@ export function SecondarySalesUploadModal({
         onClose();
       }, 1400);
     } catch (err: any) {
-      setErrorMessage(
-        err?.response?.data?.message || err?.message || "Failed to apply stock updates."
-      );
+      setErrorMessage(extractErrorMessage(err, "Failed to apply stock updates."));
     }
   };
 
@@ -206,7 +263,52 @@ export function SecondarySalesUploadModal({
     );
   };
 
-  const selectedCount = editableRows.filter((r) => r.selected && r.selectedProductId).length;
+  const handleProductSelectionChange = (row: EditableRow, nextProductId: string) => {
+    const prevStockForSelected =
+      nextProductId && analysis?.existingStocks
+        ? analysis.existingStocks[nextProductId] ?? 0
+        : 0;
+
+    let nextClosing = row.editedClosingStock;
+    if (
+      nextProductId &&
+      row.stockCalculationMode === "PREVIOUS_MINUS_SALES" &&
+      row.salesQty !== null
+    ) {
+      nextClosing = Math.max(0, Math.round(prevStockForSelected - row.salesQty));
+    }
+
+    updateRow(row.rowId, {
+      selectedProductId: nextProductId,
+      selected: Boolean(nextProductId) && !row.synced,
+      previousStock: prevStockForSelected,
+      editedClosingStock: nextClosing,
+    });
+  };
+
+  const pendingMatchedRows = useMemo(
+    () => editableRows.filter((r) => !r.synced && Boolean(r.selectedProductId)),
+    [editableRows]
+  );
+
+  const selectedPendingRows = useMemo(
+    () => pendingMatchedRows.filter((r) => r.selected),
+    [pendingMatchedRows]
+  );
+
+  const duplicateProductCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const r of selectedPendingRows) {
+      counts.set(r.selectedProductId, (counts.get(r.selectedProductId) || 0) + 1);
+    }
+    return counts;
+  }, [selectedPendingRows]);
+
+  const allPendingSelected =
+    pendingMatchedRows.length > 0 &&
+    selectedPendingRows.length === pendingMatchedRows.length;
+
+  const selectedCount = selectedPendingRows.length;
   const activeDistributorName =
     distributors.find((d) => d.id === selectedDistributorId)?.name || "Selected Stockist";
 
@@ -241,7 +343,7 @@ export function SecondarySalesUploadModal({
       maxWidth="2xl"
     >
       <div className="space-y-4 max-h-[78vh] overflow-y-auto pr-1">
-        {/* Error / Success Banners */}
+        {/* Error / Success / Warning Banners */}
         {errorMessage && (
           <div className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300">
             <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
@@ -253,6 +355,17 @@ export function SecondarySalesUploadModal({
           <div className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-xs font-semibold text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300">
             <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5 text-emerald-600" />
             <span>{successMessage}</span>
+          </div>
+        )}
+
+        {analysis?.warnings && analysis.warnings.length > 0 && (
+          <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/80 px-3.5 py-2.5 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300">
+            <Info className="h-4 w-4 shrink-0 mt-0.5 text-amber-600" />
+            <ul className="space-y-1 list-disc list-inside">
+              {analysis.warnings.map((w, idx) => (
+                <li key={idx}>{w}</li>
+              ))}
+            </ul>
           </div>
         )}
 
@@ -306,9 +419,14 @@ export function SecondarySalesUploadModal({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".pdf,.xlsx,.xls,.csv"
+                accept=".pdf,.xlsx,.xls,.xlsm,.xlsb,.csv,.tsv"
                 className="hidden"
-                onChange={(e) => handleFilePicked(e.target.files?.[0])}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  handleFilePicked(file);
+                  // Reset input so selecting the same fixed filename triggers onChange again
+                  e.target.value = "";
+                }}
               />
 
               {selectedFile ? (
@@ -343,7 +461,7 @@ export function SecondarySalesUploadModal({
                   </p>
                   <p className="text-xs text-slate-500 max-w-md mx-auto">
                     Supports standard pharma stockist statements in <strong>PDF (.pdf)</strong>,{" "}
-                    <strong>Excel (.xlsx, .xls)</strong>, or <strong>CSV (.csv)</strong> with
+                    <strong>Excel (.xlsx, .xls)</strong>, or <strong>CSV (.csv)</strong> up to 10 MB with
                     Opening, Purchase, Sales, and Closing Stock columns.
                   </p>
                 </div>
@@ -360,7 +478,7 @@ export function SecondarySalesUploadModal({
                   className="rounded border-slate-300 text-[#FF6B00] focus:ring-[#FF6B00]"
                 />
                 <span>
-                  <strong>Auto-apply immediately</strong> for all matched products without review
+                  <strong>Auto-apply immediately</strong> for high-confidence (80%+) unambiguous matches
                 </span>
               </label>
 
@@ -447,7 +565,7 @@ export function SecondarySalesUploadModal({
                 </div>
                 <div className="text-lg font-extrabold text-slate-900 dark:text-white">
                   {editableRows
-                    .filter((r) => r.selected && r.selectedProductId)
+                    .filter((r) => (r.synced || r.selected) && r.selectedProductId)
                     .reduce((s, r) => s + (Number(r.editedClosingStock) || 0), 0)
                     .toLocaleString()}
                 </div>
@@ -487,7 +605,25 @@ export function SecondarySalesUploadModal({
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
                   <tr className="bg-slate-100/80 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                    <th className="p-2.5 w-8">Use</th>
+                    <th className="p-2.5 w-8">
+                      <input
+                        type="checkbox"
+                        title="Select / deselect all pending matched rows"
+                        checked={allPendingSelected}
+                        disabled={pendingMatchedRows.length === 0}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setEditableRows((prev) =>
+                            prev.map((row) =>
+                              !row.synced && row.selectedProductId
+                                ? { ...row, selected: checked }
+                                : row
+                            )
+                          );
+                        }}
+                        className="rounded border-slate-300 text-[#FF6B00] focus:ring-[#FF6B00]"
+                      />
+                    </th>
                     <th className="p-2.5">Report Product</th>
                     <th className="p-2.5 min-w-[200px]">Matched Catalog Product</th>
                     <th className="p-2.5 text-center">Op / Pur / Sale</th>
@@ -498,23 +634,36 @@ export function SecondarySalesUploadModal({
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {editableRows.map((row) => {
                     const hasMatch = Boolean(row.selectedProductId);
+                    const duplicateCount =
+                      !row.synced && row.selected && row.selectedProductId
+                        ? duplicateProductCounts.get(row.selectedProductId) || 0
+                        : 0;
                     return (
                       <tr
                         key={row.rowId}
                         className={
-                          !hasMatch
+                          row.synced
+                            ? "bg-emerald-50/40 dark:bg-emerald-950/10"
+                            : !hasMatch
                             ? "bg-amber-50/40 dark:bg-amber-950/10"
                             : "hover:bg-slate-50/70 dark:hover:bg-slate-900/40"
                         }
                       >
                         <td className="p-2.5">
-                          <input
-                            type="checkbox"
-                            checked={row.selected && hasMatch}
-                            disabled={!hasMatch}
-                            onChange={(e) => updateRow(row.rowId, { selected: e.target.checked })}
-                            className="rounded border-slate-300 text-[#FF6B00] focus:ring-[#FF6B00]"
-                          />
+                          {row.synced ? (
+                            <CheckCircle2
+                              className="h-4 w-4 text-emerald-600"
+                              aria-label="Already synced"
+                            />
+                          ) : (
+                            <input
+                              type="checkbox"
+                              checked={row.selected && hasMatch}
+                              disabled={!hasMatch}
+                              onChange={(e) => updateRow(row.rowId, { selected: e.target.checked })}
+                              className="rounded border-slate-300 text-[#FF6B00] focus:ring-[#FF6B00]"
+                            />
+                          )}
                         </td>
                         <td className="p-2.5">
                           <div className="font-semibold text-slate-900 dark:text-slate-100">
@@ -529,18 +678,18 @@ export function SecondarySalesUploadModal({
                               .filter(Boolean)
                               .join(" • ") || "Detected from report"}
                           </div>
+                          {row.rowWarning && (
+                            <div className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5 font-medium">
+                              ⚠ {row.rowWarning}
+                            </div>
+                          )}
                         </td>
                         <td className="p-2.5">
                           <select
                             value={row.selectedProductId}
-                            onChange={(e) => {
-                              const nextId = e.target.value;
-                              updateRow(row.rowId, {
-                                selectedProductId: nextId,
-                                selected: Boolean(nextId),
-                              });
-                            }}
-                            className={`w-full h-8 px-2 rounded-md border text-xs bg-white dark:bg-slate-950 ${
+                            disabled={row.synced}
+                            onChange={(e) => handleProductSelectionChange(row, e.target.value)}
+                            className={`w-full h-8 px-2 rounded-md border text-xs bg-white dark:bg-slate-950 disabled:opacity-70 ${
                               hasMatch
                                 ? "border-emerald-300 dark:border-emerald-800 text-slate-900 dark:text-slate-100"
                                 : "border-amber-400 dark:border-amber-700 text-amber-700 dark:text-amber-300"
@@ -553,9 +702,26 @@ export function SecondarySalesUploadModal({
                               </option>
                             ))}
                           </select>
-                          {row.matchConfidence > 0 && row.selectedProductId === row.matchedProductId && (
-                            <div className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-0.5 font-medium">
-                              Auto-matched ({row.matchConfidence}% confidence)
+                          {row.synced ? (
+                            <div className="text-[10px] text-emerald-700 dark:text-emerald-400 mt-0.5 font-semibold">
+                              ✓ Synced to live stock
+                            </div>
+                          ) : row.matchConfidence > 0 && row.selectedProductId === row.matchedProductId ? (
+                            <div
+                              className={`text-[10px] mt-0.5 font-medium ${
+                                row.ambiguous || row.matchConfidence < 80
+                                  ? "text-amber-600 dark:text-amber-400"
+                                  : "text-emerald-600 dark:text-emerald-400"
+                              }`}
+                            >
+                              {row.ambiguous
+                                ? `Ambiguous match (${row.matchConfidence}% — verify product)`
+                                : `Auto-matched (${row.matchConfidence}% confidence)`}
+                            </div>
+                          ) : null}
+                          {duplicateCount > 1 && (
+                            <div className="text-[10px] text-sky-600 dark:text-sky-400 mt-0.5 font-medium">
+                              ℹ {duplicateCount} rows mapped here — stocks will be summed
                             </div>
                           )}
                         </td>
@@ -574,13 +740,18 @@ export function SecondarySalesUploadModal({
                             <input
                               type="number"
                               min={0}
+                              max={MAX_CLOSING_STOCK}
+                              disabled={row.synced}
                               value={row.editedClosingStock}
                               onChange={(e) =>
                                 updateRow(row.rowId, {
-                                  editedClosingStock: Math.max(0, Number(e.target.value) || 0),
+                                  editedClosingStock: Math.min(
+                                    MAX_CLOSING_STOCK,
+                                    Math.max(0, Math.round(Number(e.target.value) || 0))
+                                  ),
                                 })
                               }
-                              className="w-18 h-7 px-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-center font-mono font-bold text-xs text-slate-900 dark:text-white"
+                              className="w-20 h-7 px-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-center font-mono font-bold text-xs text-slate-900 dark:text-white disabled:opacity-70"
                             />
                           </div>
                           <div className="text-[9px] text-center text-slate-400 mt-0.5">
@@ -604,14 +775,14 @@ export function SecondarySalesUploadModal({
             {/* Footer Actions */}
             <div className="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-slate-800">
               <span className="text-xs text-slate-500">
-                <strong>{selectedCount}</strong> product(s) selected to update at{" "}
+                <strong>{selectedCount}</strong> product row(s) ready to update at{" "}
                 <strong>{analysis.distributor.name}</strong>
               </span>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={onClose}>
                   Close
                 </Button>
-                {!analysis.autoApplied && (
+                {editableRows.some((r) => !r.synced) && (
                   <Button
                     variant="primary"
                     size="sm"
@@ -627,7 +798,11 @@ export function SecondarySalesUploadModal({
                     ) : (
                       <>
                         <CheckCircle2 className="h-4 w-4" />
-                        <span>Apply & Set Stocks ({selectedCount})</span>
+                        <span>
+                          {analysis.autoApplied
+                            ? `Apply Remaining (${selectedCount})`
+                            : `Apply & Set Stocks (${selectedCount})`}
+                        </span>
                       </>
                     )}
                   </Button>

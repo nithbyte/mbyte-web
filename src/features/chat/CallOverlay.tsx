@@ -12,9 +12,13 @@ import {
   Maximize2,
   Minimize2,
   User,
+  Volume2,
+  AlertTriangle,
+  RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CallSession } from "@/types/chat";
+import type { AudioInputDeviceOption } from "./useWebRTCCall";
 
 interface CallOverlayProps {
   activeCall: CallSession | null;
@@ -25,12 +29,18 @@ interface CallOverlayProps {
   localStream: MediaStream | null;
   remoteStream: MediaStream | null;
   currentUserId?: string;
+  hasRealMic?: boolean;
+  micError?: string | null;
+  micLevel?: number;
+  audioInputDevices?: AudioInputDeviceOption[];
+  selectedAudioDeviceId?: string;
   onAccept: () => void;
   onReject: () => void;
   onEndCall: () => void;
   onToggleMute: () => void;
   onToggleVideo: () => void;
   onToggleScreenShare: () => void;
+  onSwitchMicrophone?: (deviceId?: string) => void;
 }
 
 export function CallOverlay({
@@ -42,17 +52,24 @@ export function CallOverlay({
   localStream,
   remoteStream,
   currentUserId,
+  hasRealMic = true,
+  micError = null,
+  micLevel = 0,
+  audioInputDevices = [],
+  selectedAudioDeviceId = "",
   onAccept,
   onReject,
   onEndCall,
   onToggleMute,
   onToggleVideo,
   onToggleScreenShare,
+  onSwitchMicrophone,
 }: CallOverlayProps) {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const remoteAudioRef = useRef<HTMLAudioElement>(null);
   const [isMinimized, setIsMinimized] = React.useState(false);
+  const [audioPlaybackBlocked, setAudioPlaybackBlocked] = React.useState(false);
 
   // Bind local stream
   useEffect(() => {
@@ -67,18 +84,34 @@ export function CallOverlay({
     if (remoteStream) {
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = remoteStream;
-        remoteVideoRef.current.play().catch((err) => {
-          console.log("Remote video play caught (autoplay policy):", err);
-        });
+        remoteVideoRef.current.muted = true; // Audio plays exclusively via remoteAudioRef to avoid echo/autoplay issues
+        remoteVideoRef.current.play().catch(() => {});
       }
       if (remoteAudioRef.current) {
         remoteAudioRef.current.srcObject = remoteStream;
-        remoteAudioRef.current.play().catch((err) => {
-          console.log("Remote audio play caught (autoplay policy):", err);
-        });
+        remoteAudioRef.current.muted = false;
+        remoteAudioRef.current.volume = 1;
+        remoteAudioRef.current
+          .play()
+          .then(() => setAudioPlaybackBlocked(false))
+          .catch((err) => {
+            console.warn("Remote audio play blocked by browser autoplay:", err);
+            setAudioPlaybackBlocked(true);
+          });
       }
     }
   }, [remoteStream, activeCall?.callType, activeCall?.status]);
+
+  const handleResumeAudio = () => {
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.muted = false;
+      remoteAudioRef.current.volume = 1;
+      remoteAudioRef.current
+        .play()
+        .then(() => setAudioPlaybackBlocked(false))
+        .catch(() => {});
+    }
+  };
 
   if (!activeCall) return null;
 
@@ -201,11 +234,12 @@ export function CallOverlay({
       <div className="relative flex-1 bg-gradient-to-b from-slate-950 via-slate-900 to-black flex items-center justify-center overflow-hidden">
         {isVideo ? (
           <>
-            {/* Remote Video Stream */}
+            {/* Remote Video Stream (muted because remoteAudioRef handles audio) */}
             <video
               ref={remoteVideoRef}
               autoPlay
               playsInline
+              muted
               className="w-full h-full object-cover"
             />
 
@@ -291,6 +325,86 @@ export function CallOverlay({
           </div>
         )}
       </div>
+
+      {/* Audio Autoplay Recovery / Microphone Diagnostics & Selector Bar */}
+      {!isMinimized && (
+        <div className="px-4 py-2 bg-slate-900/90 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs">
+          {audioPlaybackBlocked && (
+            <button
+              type="button"
+              onClick={handleResumeAudio}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500 text-slate-950 font-semibold hover:bg-amber-400 cursor-pointer"
+            >
+              <Volume2 className="w-3.5 h-3.5" />
+              Click to Enable Call Audio
+            </button>
+          )}
+
+          {!hasRealMic || micError ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 w-full">
+              <div className="flex items-center gap-2 text-amber-300">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400" />
+                <span>{micError || "Microphone not active. Others cannot hear you."}</span>
+              </div>
+              {onSwitchMicrophone && (
+                <button
+                  type="button"
+                  onClick={() => onSwitchMicrophone(selectedAudioDeviceId || undefined)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold cursor-pointer shrink-0"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  Retry Mic
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center justify-between gap-3 w-full">
+              {/* Live Mic Speaking Meter */}
+              <div className="flex items-center gap-2">
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1.5 font-medium",
+                    isMuted ? "text-red-400" : "text-emerald-400"
+                  )}
+                >
+                  {isMuted ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+                  {isMuted ? "Mic Muted" : "Mic Live"}
+                </span>
+                {!isMuted && (
+                  <div
+                    className="w-24 h-2 rounded-full bg-slate-800 overflow-hidden"
+                    title={`Microphone input level: ${micLevel}%`}
+                  >
+                    <div
+                      className="h-full bg-emerald-400 transition-all duration-75 rounded-full"
+                      style={{ width: `${Math.max(4, micLevel)}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Microphone Device Picker */}
+              {audioInputDevices.length > 0 && onSwitchMicrophone && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-400 hidden sm:inline">Input:</span>
+                  <select
+                    aria-label="Select microphone"
+                    value={selectedAudioDeviceId}
+                    onChange={(e) => onSwitchMicrophone(e.target.value)}
+                    className="max-w-[220px] truncate rounded-lg bg-slate-800 border border-slate-700 px-2 py-1 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                  >
+                    {audioInputDevices.map((dev) => (
+                      <option key={dev.deviceId} value={dev.deviceId}>
+                        {dev.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Floating Control Bar */}
       <div className="p-4 bg-slate-900/95 backdrop-blur border-t border-slate-800 flex items-center justify-center gap-4 shrink-0">

@@ -23,7 +23,12 @@ import { useFilterStore } from "@/store";
 import { attendanceService } from "@/services/growthServices";
 import { formatOperatingDateDisplay } from "@/lib/utils";
 import { API_BASE_URL } from "@/lib/api-client";
-import type { AttendanceRecord, AttendanceCorrection, AttendanceSummary } from "@/types";
+import type {
+  AttendanceRecord,
+  AttendanceCorrection,
+  AttendanceSummary,
+  LeaveRequest,
+} from "@/types";
 import {
   Clock,
   CheckCircle,
@@ -34,9 +39,11 @@ import {
   Camera,
   MapPin,
   Calendar,
+  CalendarOff,
   UserCheck,
   FileText,
   ShieldAlert,
+  RefreshCw,
 } from "lucide-react";
 
 function formatTerritory(territory: any): string {
@@ -73,15 +80,17 @@ export default function AttendancePage() {
   const { operatingDate } = useFilterStore();
   const [filterByOperatingDate, setFilterByOperatingDate] = useState(true);
 
-  const [activeTab, setActiveTab] = useState<"records" | "corrections">("records");
+  const [activeTab, setActiveTab] = useState<"records" | "corrections" | "leaves">("records");
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [corrections, setCorrections] = useState<AttendanceCorrection[]>([]);
+  const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
   const [summary, setSummary] = useState<AttendanceSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Filters
   const [search, setSearch] = useState("");
   const [selectedCorrectionStatus, setSelectedCorrectionStatus] = useState<string>("ALL");
+  const [selectedLeaveStatus, setSelectedLeaveStatus] = useState<string>("ALL");
 
   // Modals
   const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null);
@@ -92,6 +101,13 @@ export default function AttendancePage() {
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [photoLoadError, setPhotoLoadError] = useState(false);
 
+  // Leave Review Modal
+  const [leaveReviewModalOpen, setLeaveReviewModalOpen] = useState(false);
+  const [selectedLeave, setSelectedLeave] = useState<LeaveRequest | null>(null);
+  const [leaveReviewAction, setLeaveReviewAction] = useState<"APPROVED" | "REJECTED">("APPROVED");
+  const [leaveReviewComments, setLeaveReviewComments] = useState("");
+  const [isSubmittingLeaveReview, setIsSubmittingLeaveReview] = useState(false);
+
   const loadData = async () => {
     setIsLoading(true);
     try {
@@ -99,9 +115,10 @@ export default function AttendancePage() {
         ? { startDate: operatingDate, endDate: operatingDate }
         : undefined;
 
-      const [recs, corrs, summ] = await Promise.all([
+      const [recs, corrs, lvs, summ] = await Promise.all([
         attendanceService.getRecords(dateParams),
         attendanceService.getCorrections(),
+        attendanceService.getLeaves(),
         attendanceService.getSummary(
           filterByOperatingDate ? operatingDate : undefined,
           filterByOperatingDate ? operatingDate : undefined
@@ -109,6 +126,7 @@ export default function AttendancePage() {
       ]);
       setRecords(recs);
       setCorrections(corrs);
+      setLeaves(lvs);
       setSummary(summ);
     } catch (err) {
       console.error("Failed to load attendance records:", err);
@@ -116,6 +134,15 @@ export default function AttendancePage() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!isMounted || typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get("tab");
+    if (tabParam === "leaves" || tabParam === "corrections" || tabParam === "records") {
+      setActiveTab(tabParam);
+    }
+  }, [isMounted]);
 
   useEffect(() => {
     if (isMounted) {
@@ -150,6 +177,42 @@ export default function AttendancePage() {
     });
   }, [corrections, selectedCorrectionStatus, search]);
 
+  const filteredLeaves = useMemo(() => {
+    return leaves.filter((lv) => {
+      const matchesStatus = selectedLeaveStatus === "ALL" || lv.status === selectedLeaveStatus;
+      const q = search.toLowerCase();
+      const matchesSearch =
+        !search.trim() ||
+        lv.user?.firstName?.toLowerCase().includes(q) ||
+        lv.user?.lastName?.toLowerCase().includes(q) ||
+        lv.user?.email?.toLowerCase().includes(q) ||
+        lv.mr?.employeeCode?.toLowerCase().includes(q) ||
+        formatTerritory(lv.mr?.territory).toLowerCase().includes(q) ||
+        lv.leaveType.toLowerCase().includes(q) ||
+        lv.reason.toLowerCase().includes(q);
+      return matchesStatus && matchesSearch;
+    });
+  }, [leaves, selectedLeaveStatus, search]);
+
+  const handleReviewLeave = async () => {
+    if (!selectedLeave) return;
+    setIsSubmittingLeaveReview(true);
+    try {
+      await attendanceService.reviewLeave(selectedLeave.id, {
+        status: leaveReviewAction,
+        reviewComments: leaveReviewComments.trim() || undefined,
+      });
+      setLeaveReviewModalOpen(false);
+      setSelectedLeave(null);
+      setLeaveReviewComments("");
+      await loadData();
+    } catch (err: any) {
+      alert(err?.message || "Failed to review leave request");
+    } finally {
+      setIsSubmittingLeaveReview(false);
+    }
+  };
+
   const handleReviewCorrection = async () => {
     if (!selectedCorrection) return;
     setIsSubmittingReview(true);
@@ -174,12 +237,24 @@ export default function AttendancePage() {
   return (
     <div className="space-y-6 p-6">
       <PageHeader
-        title="Shift Attendance & Regularization"
-        description="Monitor daily field shift check-ins, server-authoritative timestamps, and review regularization requests."
+        title="Shift Attendance, Regularization & Leave"
+        description="Monitor daily field shift check-ins, server-authoritative timestamps, review regularization requests, and approve or reject MR leave applications."
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={loadData}
+            disabled={isLoading}
+            className="gap-1.5"
+          >
+            <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+        }
       />
 
       {/* Summary Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card className="border-l-4 border-l-blue-500 shadow-sm">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
@@ -215,7 +290,10 @@ export default function AttendancePage() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-amber-500 shadow-sm">
+        <Card
+          className="border-l-4 border-l-amber-500 shadow-sm cursor-pointer hover:bg-muted/20 transition-colors"
+          onClick={() => setActiveTab("corrections")}
+        >
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Pending Regularizations</p>
@@ -226,13 +304,33 @@ export default function AttendancePage() {
             <AlertCircle className="w-8 h-8 text-amber-500 opacity-80" />
           </CardContent>
         </Card>
+
+        <Card
+          className="border-l-4 border-l-purple-500 shadow-sm cursor-pointer hover:bg-muted/20 transition-colors"
+          onClick={() => setActiveTab("leaves")}
+        >
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Pending Leave Requests</p>
+              <h3 className="text-2xl font-bold mt-1 text-purple-600">
+                {leaves.filter((l) => l.status === "PENDING").length}
+              </h3>
+              {(summary?.onLeaveCount ?? 0) > 0 && (
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  {summary?.onLeaveCount} on leave
+                </p>
+              )}
+            </div>
+            <CalendarOff className="w-8 h-8 text-purple-500 opacity-80" />
+          </CardContent>
+        </Card>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-border space-x-4">
+      <div className="flex border-b border-border space-x-4 overflow-x-auto">
         <button
           onClick={() => setActiveTab("records")}
-          className={`pb-3 px-2 font-medium text-sm flex items-center space-x-2 border-b-2 transition-colors ${
+          className={`pb-3 px-2 font-medium text-sm flex items-center space-x-2 border-b-2 transition-colors whitespace-nowrap ${
             activeTab === "records"
               ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
@@ -244,7 +342,7 @@ export default function AttendancePage() {
 
         <button
           onClick={() => setActiveTab("corrections")}
-          className={`pb-3 px-2 font-medium text-sm flex items-center space-x-2 border-b-2 transition-colors ${
+          className={`pb-3 px-2 font-medium text-sm flex items-center space-x-2 border-b-2 transition-colors whitespace-nowrap ${
             activeTab === "corrections"
               ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
@@ -256,6 +354,21 @@ export default function AttendancePage() {
             {corrections.filter((c) => c.status === "PENDING").length} pending)
           </span>
         </button>
+
+        <button
+          onClick={() => setActiveTab("leaves")}
+          className={`pb-3 px-2 font-medium text-sm flex items-center space-x-2 border-b-2 transition-colors whitespace-nowrap ${
+            activeTab === "leaves"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <CalendarOff className="w-4 h-4" />
+          <span>
+            Leave Requests (
+            {leaves.filter((l) => l.status === "PENDING").length} pending)
+          </span>
+        </button>
       </div>
 
       {/* Filters */}
@@ -264,7 +377,11 @@ export default function AttendancePage() {
           <div className="relative w-72">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by MR name, email, territory..."
+              placeholder={
+                activeTab === "leaves"
+                  ? "Search by MR name, territory, leave type..."
+                  : "Search by MR name, email, territory..."
+              }
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9"
@@ -272,20 +389,22 @@ export default function AttendancePage() {
           </div>
 
           {/* Operating Date Context Indicator & Toggle */}
-          <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-xs shadow-xs">
-            <Calendar className="h-3.5 w-3.5 text-sky-600 dark:text-sky-400" />
-            <span className="font-semibold text-muted-foreground">Date:</span>
-            <span className="font-bold text-foreground">
-              {filterByOperatingDate ? formatOperatingDateDisplay(operatingDate) : "All Recorded Shifts"}
-            </span>
-            <button
-              type="button"
-              onClick={() => setFilterByOperatingDate(!filterByOperatingDate)}
-              className="ml-1 text-xs text-primary hover:underline cursor-pointer font-medium"
-            >
-              {filterByOperatingDate ? "Show All Shifts" : "Filter by Operating Date"}
-            </button>
-          </div>
+          {activeTab === "records" && (
+            <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-xs shadow-xs">
+              <Calendar className="h-3.5 w-3.5 text-sky-600 dark:text-sky-400" />
+              <span className="font-semibold text-muted-foreground">Date:</span>
+              <span className="font-bold text-foreground">
+                {filterByOperatingDate ? formatOperatingDateDisplay(operatingDate) : "All Recorded Shifts"}
+              </span>
+              <button
+                type="button"
+                onClick={() => setFilterByOperatingDate(!filterByOperatingDate)}
+                className="ml-1 text-xs text-primary hover:underline cursor-pointer font-medium"
+              >
+                {filterByOperatingDate ? "Show All Shifts" : "Filter by Operating Date"}
+              </button>
+            </div>
+          )}
         </div>
 
         {activeTab === "corrections" && (
@@ -300,6 +419,23 @@ export default function AttendancePage() {
               <option value="PENDING">Pending Only</option>
               <option value="APPROVED">Approved</option>
               <option value="REJECTED">Rejected</option>
+            </select>
+          </div>
+        )}
+
+        {activeTab === "leaves" && (
+          <div className="flex items-center space-x-2">
+            <Filter className="w-4 h-4 text-muted-foreground" />
+            <select
+              value={selectedLeaveStatus}
+              onChange={(e) => setSelectedLeaveStatus(e.target.value)}
+              className="text-sm bg-background border border-input rounded-md px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
+            >
+              <option value="ALL">All Statuses</option>
+              <option value="PENDING">Pending Only</option>
+              <option value="APPROVED">Approved</option>
+              <option value="REJECTED">Rejected</option>
+              <option value="CANCELLED">Cancelled</option>
             </select>
           </div>
         )}
@@ -342,71 +478,93 @@ export default function AttendancePage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredRecords.map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-medium">
-                            {r.user ? `${r.user.firstName} ${r.user.lastName}` : "MR"}
-                          </span>
-                          {r.punchInTime && !r.punchOutTime && (
-                            <AtWorkBadge punchInTime={r.punchInTime} />
+                  {filteredRecords.map((r) => {
+                    const isOnLeave =
+                      r.status === "ON_LEAVE" ||
+                      r.punchInVerificationType === "APPROVED_LEAVE";
+                    return (
+                      <TableRow key={r.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-medium">
+                              {r.user ? `${r.user.firstName} ${r.user.lastName}` : "MR"}
+                            </span>
+                            {!isOnLeave && r.punchInTime && !r.punchOutTime && (
+                              <AtWorkBadge punchInTime={r.punchInTime} />
+                            )}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {r.mr?.employeeCode ? `${r.mr.employeeCode} • ` : ""}{formatTerritory(r.mr?.territory)}
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {new Date(r.attendanceDate).toISOString().slice(0, 10)}
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {isOnLeave
+                            ? "—"
+                            : new Date(r.punchInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {isOnLeave
+                            ? "—"
+                            : r.punchOutTime
+                            ? new Date(r.punchOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                            : "— In Progress —"}
+                        </TableCell>
+                        <TableCell>
+                          {isOnLeave ? (
+                            <span className="text-xs text-purple-600 dark:text-purple-400 font-medium">
+                              On Leave
+                            </span>
+                          ) : r.totalWorkHours !== undefined && r.totalWorkHours !== null ? (
+                            <span className="font-semibold">{r.totalWorkHours} hrs</span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground italic">Active Shift</span>
                           )}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {r.mr?.employeeCode ? `${r.mr.employeeCode} • ` : ""}{formatTerritory(r.mr?.territory)}
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {new Date(r.attendanceDate).toISOString().slice(0, 10)}
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {new Date(r.punchInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {r.punchOutTime
-                          ? new Date(r.punchOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                          : "— In Progress —"}
-                      </TableCell>
-                      <TableCell>
-                        {r.totalWorkHours !== undefined && r.totalWorkHours !== null ? (
-                          <span className="font-semibold">{r.totalWorkHours} hrs</span>
-                        ) : (
-                          <span className="text-xs text-muted-foreground italic">Active Shift</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-xs">
-                          {r.punchInVerificationType === "DEVICE_PHOTO" ? "Photo Auth" : r.punchInVerificationType}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            r.status === "PRESENT"
-                              ? "default"
-                              : r.status === "HALF_DAY"
-                              ? "outline"
-                              : "secondary"
-                          }
-                        >
-                          {r.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedRecord(r);
-                            setPhotoLoadError(false);
-                          }}
-                        >
-                          Details
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">
+                            {r.punchInVerificationType === "DEVICE_PHOTO"
+                              ? "Photo Auth"
+                              : r.punchInVerificationType === "APPROVED_LEAVE"
+                              ? "Approved Leave"
+                              : r.punchInVerificationType}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              r.status === "PRESENT"
+                                ? "default"
+                                : r.status === "HALF_DAY" || r.status === "ON_LEAVE"
+                                ? "outline"
+                                : "secondary"
+                            }
+                            className={
+                              r.status === "ON_LEAVE"
+                                ? "border-purple-300 bg-purple-50 text-purple-700 dark:border-purple-800 dark:bg-purple-950/30 dark:text-purple-300"
+                                : undefined
+                            }
+                          >
+                            {r.status === "ON_LEAVE" ? "ON LEAVE" : r.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedRecord(r);
+                              setPhotoLoadError(false);
+                            }}
+                          >
+                            Details
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}
@@ -532,12 +690,159 @@ export default function AttendancePage() {
         </Card>
       )}
 
+      {/* Tab 3: Leave Requests Table */}
+      {activeTab === "leaves" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Field Representative Leave Applications</CardTitle>
+            <CardDescription>
+              Accept or reject MR leave requests. Approved leave dates automatically mark attendance as On Leave and notify the representative.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ) : filteredLeaves.length === 0 ? (
+              <EmptyState
+                icon={CalendarOff}
+                title="No leave requests found"
+                description="Leave applications submitted by medical representatives from the mobile app will appear here for approval."
+              />
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Field Representative</TableHead>
+                    <TableHead>Leave Type</TableHead>
+                    <TableHead>Dates &amp; Duration</TableHead>
+                    <TableHead>Reason</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredLeaves.map((leave) => {
+                    const startStr = new Date(leave.startDate).toISOString().slice(0, 10);
+                    const endStr = new Date(leave.endDate).toISOString().slice(0, 10);
+                    return (
+                      <TableRow key={leave.id}>
+                        <TableCell>
+                          <div className="font-medium">
+                            {leave.user ? `${leave.user.firstName} ${leave.user.lastName}` : "Representative"}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {leave.mr?.employeeCode ? `${leave.mr.employeeCode} • ` : ""}
+                            {formatTerritory(leave.mr?.territory)}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs font-medium">
+                            {leave.leaveType.replace(/_/g, " ")}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          <div className="font-mono text-xs">
+                            {startStr === endStr ? startStr : `${startStr} → ${endStr}`}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            {leave.totalDays} {leave.totalDays === 1 ? "day" : "days"}
+                          </div>
+                        </TableCell>
+                        <TableCell className="max-w-xs text-sm">
+                          <div className="line-clamp-2" title={leave.reason}>
+                            {leave.reason}
+                          </div>
+                          {leave.reviewComments && (
+                            <div className="text-xs text-muted-foreground mt-1 italic">
+                              Note: {leave.reviewComments}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              leave.status === "APPROVED"
+                                ? "default"
+                                : leave.status === "PENDING"
+                                ? "outline"
+                                : leave.status === "REJECTED"
+                                ? "destructive"
+                                : "secondary"
+                            }
+                            className={
+                              leave.status === "PENDING"
+                                ? "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300"
+                                : leave.status === "APPROVED"
+                                ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                                : undefined
+                            }
+                          >
+                            {leave.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {leave.status === "PENDING" ? (
+                            <div className="flex items-center justify-end space-x-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 dark:border-emerald-800 dark:hover:bg-emerald-950/40"
+                                onClick={() => {
+                                  setSelectedLeave(leave);
+                                  setLeaveReviewAction("APPROVED");
+                                  setLeaveReviewComments("");
+                                  setLeaveReviewModalOpen(true);
+                                }}
+                              >
+                                <CheckCircle className="w-3.5 h-3.5 mr-1" />
+                                Accept
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-rose-600 border-rose-200 hover:bg-rose-50 dark:border-rose-800 dark:hover:bg-rose-950/40"
+                                onClick={() => {
+                                  setSelectedLeave(leave);
+                                  setLeaveReviewAction("REJECTED");
+                                  setLeaveReviewComments("");
+                                  setLeaveReviewModalOpen(true);
+                                }}
+                              >
+                                <XCircle className="w-3.5 h-3.5 mr-1" />
+                                Reject
+                              </Button>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              {leave.status === "CANCELLED"
+                                ? "Cancelled by MR"
+                                : `Reviewed by ${leave.reviewedBy ? `${leave.reviewedBy.firstName} ${leave.reviewedBy.lastName}` : "Admin"}`}
+                            </span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Record Details Modal */}
       {selectedRecord && (
         <Modal
           isOpen={!!selectedRecord}
           onClose={() => setSelectedRecord(null)}
-          title="Shift Check-in Verification Details"
+          title={
+            selectedRecord.status === "ON_LEAVE"
+              ? "Approved Leave Attendance Details"
+              : "Shift Check-in Verification Details"
+          }
         >
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3 text-sm">
@@ -549,29 +854,38 @@ export default function AttendancePage() {
                 <span className="text-muted-foreground text-xs block">Shift Date</span>
                 <span className="font-mono">{new Date(selectedRecord.attendanceDate).toISOString().slice(0, 10)}</span>
               </div>
-              <div>
-                <span className="text-muted-foreground text-xs block">Server Punch-In Time</span>
-                <span className="font-mono">{new Date(selectedRecord.punchInTime).toLocaleString()}</span>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-xs block">Server Punch-Out Time</span>
-                <span className="font-mono">
-                  {selectedRecord.punchOutTime ? new Date(selectedRecord.punchOutTime).toLocaleString() : "Not Punched Out"}
-                </span>
-              </div>
+              {selectedRecord.status !== "ON_LEAVE" && (
+                <>
+                  <div>
+                    <span className="text-muted-foreground text-xs block">Server Punch-In Time</span>
+                    <span className="font-mono">{new Date(selectedRecord.punchInTime).toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground text-xs block">Server Punch-Out Time</span>
+                    <span className="font-mono">
+                      {selectedRecord.punchOutTime ? new Date(selectedRecord.punchOutTime).toLocaleString() : "Not Punched Out"}
+                    </span>
+                  </div>
+                </>
+              )}
               <div>
                 <span className="text-muted-foreground text-xs block">Verification Method</span>
                 <span className="font-medium text-emerald-600">
-                  {selectedRecord.punchInVerificationType} (Device Photo Verification)
+                  {selectedRecord.status === "ON_LEAVE"
+                    ? "APPROVED_LEAVE (Manager Approved Leave)"
+                    : `${selectedRecord.punchInVerificationType} (Device Photo Verification)`}
                 </span>
               </div>
               <div>
                 <span className="text-muted-foreground text-xs block">Total Work Hours</span>
-                <span className="font-semibold">{selectedRecord.totalWorkHours ?? "—"} hrs</span>
+                <span className="font-semibold">
+                  {selectedRecord.status === "ON_LEAVE" ? "On Leave" : `${selectedRecord.totalWorkHours ?? "—"} hrs`}
+                </span>
               </div>
             </div>
 
-            {/* Photo Capture Section with 7-Day Auto-Purge Policy */}
+            {/* Photo Capture Section with 7-Day Auto-Purge Policy (only for worked shifts) */}
+            {selectedRecord.status !== "ON_LEAVE" && (
             <div className="border border-border/80 rounded-lg p-3 bg-muted/20 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-muted-foreground">Check-in Photo Verification</span>
@@ -630,6 +944,7 @@ export default function AttendancePage() {
                 Retention Compliance: All field attendance selfies are scheduled for permanent deletion 7 days after capture.
               </p>
             </div>
+            )}
 
             {selectedRecord.notes && (
               <div className="text-sm bg-muted/30 p-3 rounded">
@@ -640,6 +955,75 @@ export default function AttendancePage() {
 
             <div className="flex justify-end pt-2">
               <Button onClick={() => setSelectedRecord(null)}>Close</Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Review Leave Request Modal */}
+      {leaveReviewModalOpen && selectedLeave && (
+        <Modal
+          isOpen={leaveReviewModalOpen}
+          onClose={() => setLeaveReviewModalOpen(false)}
+          title={`Confirm Leave ${leaveReviewAction === "APPROVED" ? "Acceptance" : "Rejection"}`}
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {leaveReviewAction === "APPROVED"
+                ? "Accepting this leave request will mark the selected dates as On Leave in official attendance records and immediately notify the field representative."
+                : "Rejecting this leave request will notify the field representative with your review comments."}
+            </p>
+
+            <div className="p-3 bg-muted/30 rounded text-sm space-y-1">
+              <div>
+                <strong>Representative:</strong>{" "}
+                {selectedLeave.user?.firstName} {selectedLeave.user?.lastName}
+              </div>
+              <div>
+                <strong>Leave Type:</strong>{" "}
+                {selectedLeave.leaveType.replace(/_/g, " ")} ({selectedLeave.totalDays}{" "}
+                {selectedLeave.totalDays === 1 ? "day" : "days"})
+              </div>
+              <div>
+                <strong>Dates:</strong>{" "}
+                {new Date(selectedLeave.startDate).toISOString().slice(0, 10)} →{" "}
+                {new Date(selectedLeave.endDate).toISOString().slice(0, 10)}
+              </div>
+              <div>
+                <strong>Reason:</strong> {selectedLeave.reason}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-foreground block mb-1">
+                Review Comments (Optional)
+              </label>
+              <Input
+                placeholder={
+                  leaveReviewAction === "APPROVED"
+                    ? "e.g. Approved. Hand over urgent territory calls."
+                    : "e.g. Critical hospital coverage required on these dates."
+                }
+                value={leaveReviewComments}
+                onChange={(e) => setLeaveReviewComments(e.target.value)}
+              />
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-2">
+              <Button variant="outline" onClick={() => setLeaveReviewModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant={leaveReviewAction === "APPROVED" ? "default" : "destructive"}
+                onClick={handleReviewLeave}
+                disabled={isSubmittingLeaveReview}
+              >
+                {isSubmittingLeaveReview
+                  ? "Processing..."
+                  : leaveReviewAction === "APPROVED"
+                  ? "Confirm Accept Leave"
+                  : "Confirm Reject Leave"}
+              </Button>
             </div>
           </div>
         </Modal>

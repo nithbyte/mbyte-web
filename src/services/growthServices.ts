@@ -11,6 +11,7 @@ import type {
   AttendanceRecord,
   AttendanceCorrection,
   AttendanceSummary,
+  LeaveRequest,
 } from "../types";
 
 export const campaignService = {
@@ -180,6 +181,19 @@ export const attendanceService = {
 
   async reviewCorrection(id: string, data: { status: 'APPROVED' | 'REJECTED'; reviewNotes?: string }): Promise<any> {
     return apiClient.put(`/attendance/corrections/${id}/review`, data);
+  },
+
+  async getLeaves(params?: { status?: string; mrId?: string; startDate?: string; endDate?: string; search?: string }): Promise<LeaveRequest[]> {
+    try {
+      const res = await apiClient.get<any>("/attendance/leaves", { params });
+      return Array.isArray(res) ? res : res?.items || [];
+    } catch {
+      return [];
+    }
+  },
+
+  async reviewLeave(id: string, data: { status: 'APPROVED' | 'REJECTED'; reviewComments?: string }): Promise<LeaveRequest> {
+    return apiClient.put<LeaveRequest>(`/attendance/leaves/${id}/review`, data);
   },
 
   async getSummary(startDate?: string, endDate?: string): Promise<AttendanceSummary> {

@@ -41,7 +41,6 @@ import { useCurrentUser, useLogout } from "@/hooks";
 import { normalizeRole, getRoleLabel, type CanonicalRole } from "@/types";
 import { APP_CONFIG } from "@/lib/constants";
 import { MByteLogo } from "@/components/ui/mbyte-logo";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 interface NavItem {
   title: string;
@@ -641,17 +640,6 @@ export function Sidebar() {
             </div>
           </div>
         )}
-
-        {/* Theme Mode Toggle */}
-        <div className="mb-1">
-          <ThemeToggle
-            showLabel={!isCollapsed}
-            className={cn(
-              "w-full text-xs font-semibold py-2 px-3 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 rounded-lg transition-colors",
-              isCollapsed ? "justify-center px-0" : "justify-start gap-2.5"
-            )}
-          />
-        </div>
 
         {/* Sign Out Button */}
         <button

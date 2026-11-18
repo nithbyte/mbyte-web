@@ -1,6 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { orderService } from "../services";
-import type { OrderQueryParams } from "../types";
+import type { OrderQueryParams, OrderStatus } from "../types";
 
 export function useOrders(params?: OrderQueryParams) {
   return useQuery({
@@ -35,5 +35,42 @@ export function useOrderTrend() {
   return useQuery({
     queryKey: ["orders", "trend"],
     queryFn: () => orderService.getOrderTrend(),
+  });
+}
+
+export function useUpdateOrderStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      status,
+      remarks,
+    }: {
+      id: string;
+      status: OrderStatus;
+      remarks?: string;
+    }) => orderService.updateOrderStatus(id, status, remarks),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["orders", "detail", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["commercial"] });
+      queryClient.invalidateQueries({ queryKey: ["reports"] });
+    },
+  });
+}
+
+export function useCancelOrder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
+      orderService.cancelOrder(id, reason),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["orders", "detail", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["commercial"] });
+      queryClient.invalidateQueries({ queryKey: ["reports"] });
+    },
   });
 }

@@ -35,6 +35,10 @@ import {
   User,
   Building2,
   Stethoscope,
+  RefreshCw,
+  Presentation,
+  Pill,
+  MessageSquare,
 } from "lucide-react";
 import { dcrService, DailyCallReport, DcrStatus } from "@/services/dcrService";
 import { useFilterStore } from "@/store";
@@ -45,6 +49,8 @@ export default function DailyCallReportsPage() {
   const [showAllDates, setShowAllDates] = useState(false);
   const activeDate = showAllDates ? "" : operatingDate;
   const [statusFilter, setStatusFilter] = useState<DcrStatus | "ALL">("ALL");
+  const [unlockRequestsOnly, setUnlockRequestsOnly] = useState(false);
+  const [pendingUnlockCount, setPendingUnlockCount] = useState(0);
   const [search, setSearch] = useState("");
 
   const [dcrs, setDcrs] = useState<DailyCallReport[]>([]);
@@ -59,25 +65,35 @@ export default function DailyCallReportsPage() {
   const [selectedDcr, setSelectedDcr] = useState<DailyCallReport | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
-  // Action State (Approve, Reject, Reopen)
-  const [actionType, setActionType] = useState<"APPROVE" | "REJECT" | "REOPEN" | null>(null);
+  // Action State (Approve, Reject, Reopen, Unlock Review)
+  const [actionType, setActionType] = useState<
+    "APPROVE" | "REJECT" | "REOPEN" | "APPROVE_UNLOCK" | "REJECT_UNLOCK" | null
+  >(null);
   const [actionComments, setActionComments] = useState("");
   const [isSubmittingAction, setIsSubmittingAction] = useState(false);
 
   const fetchDcrs = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await dcrService.getDcrs({
-        date: activeDate || undefined,
-        status: statusFilter,
-      });
+      const [res, pendingUnlocksRes] = await Promise.all([
+        dcrService.getDcrs({
+          date: unlockRequestsOnly ? undefined : activeDate || undefined,
+          status: unlockRequestsOnly ? "ALL" : statusFilter,
+          unlockRequestStatus: unlockRequestsOnly ? "PENDING" : undefined,
+        }),
+        dcrService.getDcrs({
+          unlockRequestStatus: "PENDING",
+          limit: 100,
+        }),
+      ]);
       setDcrs(res.items);
+      setPendingUnlockCount(pendingUnlocksRes.total ?? pendingUnlocksRes.items.length);
     } catch (err) {
       console.warn("Failed to fetch DCRs:", err);
     } finally {
       setIsLoading(false);
     }
-  }, [activeDate, statusFilter]);
+  }, [activeDate, statusFilter, unlockRequestsOnly]);
 
   useEffect(() => {
     if (isMounted) {
@@ -86,6 +102,8 @@ export default function DailyCallReportsPage() {
   }, [fetchDcrs, isMounted]);
 
   const handleOpenDetails = async (dcr: DailyCallReport) => {
+    setActionType(null);
+    setActionComments("");
     try {
       const full = await dcrService.getDcrById(dcr.id);
       setSelectedDcr(full || dcr);
@@ -115,6 +133,10 @@ export default function DailyCallReportsPage() {
           return;
         }
         await dcrService.reopenDcr(selectedDcr.id, actionComments);
+      } else if (actionType === "APPROVE_UNLOCK") {
+        await dcrService.reviewUnlockRequest(selectedDcr.id, "APPROVED", actionComments);
+      } else if (actionType === "REJECT_UNLOCK") {
+        await dcrService.reviewUnlockRequest(selectedDcr.id, "REJECTED", actionComments);
       }
       setActionType(null);
       setActionComments("");
@@ -172,12 +194,12 @@ export default function DailyCallReportsPage() {
       />
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <Card className="p-4 bg-card/60 backdrop-blur border-border/80">
           <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Reports Logged</div>
           <div className="text-2xl font-bold mt-1 text-foreground">{totalCount}</div>
           <div className="text-xs text-muted-foreground mt-1">
-            Date: {activeDate ? formatOperatingDateDisplay(activeDate) : "All Recorded Dates"}
+            Date: {unlockRequestsOnly ? "All Pending Unlocks" : activeDate ? formatOperatingDateDisplay(activeDate) : "All Recorded Dates"}
           </div>
         </Card>
         <Card className="p-4 bg-amber-50/50 dark:bg-amber-950/20 border-amber-200/50 dark:border-amber-800/40">
@@ -185,15 +207,29 @@ export default function DailyCallReportsPage() {
           <div className="text-2xl font-bold mt-1 text-amber-900 dark:text-amber-200">{submittedCount}</div>
           <div className="text-xs text-amber-700/80 dark:text-amber-400/80 mt-1">Calls Locked 🔒</div>
         </Card>
+        <Card
+          onClick={() => setUnlockRequestsOnly((prev) => !prev)}
+          className={`p-4 cursor-pointer transition-all border ${
+            unlockRequestsOnly
+              ? "bg-indigo-100/80 dark:bg-indigo-950/50 border-indigo-500 ring-1 ring-indigo-500"
+              : "bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-200/60 dark:border-indigo-800/40 hover:border-indigo-400"
+          }`}
+        >
+          <div className="text-xs font-semibold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">Unlock Requests</div>
+          <div className="text-2xl font-bold mt-1 text-indigo-900 dark:text-indigo-200">{pendingUnlockCount}</div>
+          <div className="text-xs text-indigo-700/80 dark:text-indigo-400/80 mt-1">
+            {unlockRequestsOnly ? "Showing pending unlocks" : "Click to review 🔓"}
+          </div>
+        </Card>
         <Card className="p-4 bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/50 dark:border-emerald-800/40">
           <div className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">Approved Reports</div>
           <div className="text-2xl font-bold mt-1 text-emerald-900 dark:text-emerald-200">{approvedCount}</div>
           <div className="text-xs text-emerald-700/80 dark:text-emerald-400/80 mt-1">Finalized Ledger</div>
         </Card>
         <Card className="p-4 bg-blue-50/50 dark:bg-blue-950/20 border-blue-200/50 dark:border-blue-800/40">
-          <div className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wider">Reopened (Corrections)</div>
+          <div className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wider">Reopened (Unlocked)</div>
           <div className="text-2xl font-bold mt-1 text-blue-900 dark:text-blue-200">{reopenedCount}</div>
-          <div className="text-xs text-blue-700/80 dark:text-blue-400/80 mt-1">Calls Unlocked 🔓</div>
+          <div className="text-xs text-blue-700/80 dark:text-blue-400/80 mt-1">Ready for Resend 🔓</div>
         </Card>
         <Card className="p-4 bg-card border-border/80">
           <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Calls / Order Booking</div>
@@ -214,6 +250,7 @@ export default function DailyCallReportsPage() {
                 aria-label="Filter DCR by date"
                 value={activeDate}
                 onChange={(e) => {
+                  setUnlockRequestsOnly(false);
                   setShowAllDates(false);
                   if (e.target.value) {
                     setOperatingDate(e.target.value);
@@ -224,7 +261,10 @@ export default function DailyCallReportsPage() {
               {activeDate ? (
                 <button
                   type="button"
-                  onClick={() => setShowAllDates(true)}
+                  onClick={() => {
+                    setUnlockRequestsOnly(false);
+                    setShowAllDates(true);
+                  }}
                   className="text-xs text-muted-foreground hover:text-foreground underline ml-1 cursor-pointer"
                 >
                   Show All Dates
@@ -233,6 +273,7 @@ export default function DailyCallReportsPage() {
                 <button
                   type="button"
                   onClick={() => {
+                    setUnlockRequestsOnly(false);
                     setShowAllDates(false);
                     setOperatingDate(getLocalTodayDate());
                   }}
@@ -244,13 +285,16 @@ export default function DailyCallReportsPage() {
             </div>
 
             {/* Status Filter */}
-            <div className="flex items-center gap-1 border border-border rounded-md p-0.5 bg-muted/40">
-              {(["ALL", "SUBMITTED", "APPROVED", "REOPENED", "DRAFT"] as const).map((st) => (
+            <div className="flex flex-wrap items-center gap-1 border border-border rounded-md p-0.5 bg-muted/40">
+              {(["ALL", "SUBMITTED", "APPROVED", "REJECTED", "REOPENED", "DRAFT"] as const).map((st) => (
                 <button
                   key={st}
-                  onClick={() => setStatusFilter(st)}
-                  className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
-                    statusFilter === st
+                  onClick={() => {
+                    setUnlockRequestsOnly(false);
+                    setStatusFilter(st);
+                  }}
+                  className={`px-2.5 py-1 text-xs font-medium rounded transition-colors cursor-pointer ${
+                    !unlockRequestsOnly && statusFilter === st
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
@@ -258,18 +302,41 @@ export default function DailyCallReportsPage() {
                   {st}
                 </button>
               ))}
+              <button
+                onClick={() => setUnlockRequestsOnly((prev) => !prev)}
+                className={`px-2.5 py-1 text-xs font-semibold rounded transition-colors cursor-pointer flex items-center gap-1 ${
+                  unlockRequestsOnly
+                    ? "bg-indigo-600 text-white shadow-sm"
+                    : "text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100/70 dark:hover:bg-indigo-950/50"
+                }`}
+              >
+                <Unlock className="h-3 w-3" />
+                UNLOCK REQUESTS ({pendingUnlockCount})
+              </button>
             </div>
           </div>
 
-          {/* Search Box */}
-          <div className="relative w-full md:w-72">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search MR, employee code, territory..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 h-9"
-            />
+          {/* Search Box & Refresh */}
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <div className="relative flex-1 md:w-72">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search MR, employee code, territory..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 h-9"
+              />
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchDcrs()}
+              disabled={isLoading}
+              className="h-9 gap-1.5 shrink-0"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
           </div>
         </div>
       </Card>
@@ -358,7 +425,27 @@ export default function DailyCallReportsPage() {
                           {dcr.totalExecutedCalls} / {dcr.totalPlannedCalls}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {dcr.totalWorkDurationMinutes ? `${Math.round(dcr.totalWorkDurationMinutes / 60)}h ${dcr.totalWorkDurationMinutes % 60}m` : "—"}
+                          {dcr.workStartTime || dcr.workEndTime ? (
+                            <span>
+                              {dcr.workStartTime
+                                ? new Date(dcr.workStartTime).toLocaleTimeString("en-IN", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })
+                                : "--:--"}{" "}
+                              –{" "}
+                              {dcr.workEndTime
+                                ? new Date(dcr.workEndTime).toLocaleTimeString("en-IN", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })
+                                : "--:--"}
+                            </span>
+                          ) : dcr.totalWorkDurationMinutes ? (
+                            `${Math.floor(dcr.totalWorkDurationMinutes / 60)}h ${dcr.totalWorkDurationMinutes % 60}m`
+                          ) : (
+                            "—"
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -377,17 +464,46 @@ export default function DailyCallReportsPage() {
                           ₹{Number(dcr.totalCollectionsAmount || 0).toLocaleString("en-IN")} coll.
                         </div>
                       </TableCell>
-                      <TableCell>{getStatusBadge(dcr.status)}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1 items-start">
+                          {getStatusBadge(dcr.status)}
+                          {dcr.unlockRequestStatus === "PENDING" && (
+                            <span
+                              title={dcr.unlockRequestReason || "MR requested unlock"}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-100 text-indigo-800 border border-indigo-300 dark:bg-indigo-950/60 dark:text-indigo-200 dark:border-indigo-700"
+                            >
+                              <Unlock className="h-3 w-3" />
+                              Unlock Requested
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleOpenDetails(dcr)}
-                          className="h-8 gap-1.5"
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                          <span>Review</span>
-                        </Button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          {dcr.unlockRequestStatus === "PENDING" && (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={async () => {
+                                await handleOpenDetails(dcr);
+                                setActionType("APPROVE_UNLOCK");
+                              }}
+                              className="h-8 gap-1 bg-indigo-600 hover:bg-indigo-700 text-white"
+                            >
+                              <Unlock className="h-3.5 w-3.5" />
+                              <span>Accept Unlock</span>
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleOpenDetails(dcr)}
+                            className="h-8 gap-1.5"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                            <span>Review</span>
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -406,7 +522,7 @@ export default function DailyCallReportsPage() {
         maxWidth="2xl"
       >
         {selectedDcr && (
-          <div className="space-y-6">
+          <div className="space-y-5 max-h-[78vh] overflow-y-auto pr-1">
             <div className="flex items-start justify-between border-b pb-4">
               <div>
                 <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
@@ -426,13 +542,69 @@ export default function DailyCallReportsPage() {
               </div>
             </div>
 
-            {/* Locked Notice Banner */}
+            {/* Pending Unlock Request Banner */}
+            {selectedDcr.unlockRequestStatus === "PENDING" && (
+              <div className="p-3.5 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-300 dark:border-indigo-700 rounded-lg space-y-2.5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-2 text-xs text-indigo-900 dark:text-indigo-200">
+                    <Unlock className="h-4 w-4 shrink-0 text-indigo-600 dark:text-indigo-400 mt-0.5" />
+                    <div>
+                      <div className="font-bold">Unlock Request Pending Review</div>
+                      <p className="mt-0.5 text-indigo-800 dark:text-indigo-300">
+                        <strong>MR Reason:</strong> {selectedDcr.unlockRequestReason || "Requested unlock to update and resend DCR."}
+                      </p>
+                      {selectedDcr.unlockRequestedAt && (
+                        <p className="text-[11px] text-indigo-700/80 dark:text-indigo-400/80 mt-0.5">
+                          Requested at {new Date(selectedDcr.unlockRequestedAt).toLocaleString("en-IN")}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Button
+                      size="sm"
+                      variant="default"
+                      className="h-8 bg-indigo-600 hover:bg-indigo-700 text-white"
+                      onClick={() => {
+                        setActionComments("");
+                        setActionType("APPROVE_UNLOCK");
+                      }}
+                    >
+                      <CheckCircle className="h-3.5 w-3.5 mr-1" /> Accept Unlock
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 border-rose-300 text-rose-600 hover:bg-rose-50 dark:border-rose-800 dark:hover:bg-rose-950/40"
+                      onClick={() => {
+                        setActionComments("");
+                        setActionType("REJECT_UNLOCK");
+                      }}
+                    >
+                      <XCircle className="h-3.5 w-3.5 mr-1" /> Decline
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Locked / Rejected / Reopened Notice Banners */}
             {(selectedDcr.status === "SUBMITTED" || selectedDcr.status === "APPROVED") && (
               <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md flex items-center gap-2 text-xs text-amber-800 dark:text-amber-300">
                 <Lock className="h-4 w-4 shrink-0 text-amber-600" />
                 <span>
                   <strong>Calls Locked:</strong> Visits logged for this date are locked against edits and new visit creation. If the representative made an error, you can authorize a reopening below.
                 </span>
+              </div>
+            )}
+
+            {selectedDcr.status === "REJECTED" && (
+              <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-md flex items-start gap-2 text-xs text-red-800 dark:text-red-300">
+                <AlertCircle className="h-4 w-4 shrink-0 text-red-600 mt-0.5" />
+                <div>
+                  <strong>Report Rejected — Unlocked for MR Resubmission:</strong>{" "}
+                  {selectedDcr.reviewComments || "Manager requested corrections."} The representative can update calls and resend this DCR from the mobile app.
+                </div>
               </div>
             )}
 
@@ -444,6 +616,55 @@ export default function DailyCallReportsPage() {
                 </span>
               </div>
             )}
+
+            {/* Work Shift Start / End Timer Banner */}
+            <div className="grid grid-cols-3 gap-3 p-3 rounded-lg border bg-slate-50/80 dark:bg-slate-900/40">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-emerald-600 shrink-0" />
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Start Time
+                  </div>
+                  <div className="text-sm font-bold text-foreground">
+                    {selectedDcr.workStartTime
+                      ? new Date(selectedDcr.workStartTime).toLocaleTimeString("en-IN", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : "—"}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-rose-600 shrink-0" />
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    End Time
+                  </div>
+                  <div className="text-sm font-bold text-foreground">
+                    {selectedDcr.workEndTime
+                      ? new Date(selectedDcr.workEndTime).toLocaleTimeString("en-IN", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : "—"}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-primary shrink-0" />
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Total Duration
+                  </div>
+                  <div className="text-sm font-bold text-foreground">
+                    {selectedDcr.totalWorkDurationMinutes
+                      ? `${Math.floor(selectedDcr.totalWorkDurationMinutes / 60)}h ${selectedDcr.totalWorkDurationMinutes % 60}m`
+                      : "—"}
+                  </div>
+                </div>
+              </div>
+            </div>
 
             {/* Quick Metrics Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -457,26 +678,144 @@ export default function DailyCallReportsPage() {
               </div>
               <div className="p-3 bg-muted/40 rounded-lg text-center border">
                 <div className="text-2xl font-black text-foreground">{selectedDcr.totalPharmaciesVisited}</div>
-                <div className="text-[11px] font-semibold text-muted-foreground uppercase mt-1">Pharmacies</div>
+                <div className="text-[11px] font-semibold text-muted-foreground uppercase mt-1">Chemists</div>
               </div>
               <div className="p-3 bg-muted/40 rounded-lg text-center border">
                 <div className="text-2xl font-black text-primary">₹{Number(selectedDcr.totalOrdersAmount || 0).toLocaleString("en-IN")}</div>
-                <div className="text-[11px] font-semibold text-muted-foreground uppercase mt-1">Orders Booked</div>
+                <div className="text-[11px] font-semibold text-muted-foreground uppercase mt-1">
+                  Orders Booked ({selectedDcr.ordersBooked?.length || 0})
+                </div>
               </div>
             </div>
 
             {/* Submission Notes */}
             {selectedDcr.submissionNotes && (
               <div className="p-3 bg-card border rounded-md text-xs">
-                <div className="font-semibold text-foreground mb-1">Representative Activity Notes:</div>
+                <div className="font-semibold text-foreground mb-1 flex items-center gap-1.5">
+                  <MessageSquare className="h-3.5 w-3.5 text-primary" />
+                  Representative Activity Summary & Feedback:
+                </div>
                 <p className="text-muted-foreground italic">“{selectedDcr.submissionNotes}”</p>
               </div>
             )}
 
+            {/* Visual Aids Shown & Products Discussed */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="p-3 rounded-lg border bg-card/60 space-y-2">
+                <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <Presentation className="h-3.5 w-3.5 text-violet-600" />
+                  Visual Aids Shown ({selectedDcr.visualAidsShown?.length || 0})
+                </div>
+                {selectedDcr.visualAidsShown && selectedDcr.visualAidsShown.length > 0 ? (
+                  <div className="space-y-1.5">
+                    {selectedDcr.visualAidsShown.map((va) => (
+                      <div
+                        key={va.sessionId}
+                        className="text-xs p-2 rounded bg-violet-50/70 dark:bg-violet-950/20 border border-violet-200/70 dark:border-violet-800/40 flex items-center justify-between gap-2"
+                      >
+                        <div>
+                          <div className="font-semibold text-foreground">{va.title}</div>
+                          <div className="text-[11px] text-muted-foreground">
+                            {[va.productName, va.customerName, va.type].filter(Boolean).join(" • ")}
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="text-[10px] shrink-0">
+                          {va.durationSeconds > 0
+                            ? `${Math.max(1, Math.round(va.durationSeconds / 60))}m`
+                            : "Shown"}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-xs text-muted-foreground italic">No visual aids recorded for this day.</div>
+                )}
+              </div>
+
+              <div className="p-3 rounded-lg border bg-card/60 space-y-2">
+                <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <Pill className="h-3.5 w-3.5 text-blue-600" />
+                  Products Discussed ({selectedDcr.productsDiscussed?.length || 0})
+                </div>
+                {selectedDcr.productsDiscussed && selectedDcr.productsDiscussed.length > 0 ? (
+                  <div className="space-y-1.5">
+                    {selectedDcr.productsDiscussed.map((prod) => (
+                      <div
+                        key={prod.productId}
+                        className="text-xs p-2 rounded bg-blue-50/70 dark:bg-blue-950/20 border border-blue-200/70 dark:border-blue-800/40"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-semibold text-foreground">{prod.brandName}</span>
+                          <span className="text-[11px] text-muted-foreground">
+                            {prod.visitCount} call{prod.visitCount === 1 ? "" : "s"}
+                            {prod.samplesQty > 0 ? ` • ${prod.samplesQty} samples` : ""}
+                          </span>
+                        </div>
+                        {prod.feedbacks && prod.feedbacks.length > 0 && (
+                          <div className="text-[11px] text-muted-foreground italic mt-1">
+                            {prod.feedbacks.join(" | ")}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-xs text-muted-foreground italic">No products detailed for this day.</div>
+                )}
+              </div>
+            </div>
+
+            {/* Orders Booked Breakdown */}
+            <div className="space-y-2">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <ShoppingBag className="h-3.5 w-3.5 text-primary" />
+                Orders Booked ({selectedDcr.ordersBooked?.length || 0})
+              </h3>
+              {selectedDcr.ordersBooked && selectedDcr.ordersBooked.length > 0 ? (
+                <div className="space-y-2">
+                  {selectedDcr.ordersBooked.map((ord) => (
+                    <div
+                      key={ord.id}
+                      className="p-3 rounded-lg border bg-card/60 flex items-start justify-between gap-3 text-xs"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono font-bold text-foreground">{ord.orderNumber}</span>
+                          <span className="font-semibold text-foreground">• {ord.customerName}</span>
+                          <Badge variant="outline" className="text-[10px]">
+                            {ord.status}
+                          </Badge>
+                        </div>
+                        {ord.items && ord.items.length > 0 && (
+                          <div className="text-[11px] text-muted-foreground">
+                            {ord.items.map((it) => `${it.productName} × ${it.quantity}`).join(", ")}
+                          </div>
+                        )}
+                        <div className="text-[11px] text-muted-foreground">
+                          Booked at{" "}
+                          {new Date(ord.createdAt).toLocaleTimeString("en-IN", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </div>
+                      </div>
+                      <div className="text-sm font-bold text-primary shrink-0">
+                        ₹{Number(ord.totalAmount || 0).toLocaleString("en-IN")}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-xs text-muted-foreground italic py-1">
+                  No orders booked on this date.
+                </div>
+              )}
+            </div>
+
             {/* Executed Visits Breakdown */}
             <div className="space-y-2">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
-                Executed Customer Calls ({selectedDcr.visits?.length || 0})
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Executed Customer Calls, Timings & Feedbacks ({selectedDcr.visits?.length || 0})
               </h3>
               <div className="space-y-2">
                 {selectedDcr.visits && selectedDcr.visits.length > 0 ? (
@@ -485,25 +824,84 @@ export default function DailyCallReportsPage() {
                     return (
                       <div
                         key={v.id || idx}
-                        className="p-3 rounded-lg border bg-card/60 flex items-start justify-between text-xs"
+                        className="p-3 rounded-lg border bg-card/60 flex items-start justify-between gap-3 text-xs"
                       >
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
+                        <div className="space-y-1.5 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-bold text-foreground text-sm">{custName}</span>
                             <Badge variant="outline">{v.customerType}</Badge>
                             <Badge variant={v.verificationStatus === "VERIFIED" ? "success" : "secondary"}>
                               {v.verificationStatus}
                             </Badge>
                           </div>
-                          {v.feedbackNotes && (
-                            <p className="text-muted-foreground italic">“{v.feedbackNotes}”</p>
-                          )}
-                          <div className="text-muted-foreground text-[11px]">
-                            {v.actualStartTime && (
-                              <span>Start: {new Date(v.actualStartTime).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</span>
-                            )}
-                            {v.durationSeconds && <span> • Duration: {Math.round(v.durationSeconds / 60)} mins</span>}
+
+                          {/* Call Start & End Time */}
+                          <div className="text-muted-foreground text-[11px] flex items-center gap-2 flex-wrap">
+                            <span>
+                              Start:{" "}
+                              <strong>
+                                {v.actualStartTime
+                                  ? new Date(v.actualStartTime).toLocaleTimeString("en-IN", {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })
+                                  : "—"}
+                              </strong>
+                            </span>
+                            <span>•</span>
+                            <span>
+                              End:{" "}
+                              <strong>
+                                {v.actualEndTime
+                                  ? new Date(v.actualEndTime).toLocaleTimeString("en-IN", {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })
+                                  : "—"}
+                              </strong>
+                            </span>
+                            {v.durationSeconds ? (
+                              <>
+                                <span>•</span>
+                                <span>Duration: {Math.max(1, Math.round(v.durationSeconds / 60))} mins</span>
+                              </>
+                            ) : null}
                           </div>
+
+                          {/* Products & Visual Aids on this Visit */}
+                          {v.visitProducts && v.visitProducts.length > 0 && (
+                            <div className="flex flex-wrap gap-1 pt-0.5">
+                              {v.visitProducts.map((vp: any) => (
+                                <span
+                                  key={vp.id || vp.productId}
+                                  className="px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-800/50 text-[11px] text-blue-700 dark:text-blue-300 font-medium"
+                                >
+                                  {vp.product?.brandName || "Product"}
+                                  {vp.samplesQty > 0 ? ` (${vp.samplesQty} samples)` : ""}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          {v.visualAidSessions && v.visualAidSessions.length > 0 && (
+                            <div className="flex flex-wrap gap-1 pt-0.5">
+                              {v.visualAidSessions.map((vas: any) => (
+                                <span
+                                  key={vas.id}
+                                  className="px-2 py-0.5 rounded bg-violet-50 dark:bg-violet-950/30 border border-violet-200/80 dark:border-violet-800/50 text-[11px] text-violet-700 dark:text-violet-300 font-medium"
+                                >
+                                  Visual Aid: {vas.visualAid?.title || "Presentation"}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Feedback */}
+                          {v.feedbackNotes && (
+                            <p className="text-foreground/90 bg-muted/40 rounded px-2 py-1 italic">
+                              Feedback: “{v.feedbackNotes}”
+                            </p>
+                          )}
                         </div>
                         <Badge variant={v.status === "COMPLETED" ? "success" : "secondary"}>
                           {v.status}
@@ -552,6 +950,8 @@ export default function DailyCallReportsPage() {
                   {actionType === "APPROVE" && "Approve Daily Call Report"}
                   {actionType === "REJECT" && "Reject Daily Call Report with Comments"}
                   {actionType === "REOPEN" && "Authorize Reopening of Locked Daily Call Report"}
+                  {actionType === "APPROVE_UNLOCK" && "Accept Unlock Request & Reopen DCR"}
+                  {actionType === "REJECT_UNLOCK" && "Decline Unlock Request"}
                 </h4>
                 <p className="text-xs text-muted-foreground">
                   {actionType === "APPROVE" &&
@@ -560,6 +960,10 @@ export default function DailyCallReportsPage() {
                     "Specify feedback so the representative can make necessary adjustments."}
                   {actionType === "REOPEN" &&
                     "Specify the authorization reason. This will unlock all visits on this date so the representative can correct or add calls."}
+                  {actionType === "APPROVE_UNLOCK" &&
+                    "Accepting this unlock request will reopen the DCR, unlock visits for editing, and allow the representative to resend the DCR."}
+                  {actionType === "REJECT_UNLOCK" &&
+                    "Declining will keep this DCR locked and notify the representative with your remarks."}
                 </p>
                 <textarea
                   className="w-full text-xs p-2.5 rounded-md border border-input bg-background min-h-[70px]"
@@ -568,6 +972,10 @@ export default function DailyCallReportsPage() {
                       ? "Optional manager approval remarks..."
                       : actionType === "REJECT"
                       ? "Explain reason for rejection..."
+                      : actionType === "APPROVE_UNLOCK"
+                      ? "Optional note to MR (e.g., Unlocked — please update the missed visit and resend)..."
+                      : actionType === "REJECT_UNLOCK"
+                      ? "Optional reason for declining unlock request..."
                       : "Mandatory reopen reason (e.g., MR missed logging evening doctor visit)..."
                   }
                   value={actionComments}
@@ -587,9 +995,9 @@ export default function DailyCallReportsPage() {
                   </Button>
                   <Button
                     variant={
-                      actionType === "APPROVE"
+                      actionType === "APPROVE" || actionType === "APPROVE_UNLOCK"
                         ? "default"
-                        : actionType === "REJECT"
+                        : actionType === "REJECT" || actionType === "REJECT_UNLOCK"
                         ? "destructive"
                         : "outline"
                     }
@@ -597,12 +1005,18 @@ export default function DailyCallReportsPage() {
                     onClick={handleExecuteAction}
                     disabled={isSubmittingAction}
                   >
-                    {isSubmittingAction ? "Processing..." : `Confirm ${actionType}`}
+                    {isSubmittingAction
+                      ? "Processing..."
+                      : actionType === "APPROVE_UNLOCK"
+                      ? "Confirm Accept Unlock"
+                      : actionType === "REJECT_UNLOCK"
+                      ? "Confirm Decline Unlock"
+                      : `Confirm ${actionType}`}
                   </Button>
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-between pt-4 border-t">
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-4 border-t">
                 <div className="text-xs text-muted-foreground">
                   {selectedDcr.status === "APPROVED" && (
                     <span className="flex items-center gap-1 text-emerald-600 font-medium">
@@ -615,7 +1029,27 @@ export default function DailyCallReportsPage() {
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  {selectedDcr.unlockRequestStatus === "PENDING" && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setActionType("REJECT_UNLOCK")}
+                        className="border-rose-300 text-rose-600 hover:bg-rose-50"
+                      >
+                        <XCircle className="h-4 w-4 mr-1.5" /> Decline Unlock
+                      </Button>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => setActionType("APPROVE_UNLOCK")}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                      >
+                        <Unlock className="h-4 w-4 mr-1.5" /> Accept Unlock
+                      </Button>
+                    </>
+                  )}
                   {selectedDcr.status === "SUBMITTED" && (
                     <>
                       <Button
@@ -634,16 +1068,17 @@ export default function DailyCallReportsPage() {
                       </Button>
                     </>
                   )}
-                  {selectedDcr.status === "APPROVED" && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setActionType("REOPEN")}
-                      className="border-blue-500 text-blue-600 hover:bg-blue-50"
-                    >
-                      <RotateCcw className="h-4 w-4 mr-1.5" /> Authorize Reopening (Unlock Calls 🔓)
-                    </Button>
-                  )}
+                  {(selectedDcr.status === "APPROVED" || selectedDcr.status === "SUBMITTED") &&
+                    selectedDcr.unlockRequestStatus !== "PENDING" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setActionType("REOPEN")}
+                        className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                      >
+                        <RotateCcw className="h-4 w-4 mr-1.5" /> Authorize Reopening (Unlock Calls 🔓)
+                      </Button>
+                    )}
                 </div>
               </div>
             )}

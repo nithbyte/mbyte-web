@@ -258,6 +258,10 @@ export default function DistributorsPage() {
   const handleResetFilters = () => {
     setSearch("");
     setTerritoryId("ALL");
+    if (typeof window !== "undefined" && window.location.search.includes("search=")) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+    setTimeout(() => refetch(), 0);
   };
 
   // History & live stocks queries for selected distributor

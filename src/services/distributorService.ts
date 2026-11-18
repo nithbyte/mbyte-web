@@ -17,6 +17,7 @@ export interface AnalyzedSecondarySalesItem {
   matchedProductName: string | null;
   matchedProductSku: string | null;
   matchConfidence: number;
+  ambiguous?: boolean;
   previousStock: number;
   openingQty: number | null;
   purchaseQty: number | null;
@@ -30,6 +31,7 @@ export interface AnalyzedSecondarySalesItem {
   batchNumber?: string;
   expiryDate?: string;
   salesValue?: number | null;
+  rowWarning?: string;
 }
 
 export interface SecondarySalesAnalysisResponse {
@@ -43,6 +45,8 @@ export interface SecondarySalesAnalysisResponse {
   fileType: "EXCEL" | "CSV" | "PDF";
   reportPeriod?: string;
   detectedColumns: string[];
+  warnings?: string[];
+  existingStocks?: Record<string, number>;
   summary: {
     totalRows: number;
     matchedCount: number;
@@ -55,6 +59,8 @@ export interface SecondarySalesAnalysisResponse {
   items: AnalyzedSecondarySalesItem[];
   autoApplied?: boolean;
   appliedCount?: number;
+  appliedRowIds?: string[];
+  skippedLowConfidenceCount?: number;
 }
 
 export interface DistributorStockItem {
@@ -390,6 +396,7 @@ export const distributorService = {
       `/distributors/${distributorId}/secondary-sales/analyze${autoApply ? "?autoApply=true" : ""}`,
       formData,
       {
+        timeout: 60000,
         headers: {
           "Content-Type": "multipart/form-data",
         },
@@ -419,12 +426,14 @@ export const distributorService = {
     distributorId: string;
     distributorName: string;
     updatedCount: number;
+    skippedProductIds?: string[];
     syncedAt: string;
     stocks: any[];
   }> {
     const res = await apiClient.post<any>(
       `/distributors/${distributorId}/secondary-sales/apply`,
-      payload
+      payload,
+      { timeout: 60000 }
     );
     return res;
   },

@@ -114,6 +114,22 @@ export function NotificationDropdown({
       router.push("/collections");
     } else if (categoryLower === "product") {
       router.push("/products");
+    } else if (
+      categoryLower === "dcr" ||
+      (notif.entityType || "").toUpperCase() === "DCR" ||
+      (notif.entityType || "").toUpperCase() === "DCR_UNLOCK_REQUEST" ||
+      titleLower.includes("dcr")
+    ) {
+      router.push("/dcr");
+    } else if (
+      categoryLower === "attendance" ||
+      (notif.entityType || "").toUpperCase() === "LEAVE_REQUEST" ||
+      titleLower.includes("leave")
+    ) {
+      const isLeave =
+        (notif.entityType || "").toUpperCase() === "LEAVE_REQUEST" ||
+        titleLower.includes("leave");
+      router.push(isLeave ? "/attendance?tab=leaves" : "/attendance");
     }
   };
 

@@ -88,6 +88,7 @@ export function useAnalyzeSecondarySales() {
         queryClient.invalidateQueries({ queryKey: ["presence"] });
         queryClient.invalidateQueries({ queryKey: ["products"] });
         queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+        queryClient.invalidateQueries({ queryKey: ["reports"] });
       }
     },
   });
@@ -109,6 +110,7 @@ export function useApplySecondarySales() {
       queryClient.invalidateQueries({ queryKey: ["presence"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["reports"] });
     },
   });
 }

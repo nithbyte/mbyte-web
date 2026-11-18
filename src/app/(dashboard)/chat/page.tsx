@@ -408,12 +408,18 @@ export default function ChatPage() {
         localStream={callState.localStream}
         remoteStream={callState.remoteStream}
         currentUserId={currentUserId}
+        hasRealMic={callState.hasRealMic}
+        micError={callState.micError}
+        micLevel={callState.micLevel}
+        audioInputDevices={callState.audioInputDevices}
+        selectedAudioDeviceId={callState.selectedAudioDeviceId}
         onAccept={callState.acceptCall}
         onReject={callState.rejectCall}
         onEndCall={callState.endCall}
         onToggleMute={callState.toggleMute}
         onToggleVideo={callState.toggleVideo}
         onToggleScreenShare={callState.toggleScreenShare}
+        onSwitchMicrophone={callState.switchMicrophone}
       />
 
       {/* LEFT PANEL: Conversation Directory */}

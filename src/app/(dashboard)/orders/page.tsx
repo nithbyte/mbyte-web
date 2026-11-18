@@ -30,6 +30,8 @@ import {
   useOrderDetail,
   useMRList,
   useIsMounted,
+  useUpdateOrderStatus,
+  useCancelOrder,
 } from "@/hooks";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
@@ -44,8 +46,35 @@ import {
   Calendar,
   Layers,
   TrendingUp,
+  CheckCircle2,
+  Truck,
+  PackageCheck,
+  XCircle,
+  Loader2,
+  AlertTriangle,
+  RefreshCw,
+  X,
 } from "lucide-react";
 import { OrderStatus } from "@/types";
+
+function getRecentDateOptions() {
+  const opts: Array<{ value: string; label: string }> = [];
+  const now = new Date();
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - i);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const val = `${yyyy}-${mm}-${dd}`;
+    const nice = d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+    opts.push({
+      value: val,
+      label: i === 0 ? `Today (${nice})` : i === 1 ? `Yesterday (${nice})` : nice,
+    });
+  }
+  return opts;
+}
 
 export default function OrdersPage() {
   const isMounted = useIsMounted();
@@ -59,15 +88,83 @@ export default function OrdersPage() {
     if (q) setSearchQuery(q);
   }, []);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [statusRemarks, setStatusRemarks] = useState<string>("");
+  const [busyOrderId, setBusyOrderId] = useState<string | null>(null);
+  const [actionBanner, setActionBanner] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  const { data: kpis, isLoading: kpisLoading } = useOrderKPIs({
+  const updateOrderStatusMutation = useUpdateOrderStatus();
+  const cancelOrderMutation = useCancelOrder();
+
+  const handleTransitionStatus = async (orderId: string, nextStatus: OrderStatus, remarks?: string) => {
+    setBusyOrderId(orderId);
+    setActionBanner(null);
+    try {
+      const updated = await updateOrderStatusMutation.mutateAsync({
+        id: orderId,
+        status: nextStatus,
+        remarks,
+      });
+      setStatusRemarks("");
+      setActionBanner({
+        type: "success",
+        text: `Order ${updated.orderNumber} updated to ${nextStatus}. MR mobile app notified.`,
+      });
+    } catch (err: any) {
+      setActionBanner({
+        type: "error",
+        text: err?.message || "Failed to update order status.",
+      });
+    } finally {
+      setBusyOrderId(null);
+    }
+  };
+
+  const handleCancelOrder = async (orderId: string, reason?: string) => {
+    setBusyOrderId(orderId);
+    setActionBanner(null);
+    try {
+      const updated = await cancelOrderMutation.mutateAsync({
+        id: orderId,
+        reason: reason?.trim() || "Cancelled by administrator",
+      });
+      setStatusRemarks("");
+      setActionBanner({
+        type: "success",
+        text: `Order ${updated.orderNumber} has been cancelled.`,
+      });
+    } catch (err: any) {
+      setActionBanner({
+        type: "error",
+        text: err?.message || "Failed to cancel order.",
+      });
+    } finally {
+      setBusyOrderId(null);
+    }
+  };
+
+  const recentDates = React.useMemo(() => getRecentDateOptions(), []);
+  const currentMonthLabel = React.useMemo(
+    () => new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" }),
+    []
+  );
+  const todayShortLabel = React.useMemo(
+    () => new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short" }),
+    []
+  );
+
+  const { data: kpis, isLoading: kpisLoading, refetch: refetchKpis } = useOrderKPIs({
     mrId: mrFilter !== "ALL" ? mrFilter : undefined,
   });
 
-  const { data: trendData, isLoading: trendLoading } = useOrderTrend();
+  const { data: trendData, isLoading: trendLoading, refetch: refetchTrend } = useOrderTrend();
   const { data: mrs } = useMRList();
 
-  const { data: orders, isLoading: ordersLoading } = useOrders({
+  const {
+    data: orders,
+    isLoading: ordersLoading,
+    isFetching: ordersFetching,
+    refetch: refetchOrders,
+  } = useOrders({
     status: statusFilter,
     mrId: mrFilter,
     date: dateFilter || undefined,
@@ -76,11 +173,21 @@ export default function OrdersPage() {
 
   const { data: activeOrder, isLoading: orderDetailLoading } = useOrderDetail(selectedOrderId);
 
+  const handleRefresh = () => {
+    refetchOrders();
+    refetchKpis();
+    refetchTrend();
+  };
+
   const resetFilters = () => {
     setStatusFilter("ALL");
     setMrFilter("ALL");
     setDateFilter("");
     setSearchQuery("");
+    if (typeof window !== "undefined" && window.location.search.includes("search=")) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+    setTimeout(() => handleRefresh(), 0);
   };
 
   const getStatusBadgeVariant = (status: OrderStatus): "default" | "secondary" | "destructive" | "outline" | "success" | "warning" | "info" => {
@@ -127,6 +234,33 @@ export default function OrdersPage() {
         }
       />
 
+      {/* Action Feedback Banner */}
+      {actionBanner && (
+        <div
+          className={`flex items-center justify-between gap-2 rounded-xl border px-4 py-2.5 text-xs font-semibold ${
+            actionBanner.type === "success"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300"
+              : "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {actionBanner.type === "success" ? (
+              <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+            ) : (
+              <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0" />
+            )}
+            <span>{actionBanner.text}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setActionBanner(null)}
+            className="text-[11px] opacity-70 hover:opacity-100 cursor-pointer"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Today's Orders */}
@@ -151,7 +285,7 @@ export default function OrdersPage() {
                   <span className="font-bold text-sky-600 dark:text-sky-400">
                     {kpis?.todayCount || 0} orders
                   </span>
-                  <span>booked on Oct 08</span>
+                  <span>booked on {todayShortLabel}</span>
                 </div>
               </div>
             )}
@@ -247,7 +381,7 @@ export default function OrdersPage() {
             <div>
               <CardTitle className="text-sm font-bold flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-sky-600" />
-                Daily Order Booking Value Trend (October 2026)
+                Daily Order Booking Value Trend ({currentMonthLabel})
               </CardTitle>
               <CardDescription className="text-xs">
                 Value and volume of pharmaceutical stock orders booked day-by-day
@@ -306,11 +440,21 @@ export default function OrdersPage() {
               <div className="relative min-w-[220px] flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input
-                  placeholder="Search order #, customer, or MR..."
+                  placeholder="Search order #, customer, product, or MR..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 h-9 text-xs"
+                  className="pl-9 pr-8 h-9 text-xs"
                 />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    aria-label="Clear search"
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
 
               {/* Status Filter */}
@@ -354,26 +498,39 @@ export default function OrdersPage() {
                 className="h-9 rounded-md border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 shadow-xs dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300"
               >
                 <option value="">All Dates</option>
-                <option value="2026-10-08">Today (08 Oct 2026)</option>
-                <option value="2026-10-07">07 Oct 2026</option>
-                <option value="2026-10-06">06 Oct 2026</option>
-                <option value="2026-10-05">05 Oct 2026</option>
-                <option value="2026-10-04">04 Oct 2026</option>
+                {recentDates.map((d) => (
+                  <option key={d.value} value={d.value}>
+                    {d.label}
+                  </option>
+                ))}
               </select>
             </div>
 
-            {/* Reset */}
-            {(statusFilter !== "ALL" || mrFilter !== "ALL" || dateFilter || searchQuery) && (
+            <div className="flex items-center gap-1.5">
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                onClick={resetFilters}
-                className="text-xs text-rose-600 hover:text-rose-700 gap-1.5 h-9"
+                onClick={handleRefresh}
+                disabled={ordersFetching}
+                className="text-xs gap-1.5 h-9"
               >
-                <RotateCcw className="h-3.5 w-3.5" />
-                Reset
+                <RefreshCw className={`h-3.5 w-3.5 ${ordersFetching ? "animate-spin" : ""}`} />
+                Refresh
               </Button>
-            )}
+
+              {/* Reset */}
+              {(statusFilter !== "ALL" || mrFilter !== "ALL" || dateFilter || searchQuery) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={resetFilters}
+                  className="text-xs text-rose-600 hover:text-rose-700 gap-1.5 h-9"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  Reset
+                </Button>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -464,15 +621,54 @@ export default function OrdersPage() {
                     </TableCell>
 
                     <TableCell className="text-center">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedOrderId(o.id)}
-                        className="h-8 px-2.5 text-xs text-sky-600 hover:text-sky-700 hover:bg-sky-50 dark:hover:bg-sky-950/60"
-                      >
-                        <Eye className="h-3.5 w-3.5 mr-1" />
-                        Details
-                      </Button>
+                      <div className="flex items-center justify-center gap-1.5">
+                        {o.status === "SUBMITTED" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={busyOrderId === o.id}
+                            onClick={() => handleTransitionStatus(o.id, "ACCEPTED")}
+                            className="h-8 px-2.5 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/50 gap-1"
+                          >
+                            {busyOrderId === o.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                            )}
+                            Accept
+                          </Button>
+                        )}
+                        {(o.status === "ACCEPTED" ||
+                          o.status === "PROCESSING" ||
+                          o.status === "DISPATCHED") && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={busyOrderId === o.id}
+                            onClick={() => handleTransitionStatus(o.id, "DELIVERED")}
+                            className="h-8 px-2.5 text-xs border-sky-300 text-sky-700 hover:bg-sky-50 dark:border-sky-800 dark:text-sky-300 dark:hover:bg-sky-950/50 gap-1"
+                          >
+                            {busyOrderId === o.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <PackageCheck className="h-3.5 w-3.5" />
+                            )}
+                            Mark Delivered
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setStatusRemarks("");
+                            setSelectedOrderId(o.id);
+                          }}
+                          className="h-8 px-2.5 text-xs text-sky-600 hover:text-sky-700 hover:bg-sky-50 dark:hover:bg-sky-950/60"
+                        >
+                          <Eye className="h-3.5 w-3.5 mr-1" />
+                          Details
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -630,6 +826,148 @@ export default function OrdersPage() {
                 {activeOrder.notes || activeOrder.remarks || "Standard delivery terms apply. Booked during scheduled field call."}
               </div>
             </div>
+
+            {/* Fulfillment Lifecycle Stepper */}
+            {activeOrder.status !== "CANCELLED" && (
+              <div className="rounded-lg border border-slate-200 dark:border-slate-800 p-3 bg-white dark:bg-slate-950">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2.5">
+                  Order Fulfillment Progress
+                </div>
+                <div className="flex items-center justify-between gap-1">
+                  {(["SUBMITTED", "ACCEPTED", "PROCESSING", "DISPATCHED", "DELIVERED"] as OrderStatus[]).map(
+                    (step, idx, arr) => {
+                      const orderIdx = arr.indexOf(activeOrder.status);
+                      const completed = orderIdx >= idx;
+                      const current = orderIdx === idx;
+                      return (
+                        <React.Fragment key={step}>
+                          <div className="flex flex-col items-center gap-1 min-w-0">
+                            <div
+                              className={`h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                                current
+                                  ? "bg-[#FF6B00] text-white ring-2 ring-orange-200"
+                                  : completed
+                                  ? "bg-emerald-600 text-white"
+                                  : "bg-slate-200 text-slate-500 dark:bg-slate-800"
+                              }`}
+                            >
+                              {completed && !current ? "✓" : idx + 1}
+                            </div>
+                            <span
+                              className={`text-[9px] font-bold ${
+                                current
+                                  ? "text-[#FF6B00]"
+                                  : completed
+                                  ? "text-emerald-700 dark:text-emerald-400"
+                                  : "text-slate-400"
+                              }`}
+                            >
+                              {step}
+                            </span>
+                          </div>
+                          {idx < arr.length - 1 && (
+                            <div
+                              className={`h-0.5 flex-1 mb-4 ${
+                                orderIdx > idx ? "bg-emerald-500" : "bg-slate-200 dark:bg-slate-800"
+                              }`}
+                            />
+                          )}
+                        </React.Fragment>
+                      );
+                    }
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Admin Fulfillment Actions */}
+            {activeOrder.status !== "DELIVERED" && activeOrder.status !== "CANCELLED" && (
+              <div className="rounded-xl border border-orange-200 dark:border-orange-900/50 bg-orange-50/50 dark:bg-orange-950/20 p-3.5 space-y-3">
+                <div className="font-bold text-slate-800 dark:text-slate-200 text-xs">
+                  Admin Fulfillment Actions
+                </div>
+                <Input
+                  placeholder="Optional note / dispatch or delivery remarks (visible to MR)..."
+                  value={statusRemarks}
+                  onChange={(e) => setStatusRemarks(e.target.value)}
+                  className="h-8 text-xs bg-white dark:bg-slate-950"
+                />
+                <div className="flex flex-wrap items-center gap-2">
+                  {activeOrder.status === "SUBMITTED" && (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      disabled={busyOrderId === activeOrder.id}
+                      onClick={() => handleTransitionStatus(activeOrder.id, "ACCEPTED", statusRemarks)}
+                      className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                    >
+                      {busyOrderId === activeOrder.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                      )}
+                      Accept Order
+                    </Button>
+                  )}
+
+                  {activeOrder.status === "ACCEPTED" && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={busyOrderId === activeOrder.id}
+                      onClick={() => handleTransitionStatus(activeOrder.id, "PROCESSING", statusRemarks)}
+                      className="gap-1.5"
+                    >
+                      <Clock className="h-3.5 w-3.5" />
+                      Start Processing
+                    </Button>
+                  )}
+
+                  {(activeOrder.status === "ACCEPTED" || activeOrder.status === "PROCESSING") && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={busyOrderId === activeOrder.id}
+                      onClick={() => handleTransitionStatus(activeOrder.id, "DISPATCHED", statusRemarks)}
+                      className="gap-1.5"
+                    >
+                      <Truck className="h-3.5 w-3.5" />
+                      Mark Dispatched
+                    </Button>
+                  )}
+
+                  {(activeOrder.status === "ACCEPTED" ||
+                    activeOrder.status === "PROCESSING" ||
+                    activeOrder.status === "DISPATCHED") && (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      disabled={busyOrderId === activeOrder.id}
+                      onClick={() => handleTransitionStatus(activeOrder.id, "DELIVERED", statusRemarks)}
+                      className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                    >
+                      {busyOrderId === activeOrder.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <PackageCheck className="h-3.5 w-3.5" />
+                      )}
+                      Mark as Delivered
+                    </Button>
+                  )}
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={busyOrderId === activeOrder.id}
+                    onClick={() => handleCancelOrder(activeOrder.id, statusRemarks)}
+                    className="gap-1.5 text-rose-600 border-rose-200 hover:bg-rose-50 dark:border-rose-900 dark:hover:bg-rose-950/40 ml-auto"
+                  >
+                    <XCircle className="h-3.5 w-3.5" />
+                    Cancel Order
+                  </Button>
+                </div>
+              </div>
+            )}
 
             <div className="flex justify-end pt-2">
               <Button variant="outline" size="sm" onClick={() => setSelectedOrderId(null)}>

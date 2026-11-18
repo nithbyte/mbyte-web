@@ -181,12 +181,18 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           localStream={globalCall.localStream}
           remoteStream={globalCall.remoteStream}
           currentUserId={currentUser?.id}
+          hasRealMic={globalCall.hasRealMic}
+          micError={globalCall.micError}
+          micLevel={globalCall.micLevel}
+          audioInputDevices={globalCall.audioInputDevices}
+          selectedAudioDeviceId={globalCall.selectedAudioDeviceId}
           onAccept={globalCall.acceptCall}
           onReject={globalCall.rejectCall}
           onEndCall={globalCall.endCall}
           onToggleMute={globalCall.toggleMute}
           onToggleVideo={globalCall.toggleVideo}
           onToggleScreenShare={globalCall.toggleScreenShare}
+          onSwitchMicrophone={globalCall.switchMicrophone}
         />
       )}
     </div>

@@ -206,15 +206,21 @@ export default function ReportsPage() {
                   onChange={(e) => setSelectedDate(e.target.value)}
                   className="w-full h-8 px-2.5 rounded-md border border-slate-200 bg-white text-xs font-medium text-slate-700 shadow-xs dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 >
-                  <option value="ALL">All Dates (October MTD)</option>
-                  <option value="2026-10-08">Today (08 Oct 2026)</option>
-                  <option value="2026-10-07">07 Oct 2026</option>
-                  <option value="2026-10-06">06 Oct 2026</option>
-                  <option value="2026-10-05">05 Oct 2026</option>
-                  <option value="2026-10-04">04 Oct 2026</option>
-                  <option value="2026-10-03">03 Oct 2026</option>
-                  <option value="2026-10-02">02 Oct 2026</option>
-                  <option value="2026-10-01">01 Oct 2026</option>
+                  <option value="ALL">All Dates (Current Month MTD)</option>
+                  {Array.from({ length: 8 }).map((_, idx) => {
+                    const d = new Date();
+                    d.setDate(d.getDate() - idx);
+                    const yyyy = d.getFullYear();
+                    const mm = String(d.getMonth() + 1).padStart(2, "0");
+                    const dd = String(d.getDate()).padStart(2, "0");
+                    const val = `${yyyy}-${mm}-${dd}`;
+                    const nice = d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+                    return (
+                      <option key={val} value={val}>
+                        {idx === 0 ? `Today (${nice})` : idx === 1 ? `Yesterday (${nice})` : nice}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
@@ -1335,7 +1341,7 @@ export default function ReportsPage() {
               <div>
                 <CardTitle className="text-sm font-bold">Target vs Achievement Register</CardTitle>
                 <CardDescription className="text-xs">
-                  Representative monthly quota allocations for October 2026
+                  Representative monthly quota allocations for current period
                 </CardDescription>
               </div>
               <Button

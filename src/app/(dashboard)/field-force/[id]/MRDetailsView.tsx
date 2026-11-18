@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AtWorkBadge } from "@/components/ui/at-work-badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -17,6 +18,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { useMRDetails, useCurrentUser } from "@/hooks";
+import { analysisService, MrAnalysisData } from "@/services/analysisService";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { normalizeRole } from "@/types";
 import {
@@ -36,16 +38,157 @@ import {
   TrendingUp,
   TrendingDown,
   ShieldAlert,
+  Search,
+  RefreshCw,
+  RotateCcw,
+  Stethoscope,
+  Building2,
+  FileCheck,
+  Clock,
+  ExternalLink,
+  Calendar,
 } from "lucide-react";
+
+type DatePreset = "ALL_TIME" | "TODAY" | "7D" | "THIS_MONTH" | "30D" | "CUSTOM";
+type ActiveTab =
+  | "VISITS"
+  | "DOCTORS"
+  | "CHEMISTS"
+  | "ORDERS"
+  | "COLLECTIONS"
+  | "PRODUCTS_DCR"
+  | "TARGET";
+
+const toLocalIso = (d: Date) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+
+const getPresetRange = (preset: DatePreset): { start?: string; end?: string } => {
+  const now = new Date();
+  const today = toLocalIso(now);
+  if (preset === "TODAY") return { start: today, end: today };
+  if (preset === "7D") {
+    const s = new Date(now);
+    s.setDate(s.getDate() - 6);
+    return { start: toLocalIso(s), end: today };
+  }
+  if (preset === "THIS_MONTH") {
+    const s = new Date(now.getFullYear(), now.getMonth(), 1);
+    return { start: toLocalIso(s), end: today };
+  }
+  if (preset === "30D") {
+    const s = new Date(now);
+    s.setDate(s.getDate() - 29);
+    return { start: toLocalIso(s), end: today };
+  }
+  return {};
+};
+
+const formatTime = (iso?: string | null) => {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "—";
+  return d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+};
 
 export function MRDetailsView({ id }: { id: string }) {
   const { data: currentUser } = useCurrentUser();
   const canonicalRole = normalizeRole(currentUser?.role);
   const { data, isLoading } = useMRDetails(id);
 
-  const [activeTab, setActiveTab] = useState<
-    "VISITS" | "ORDERS" | "COLLECTIONS" | "TARGET" | "PRODUCTS"
-  >("VISITS");
+  // Analysis & Multi-Facet Filter State
+  const [datePreset, setDatePreset] = useState<DatePreset>("ALL_TIME");
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  const [customerType, setCustomerType] = useState<string>("ALL");
+  const [customerId, setCustomerId] = useState<string>("ALL");
+  const [productId, setProductId] = useState<string>("ALL");
+  const [visitStatus, setVisitStatus] = useState<string>("ALL");
+  const [orderStatus, setOrderStatus] = useState<string>("ALL");
+  const [search, setSearch] = useState<string>("");
+  const [debouncedSearch, setDebouncedSearch] = useState<string>("");
+
+  const [analysis, setAnalysis] = useState<MrAnalysisData | null>(null);
+  const [isLoadingAnalysis, setIsLoadingAnalysis] = useState<boolean>(true);
+  const [activeTab, setActiveTab] = useState<ActiveTab>("VISITS");
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 250);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const fetchAnalysis = useCallback(async () => {
+    if (canonicalRole === "SUPER_ADMIN") return;
+    setIsLoadingAnalysis(true);
+    try {
+      const res = await analysisService.getMrAnalysis({
+        mrId: id,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        customerType,
+        customerId,
+        productId,
+        visitStatus,
+        orderStatus,
+        search: debouncedSearch,
+      });
+      setAnalysis(res);
+    } catch (err) {
+      console.warn("Failed to load MR analysis:", err);
+    } finally {
+      setIsLoadingAnalysis(false);
+    }
+  }, [
+    id,
+    canonicalRole,
+    startDate,
+    endDate,
+    customerType,
+    customerId,
+    productId,
+    visitStatus,
+    orderStatus,
+    debouncedSearch,
+  ]);
+
+  useEffect(() => {
+    fetchAnalysis();
+  }, [fetchAnalysis]);
+
+  const handleSelectPreset = (preset: DatePreset) => {
+    setDatePreset(preset);
+    if (preset === "CUSTOM") return;
+    const range = getPresetRange(preset);
+    setStartDate(range.start || "");
+    setEndDate(range.end || "");
+  };
+
+  const handleResetFilters = () => {
+    setDatePreset("ALL_TIME");
+    setStartDate("");
+    setEndDate("");
+    setCustomerType("ALL");
+    setCustomerId("ALL");
+    setProductId("ALL");
+    setVisitStatus("ALL");
+    setOrderStatus("ALL");
+    setSearch("");
+    setDebouncedSearch("");
+  };
+
+  const hasActiveFilters =
+    datePreset !== "ALL_TIME" ||
+    Boolean(startDate) ||
+    Boolean(endDate) ||
+    customerType !== "ALL" ||
+    customerId !== "ALL" ||
+    productId !== "ALL" ||
+    visitStatus !== "ALL" ||
+    orderStatus !== "ALL" ||
+    Boolean(search.trim());
 
   if (canonicalRole === "SUPER_ADMIN") {
     return (
@@ -99,8 +242,29 @@ export function MRDetailsView({ id }: { id: string }) {
     );
   }
 
-  const { mr, visits, orders, collections, target, productActivity } = data;
-  const isAhead = mr.performanceStatus === "AHEAD" || mr.performanceStatus === "ON_TRACK";
+  const { mr, target, productActivity } = data;
+  const summary = analysis?.summary;
+  const filteredVisits = analysis?.visits || [];
+  const filteredOrders = analysis?.orders || [];
+  const filteredCollections = analysis?.collections || [];
+  const doctorsReport = analysis?.doctorsReport || [];
+  const chemistsReport = analysis?.chemistsReport || [];
+  const productsReport = analysis?.productsReport || [];
+  const dcrs = analysis?.dcrs || [];
+  const expenses = analysis?.expenses || [];
+
+  const liveAchievedAmount =
+    target.achievedAmount > 0 ? target.achievedAmount : summary?.totalOrdersAmount || 0;
+  const liveAchievementRate =
+    target.targetAmount > 0
+      ? Math.round((liveAchievedAmount / target.targetAmount) * 100)
+      : target.achievementRate;
+  const liveShortfall = Math.max(0, target.targetAmount - liveAchievedAmount);
+  const currentMonthLabel = new Date().toLocaleDateString("en-IN", {
+    month: "long",
+    year: "numeric",
+  });
+  const isAhead = liveAchievementRate >= 25 || mr.performanceStatus === "AHEAD" || mr.performanceStatus === "ON_TRACK";
 
   return (
     <div className="space-y-6">
@@ -140,6 +304,16 @@ export function MRDetailsView({ id }: { id: string }) {
                 variant="outline"
                 size="sm"
                 className="text-xs gap-1.5"
+                onClick={() => fetchAnalysis()}
+                disabled={isLoadingAnalysis}
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${isLoadingAnalysis ? "animate-spin" : ""}`} />
+                <span>Refresh</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs gap-1.5"
                 onClick={() => alert(`Calling ${mr.name}: ${mr.phone}`)}
               >
                 <Phone className="h-3.5 w-3.5" />
@@ -154,7 +328,6 @@ export function MRDetailsView({ id }: { id: string }) {
       <Card>
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {/* Col 1: Identity */}
             <div className="flex items-start gap-3">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-sky-600 to-indigo-600 text-sm font-bold text-white shadow-md">
                 {mr.name
@@ -174,7 +347,6 @@ export function MRDetailsView({ id }: { id: string }) {
               </div>
             </div>
 
-            {/* Col 2: Territory & Manager */}
             <div className="space-y-1.5 text-xs">
               <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
                 <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
@@ -190,7 +362,6 @@ export function MRDetailsView({ id }: { id: string }) {
               </div>
             </div>
 
-            {/* Col 3: Contact */}
             <div className="space-y-1.5 text-xs">
               <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300 font-mono">
                 <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
@@ -202,7 +373,6 @@ export function MRDetailsView({ id }: { id: string }) {
               </div>
             </div>
 
-            {/* Col 4: Today's Status */}
             <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 space-y-1 text-xs dark:border-slate-800 dark:bg-slate-800/80">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                 Current Field Status
@@ -218,29 +388,229 @@ export function MRDetailsView({ id }: { id: string }) {
         </CardContent>
       </Card>
 
-      {/* Target & Commercial KPI Summary Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Monthly Target Quota */}
+      {/* Comprehensive Rep Analysis & Filter Controls */}
+      <Card>
+        <CardContent className="p-4 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Calendar className="h-4 w-4 text-slate-400 mr-1" />
+              {(
+                [
+                  { key: "ALL_TIME", label: "All Time" },
+                  { key: "TODAY", label: "Today" },
+                  { key: "7D", label: "Last 7 Days" },
+                  { key: "THIS_MONTH", label: "This Month" },
+                  { key: "30D", label: "Last 30 Days" },
+                ] as const
+              ).map((p) => (
+                <button
+                  key={p.key}
+                  type="button"
+                  onClick={() => handleSelectPreset(p.key)}
+                  className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-colors cursor-pointer ${
+                    datePreset === p.key
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "bg-muted text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+
+              <div className="flex items-center gap-1.5 ml-2">
+                <input
+                  type="date"
+                  aria-label="Start date"
+                  value={startDate}
+                  onChange={(e) => {
+                    setDatePreset("CUSTOM");
+                    setStartDate(e.target.value);
+                  }}
+                  className="h-8 px-2 rounded-md border border-input bg-background text-xs"
+                />
+                <span className="text-xs text-muted-foreground">to</span>
+                <input
+                  type="date"
+                  aria-label="End date"
+                  value={endDate}
+                  onChange={(e) => {
+                    setDatePreset("CUSTOM");
+                    setEndDate(e.target.value);
+                  }}
+                  className="h-8 px-2 rounded-md border border-input bg-background text-xs"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleResetFilters}
+                  className="h-8 text-xs text-rose-600 hover:text-rose-700 gap-1"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  Reset Filters
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fetchAnalysis()}
+                disabled={isLoadingAnalysis}
+                className="h-8 text-xs gap-1"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${isLoadingAnalysis ? "animate-spin" : ""}`} />
+                Refresh
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2.5">
+            {/* Search */}
+            <div className="relative lg:col-span-2">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search doctor, chemist, order #, product, feedback..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-8 h-9 text-xs"
+              />
+            </div>
+
+            {/* Customer Type */}
+            <select
+              aria-label="Filter by customer type"
+              value={customerType}
+              onChange={(e) => setCustomerType(e.target.value)}
+              className="h-9 px-2.5 rounded-md border border-input bg-background text-xs font-medium"
+            >
+              <option value="ALL">All Customer Types</option>
+              <option value="DOCTOR">Doctors Only</option>
+              <option value="PURCHASING_DOCTOR">Purchasing Doctors</option>
+              <option value="PHARMACY">Chemists / Pharmacies</option>
+              <option value="DISTRIBUTOR">Distributors</option>
+            </select>
+
+            {/* Specific Doctor / Chemist Selector */}
+            <select
+              aria-label="Filter by specific doctor or chemist"
+              value={customerId}
+              onChange={(e) => setCustomerId(e.target.value)}
+              className="h-9 px-2.5 rounded-md border border-input bg-background text-xs font-medium"
+            >
+              <option value="ALL">All Doctors & Chemists</option>
+              {(analysis?.filterOptions?.doctors || []).length > 0 && (
+                <optgroup label="Doctors & Purchasing Doctors">
+                  {(analysis?.filterOptions?.doctors || []).map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name} ({d.specialty})
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {(analysis?.filterOptions?.chemists || []).length > 0 && (
+                <optgroup label="Chemists & Pharmacies">
+                  {(analysis?.filterOptions?.chemists || []).map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+            </select>
+
+            {/* Product Filter */}
+            <select
+              aria-label="Filter by product"
+              value={productId}
+              onChange={(e) => setProductId(e.target.value)}
+              className="h-9 px-2.5 rounded-md border border-input bg-background text-xs font-medium"
+            >
+              <option value="ALL">All Products</option>
+              {(analysis?.filterOptions?.products || []).map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.brandName}
+                </option>
+              ))}
+            </select>
+
+            {/* Status Filter (Visit / Order) */}
+            <div className="flex gap-1.5">
+              <select
+                aria-label="Filter by visit status"
+                value={visitStatus}
+                onChange={(e) => setVisitStatus(e.target.value)}
+                className="h-9 flex-1 px-2 rounded-md border border-input bg-background text-xs font-medium"
+              >
+                <option value="ALL">Visit: All</option>
+                <option value="COMPLETED">Completed</option>
+                <option value="PLANNED">Planned</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="MISSED">Missed</option>
+                <option value="CANCELLED">Cancelled</option>
+              </select>
+              <select
+                aria-label="Filter by order status"
+                value={orderStatus}
+                onChange={(e) => setOrderStatus(e.target.value)}
+                className="h-9 flex-1 px-2 rounded-md border border-input bg-background text-xs font-medium"
+              >
+                <option value="ALL">Order: All</option>
+                <option value="SUBMITTED">Submitted</option>
+                <option value="ACCEPTED">Accepted</option>
+                <option value="PROCESSING">Processing</option>
+                <option value="DISPATCHED">Dispatched</option>
+                <option value="DELIVERED">Delivered</option>
+                <option value="CANCELLED">Cancelled</option>
+              </select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Filtered KPI Summary Row */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="rounded-xl border border-slate-200/90 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Monthly Sales Target
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              Calls Executed
             </span>
-            <Target className="h-4 w-4 text-sky-600" />
+            <CalendarCheck className="h-4 w-4 text-sky-600" />
           </div>
           <div className="mt-1">
             <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-              {formatCurrency(target.targetAmount)}
+              {summary?.completedVisits ?? 0}{" "}
+              <span className="text-sm font-medium text-slate-400">/ {summary?.totalVisits ?? 0}</span>
             </div>
-            <p className="text-[11px] text-slate-500 mt-0.5">October 2026 Quota</p>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              {summary?.completionRate ?? 0}% completion • {summary?.verifiedVisits ?? 0} GPS verified
+            </p>
           </div>
         </div>
 
-        {/* Quota Achievement */}
         <div className="rounded-xl border border-slate-200/90 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Achieved Amount
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              Doctors & Chemists
+            </span>
+            <Stethoscope className="h-4 w-4 text-indigo-600" />
+          </div>
+          <div className="mt-1">
+            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+              {summary?.uniqueDoctorsVisited ?? 0} Docs • {summary?.uniqueChemistsVisited ?? 0} Chem
+            </div>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              {summary?.totalSamplesDistributed ?? 0} samples • {summary?.totalVisualAidsShown ?? 0} visual aids
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-slate-200/90 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              Orders Value
             </span>
             {isAhead ? (
               <TrendingUp className="h-4 w-4 text-emerald-600" />
@@ -249,47 +619,45 @@ export function MRDetailsView({ id }: { id: string }) {
             )}
           </div>
           <div className="mt-1">
-            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-              {formatCurrency(target.achievedAmount)}
-            </div>
-            <p className="text-[11px] font-semibold text-emerald-600 mt-0.5">
-              {target.achievementRate}% of monthly target
-            </p>
-          </div>
-        </div>
-
-        {/* Visits Target vs Achieved */}
-        <div className="rounded-xl border border-slate-200/90 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Call Quota (Month)
-            </span>
-            <CalendarCheck className="h-4 w-4 text-sky-600" />
-          </div>
-          <div className="mt-1">
-            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-              {target.visitAchieved} / {target.visitTarget}
+            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+              {formatCurrency(summary?.totalOrdersAmount ?? 0)}
             </div>
             <p className="text-[11px] text-slate-500 mt-0.5">
-              Goal: {target.dailyCallGoal} doctor calls / day
+              {summary?.totalOrders ?? 0} orders ({summary?.deliveredOrdersCount ?? 0} delivered)
             </p>
           </div>
         </div>
 
-        {/* Collections Reconciled */}
         <div className="rounded-xl border border-slate-200/90 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
               Collections Recorded
             </span>
             <Receipt className="h-4 w-4 text-emerald-600" />
           </div>
           <div className="mt-1">
             <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-              {formatCurrency(mr.collectionsValue)}
+              {formatCurrency(summary?.totalCollectionsAmount ?? 0)}
             </div>
             <p className="text-[11px] text-slate-500 mt-0.5">
-              {collections.length} Payment Receipts
+              {summary?.totalCollections ?? 0} Payment Receipts
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-slate-200/90 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              Monthly Sales Target
+            </span>
+            <Target className="h-4 w-4 text-sky-600" />
+          </div>
+          <div className="mt-1">
+            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+              {formatCurrency(target.targetAmount)}
+            </div>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              {currentMonthLabel} • {liveAchievementRate}% achieved
             </p>
           </div>
         </div>
@@ -300,10 +668,10 @@ export function MRDetailsView({ id }: { id: string }) {
         <CardContent className="p-4 space-y-2">
           <div className="flex items-center justify-between text-xs">
             <span className="font-semibold text-slate-700 dark:text-slate-300">
-              Sales Quota Achievement Progress
+              Sales Quota Achievement Progress ({currentMonthLabel})
             </span>
             <span className="font-bold text-slate-900 dark:text-slate-100">
-              {target.achievementRate}% ({formatCurrency(target.achievedAmount)} / {formatCurrency(target.targetAmount)})
+              {liveAchievementRate}% ({formatCurrency(liveAchievedAmount)} / {formatCurrency(target.targetAmount)})
             </span>
           </div>
           <div className="h-3 w-full rounded-full bg-slate-100 overflow-hidden dark:bg-slate-800">
@@ -311,19 +679,19 @@ export function MRDetailsView({ id }: { id: string }) {
               className={`h-full rounded-full transition-all duration-500 ${
                 isAhead ? "bg-gradient-to-r from-sky-500 to-emerald-500" : "bg-amber-500"
               }`}
-              style={{ width: `${Math.min(100, target.achievementRate)}%` }}
+              style={{ width: `${Math.min(100, liveAchievementRate)}%` }}
             />
           </div>
           <div className="flex justify-between text-[11px] text-slate-500">
-            <span>Day-8 Benchmark: 26%</span>
-            <span>Shortfall: {formatCurrency(target.shortfall)}</span>
+            <span>DCRs: {summary?.dcrApprovedCount ?? 0} Approved / {summary?.dcrSubmittedCount ?? 0} Pending / {summary?.dcrRejectedCount ?? 0} Rejected</span>
+            <span>Shortfall: {formatCurrency(liveShortfall)}</span>
             <span>Monthly Target: 100%</span>
           </div>
         </CardContent>
       </Card>
 
       {/* Activity Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-2 dark:border-slate-800">
+      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-2 dark:border-slate-800">
         <Button
           variant={activeTab === "VISITS" ? "primary" : "ghost"}
           size="sm"
@@ -331,7 +699,27 @@ export function MRDetailsView({ id }: { id: string }) {
           onClick={() => setActiveTab("VISITS")}
         >
           <CalendarCheck className="h-4 w-4" />
-          <span>Visits & Field Detailing ({visits.length})</span>
+          <span>Visits & Detailing ({filteredVisits.length})</span>
+        </Button>
+
+        <Button
+          variant={activeTab === "DOCTORS" ? "primary" : "ghost"}
+          size="sm"
+          className="text-xs gap-1.5"
+          onClick={() => setActiveTab("DOCTORS")}
+        >
+          <Stethoscope className="h-4 w-4" />
+          <span>Doctors ({doctorsReport.length})</span>
+        </Button>
+
+        <Button
+          variant={activeTab === "CHEMISTS" ? "primary" : "ghost"}
+          size="sm"
+          className="text-xs gap-1.5"
+          onClick={() => setActiveTab("CHEMISTS")}
+        >
+          <Building2 className="h-4 w-4" />
+          <span>Chemists ({chemistsReport.length})</span>
         </Button>
 
         <Button
@@ -341,7 +729,7 @@ export function MRDetailsView({ id }: { id: string }) {
           onClick={() => setActiveTab("ORDERS")}
         >
           <ShoppingCart className="h-4 w-4" />
-          <span>Commercial Orders ({orders.length})</span>
+          <span>Orders ({filteredOrders.length})</span>
         </Button>
 
         <Button
@@ -351,7 +739,17 @@ export function MRDetailsView({ id }: { id: string }) {
           onClick={() => setActiveTab("COLLECTIONS")}
         >
           <Receipt className="h-4 w-4" />
-          <span>Collections & Receipts ({collections.length})</span>
+          <span>Collections ({filteredCollections.length})</span>
+        </Button>
+
+        <Button
+          variant={activeTab === "PRODUCTS_DCR" ? "primary" : "ghost"}
+          size="sm"
+          className="text-xs gap-1.5"
+          onClick={() => setActiveTab("PRODUCTS_DCR")}
+        >
+          <Package className="h-4 w-4" />
+          <span>Products, DCRs & Expenses ({dcrs.length})</span>
         </Button>
 
         <Button
@@ -361,17 +759,7 @@ export function MRDetailsView({ id }: { id: string }) {
           onClick={() => setActiveTab("TARGET")}
         >
           <Target className="h-4 w-4" />
-          <span>Target & Quota Breakdown</span>
-        </Button>
-
-        <Button
-          variant={activeTab === "PRODUCTS" ? "primary" : "ghost"}
-          size="sm"
-          className="text-xs gap-1.5"
-          onClick={() => setActiveTab("PRODUCTS")}
-        >
-          <Package className="h-4 w-4" />
-          <span>Product Activity & Audits ({productActivity.auditsCount})</span>
+          <span>Target & Quota</span>
         </Button>
       </div>
 
@@ -381,106 +769,296 @@ export function MRDetailsView({ id }: { id: string }) {
           <CardHeader>
             <CardTitle className="text-sm font-bold flex items-center gap-2">
               <CalendarCheck className="h-4 w-4 text-sky-600" />
-              Doctor Calls & Field Detailing History
+              All Visits & Field Detailing History ({filteredVisits.length})
             </CardTitle>
             <CardDescription>
-              Physician meetings, feedback, samples given, and GPS radius verification
+              Filtered doctor & chemist meetings with start–end times, products discussed, visual aids, samples & feedback
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Physician & Clinic</TableHead>
-                  <TableHead>Call Status</TableHead>
-                  <TableHead>GPS Verification</TableHead>
-                  <TableHead>Detailing Feedback</TableHead>
-                  <TableHead className="text-right">Time</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {visits.map((v) => (
-                  <TableRow key={v.id}>
-                    <TableCell>
-                      <div className="font-semibold text-xs text-slate-900 dark:text-slate-100">
-                        {v.customerName}
-                      </div>
-                      <div className="text-[11px] text-slate-500">
-                        {v.specialty || "Clinic / Pharmacy"}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          v.status === "COMPLETED"
-                            ? "default"
-                            : v.status === "IN_PROGRESS"
-                            ? "info"
-                            : v.status === "MISSED"
-                            ? "destructive"
-                            : "secondary"
-                        }
-                        className="text-[10px]"
-                      >
-                        {v.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          v.verificationStatus === "VERIFIED"
-                            ? "success"
-                            : v.verificationStatus === "OUTSIDE_RADIUS"
-                            ? "destructive"
-                            : "warning"
-                        }
-                        className="text-[10px] gap-1"
-                      >
-                        {v.verificationStatus === "VERIFIED" ? (
-                          <CheckCircle className="h-3 w-3" />
-                        ) : (
-                          <AlertTriangle className="h-3 w-3" />
-                        )}
-                        {v.verificationStatus}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="max-w-xs text-xs text-slate-600 dark:text-slate-300">
-                      {(v as { feedbackNotes?: string }).feedbackNotes || v.doctorFeedback || "Prescribed core formulations"}
-                    </TableCell>
-                    <TableCell className="text-right text-xs font-mono text-slate-500">
-                      {v.actualStartTime || (v as { scheduledStartTime?: string }).scheduledStartTime || "10:00 AM"}
-                    </TableCell>
+            {isLoadingAnalysis ? (
+              <div className="p-8 text-center text-xs text-slate-500">Loading visits...</div>
+            ) : filteredVisits.length === 0 ? (
+              <div className="p-8 text-center text-xs text-slate-500">
+                No visits match the selected filters.
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date & Time</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Status & GPS</TableHead>
+                    <TableHead>Products & Visual Aids</TableHead>
+                    <TableHead>Detailing Feedback</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredVisits.map((v) => {
+                    const isDoctor = v.customerType === "DOCTOR" || v.customerType === "PURCHASING_DOCTOR";
+                    return (
+                      <TableRow key={v.id}>
+                        <TableCell className="text-xs whitespace-nowrap">
+                          <div className="font-semibold text-slate-900 dark:text-slate-100">
+                            {formatDate(v.scheduledDate)}
+                          </div>
+                          <div className="text-[11px] font-mono text-slate-500 flex items-center gap-1 mt-0.5">
+                            <Clock className="h-3 w-3" />
+                            {formatTime(v.actualStartTime)} – {formatTime(v.actualEndTime)}
+                            {v.durationSeconds ? ` (${Math.max(1, Math.round(v.durationSeconds / 60))}m)` : ""}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {isDoctor && v.customerId ? (
+                            <Link
+                              href={`/doctors/${v.customerId}`}
+                              className="font-semibold text-xs text-sky-600 hover:underline inline-flex items-center gap-1"
+                            >
+                              <span>{v.customerName}</span>
+                              <ExternalLink className="h-3 w-3" />
+                            </Link>
+                          ) : (
+                            <div className="font-semibold text-xs text-slate-900 dark:text-slate-100">
+                              {v.customerName}
+                            </div>
+                          )}
+                          <div className="text-[11px] text-slate-500">
+                            {v.customerSubtitle} • {v.customerType.replace("_", " ")}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1 items-start">
+                            <Badge
+                              variant={
+                                v.status === "COMPLETED"
+                                  ? "success"
+                                  : v.status === "IN_PROGRESS"
+                                  ? "info"
+                                  : v.status === "MISSED"
+                                  ? "destructive"
+                                  : "secondary"
+                              }
+                              className="text-[10px]"
+                            >
+                              {v.status}
+                            </Badge>
+                            <Badge
+                              variant={
+                                v.verificationStatus === "VERIFIED" || v.verificationStatus === "EXCEPTION_APPROVED"
+                                  ? "success"
+                                  : v.verificationStatus === "OUTSIDE_RADIUS"
+                                  ? "destructive"
+                                  : "warning"
+                              }
+                              className="text-[10px] gap-1"
+                            >
+                              {v.verificationStatus === "VERIFIED" ? (
+                                <CheckCircle className="h-3 w-3" />
+                              ) : (
+                                <AlertTriangle className="h-3 w-3" />
+                              )}
+                              {v.verificationStatus}
+                            </Badge>
+                          </div>
+                        </TableCell>
+                        <TableCell className="max-w-xs">
+                          <div className="flex flex-wrap gap-1">
+                            {v.productsDiscussed.map((p) => (
+                              <span
+                                key={p.productId}
+                                className="px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-800/50 text-[10px] font-medium text-blue-700 dark:text-blue-300"
+                              >
+                                {p.brandName}
+                                {p.samplesQty > 0 ? ` (${p.samplesQty} smp)` : ""}
+                              </span>
+                            ))}
+                            {v.visualAidsShown.map((va) => (
+                              <span
+                                key={va.sessionId}
+                                className="px-2 py-0.5 rounded bg-violet-50 dark:bg-violet-950/30 border border-violet-200/80 dark:border-violet-800/50 text-[10px] font-medium text-violet-700 dark:text-violet-300"
+                              >
+                                VA: {va.title}
+                              </span>
+                            ))}
+                            {v.productsDiscussed.length === 0 && v.visualAidsShown.length === 0 && (
+                              <span className="text-[11px] text-slate-400 italic">—</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="max-w-xs text-xs text-slate-600 dark:text-slate-300">
+                          {v.feedbackNotes || <span className="text-slate-400 italic">No feedback notes</span>}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       )}
 
-      {/* TAB 2: ORDERS */}
+      {/* TAB 2: DOCTORS COVERED */}
+      {activeTab === "DOCTORS" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <Stethoscope className="h-4 w-4 text-indigo-600" />
+              Doctors Covered by {mr.name} ({doctorsReport.length})
+            </CardTitle>
+            <CardDescription>
+              Click any doctor to open their full lifetime profile, past visits, products discussed & feedback history
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            {doctorsReport.length === 0 ? (
+              <div className="p-8 text-center text-xs text-slate-500">
+                No doctor visits match the selected filters.
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Doctor & Specialty</TableHead>
+                    <TableHead>Visits (Done / Total)</TableHead>
+                    <TableHead>Products & Samples</TableHead>
+                    <TableHead>Latest Feedback</TableHead>
+                    <TableHead>Last Visit</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {doctorsReport.map((doc) => (
+                    <TableRow key={doc.id}>
+                      <TableCell>
+                        <Link
+                          href={`/doctors/${doc.id}`}
+                          className="font-semibold text-xs text-sky-600 hover:underline"
+                        >
+                          {doc.name}
+                        </Link>
+                        <div className="text-[11px] text-slate-500">
+                          {doc.specialty} {doc.tier ? `• Tier ${doc.tier}` : ""} •{" "}
+                          {doc.customerType === "PURCHASING_DOCTOR" ? "Purchasing Dr" : "Doctor"}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs font-semibold">
+                        {doc.completedVisits} / {doc.totalVisits}
+                      </TableCell>
+                      <TableCell className="text-xs max-w-xs">
+                        <div>{doc.productsDiscussed.length > 0 ? doc.productsDiscussed.join(", ") : "—"}</div>
+                        <div className="text-[11px] text-slate-500">
+                          {doc.totalSamplesGiven} samples • {doc.visualAidsCount} visual aids
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs text-slate-600 max-w-xs italic">
+                        {doc.latestFeedback ? `“${doc.latestFeedback}”` : "—"}
+                      </TableCell>
+                      <TableCell className="text-xs text-slate-500 whitespace-nowrap">
+                        {doc.lastVisitDate ? formatDate(doc.lastVisitDate) : "—"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Link href={`/doctors/${doc.id}`}>
+                          <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
+                            <span>Full History</span>
+                            <ExternalLink className="h-3 w-3" />
+                          </Button>
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* TAB 3: CHEMISTS */}
+      {activeTab === "CHEMISTS" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-amber-600" />
+              Chemists & Pharmacies Covered ({chemistsReport.length})
+            </CardTitle>
+            <CardDescription>
+              Visits, orders booked, delivered values, and payment collections by pharmacy
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            {chemistsReport.length === 0 ? (
+              <div className="p-8 text-center text-xs text-slate-500">
+                No chemist records match the selected filters.
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Chemist / Pharmacy</TableHead>
+                    <TableHead>Visits</TableHead>
+                    <TableHead>Orders Booked</TableHead>
+                    <TableHead>Delivered Value</TableHead>
+                    <TableHead>Collections</TableHead>
+                    <TableHead className="text-right">Last Visit</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {chemistsReport.map((ch) => (
+                    <TableRow key={ch.id}>
+                      <TableCell>
+                        <div className="font-semibold text-xs text-slate-900 dark:text-slate-100">
+                          {ch.name}
+                        </div>
+                        {ch.address && <div className="text-[11px] text-slate-500">{ch.address}</div>}
+                      </TableCell>
+                      <TableCell className="text-xs font-semibold">
+                        {ch.completedVisits} / {ch.totalVisits}
+                      </TableCell>
+                      <TableCell className="text-xs font-semibold text-sky-600">
+                        {formatCurrency(ch.totalOrdersAmount)} ({ch.totalOrdersCount})
+                      </TableCell>
+                      <TableCell className="text-xs font-semibold text-emerald-600">
+                        {formatCurrency(ch.deliveredOrdersAmount)}
+                      </TableCell>
+                      <TableCell className="text-xs font-semibold">
+                        {formatCurrency(ch.totalCollectionsAmount)}
+                      </TableCell>
+                      <TableCell className="text-right text-xs text-slate-500">
+                        {ch.lastVisitDate ? formatDate(ch.lastVisitDate) : "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* TAB 4: ORDERS */}
       {activeTab === "ORDERS" && (
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-bold flex items-center gap-2">
               <ShoppingCart className="h-4 w-4 text-sky-600" />
-              Commercial Orders Booked by {mr.name}
+              Commercial Orders Booked by {mr.name} ({filteredOrders.length})
             </CardTitle>
             <CardDescription>
-              Direct orders booked at chemists and hospital pharmacies
+              Direct orders booked at chemists, stockists, and purchasing clinics
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
-            {orders.length === 0 ? (
+            {filteredOrders.length === 0 ? (
               <div className="p-8 text-center text-xs text-slate-500">
-                No orders recorded for this representative yet.
+                No orders match the selected filters.
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Order #</TableHead>
-                    <TableHead>Pharmacy / Chemist</TableHead>
+                    <TableHead>Customer</TableHead>
                     <TableHead>Order Date</TableHead>
                     <TableHead>Line Items</TableHead>
                     <TableHead>Status</TableHead>
@@ -488,27 +1066,29 @@ export function MRDetailsView({ id }: { id: string }) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {orders.map((o) => (
+                  {filteredOrders.map((o) => (
                     <TableRow key={o.id}>
                       <TableCell className="font-mono text-xs font-semibold text-slate-900 dark:text-slate-100">
                         {o.orderNumber}
                       </TableCell>
                       <TableCell className="font-medium text-xs text-slate-800 dark:text-slate-200">
-                        {o.pharmacyName}
+                        {o.customerName}
                       </TableCell>
                       <TableCell className="text-xs text-slate-500">
-                        {formatDate(o.orderDate)}
+                        {formatDate(o.createdAt)}
                       </TableCell>
-                      <TableCell className="text-xs text-slate-600">
-                        {o.items?.length || 0} product(s)
+                      <TableCell className="text-xs text-slate-600 max-w-xs">
+                        {o.items.map((it) => `${it.productName} × ${it.quantity}`).join(", ") || `${o.itemsCount} item(s)`}
                       </TableCell>
                       <TableCell>
                         <Badge
                           variant={
                             o.status === "DELIVERED"
                               ? "success"
+                              : o.status === "CANCELLED"
+                              ? "destructive"
                               : o.status === "ACCEPTED"
-                              ? "default"
+                              ? "info"
                               : "outline"
                           }
                           className="text-[10px]"
@@ -528,22 +1108,22 @@ export function MRDetailsView({ id }: { id: string }) {
         </Card>
       )}
 
-      {/* TAB 3: COLLECTIONS */}
+      {/* TAB 5: COLLECTIONS */}
       {activeTab === "COLLECTIONS" && (
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-bold flex items-center gap-2">
               <Receipt className="h-4 w-4 text-emerald-600" />
-              Payment Collections Reconciled
+              Payment Collections Reconciled ({filteredCollections.length})
             </CardTitle>
             <CardDescription>
               Receipt vouchers cleared against outstanding chemist invoices
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
-            {collections.length === 0 ? (
+            {filteredCollections.length === 0 ? (
               <div className="p-8 text-center text-xs text-slate-500">
-                No payment receipts recorded for this representative yet.
+                No payment receipts match the selected filters.
               </div>
             ) : (
               <Table>
@@ -558,13 +1138,13 @@ export function MRDetailsView({ id }: { id: string }) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {collections.map((c) => (
+                  {filteredCollections.map((c) => (
                     <TableRow key={c.id}>
                       <TableCell className="font-mono text-xs font-semibold text-slate-900 dark:text-slate-100">
                         {c.receiptNumber}
                       </TableCell>
                       <TableCell className="font-medium text-xs text-slate-800 dark:text-slate-200">
-                        {c.pharmacyName}
+                        {c.customerName}
                       </TableCell>
                       <TableCell>
                         <Badge
@@ -598,13 +1178,216 @@ export function MRDetailsView({ id }: { id: string }) {
         </Card>
       )}
 
-      {/* TAB 4: TARGET TRACKING */}
+      {/* TAB 6: PRODUCTS, DCRS & EXPENSES */}
+      {activeTab === "PRODUCTS_DCR" && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                  <Package className="h-4 w-4 text-sky-600" />
+                  Product Performance ({productsReport.length})
+                </CardTitle>
+                <CardDescription>Detailing calls, samples distributed, and order volume</CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Product</TableHead>
+                      <TableHead>Calls Detailed</TableHead>
+                      <TableHead>Samples</TableHead>
+                      <TableHead className="text-right">Orders Value</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {productsReport.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center text-xs text-slate-500 py-6">
+                          No product activity in this filter range.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      productsReport.map((p) => (
+                        <TableRow key={p.productId}>
+                          <TableCell className="font-semibold text-xs">{p.brandName}</TableCell>
+                          <TableCell className="text-xs">{p.visitsDetailed}</TableCell>
+                          <TableCell className="text-xs">{p.samplesDistributed}</TableCell>
+                          <TableCell className="text-right text-xs font-bold text-emerald-600">
+                            {formatCurrency(p.ordersValue)} ({p.ordersQuantity} qty)
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                  <FileCheck className="h-4 w-4 text-indigo-600" />
+                  Daily Call Reports ({dcrs.length})
+                </CardTitle>
+                <CardDescription>End-of-day submissions, shift timers, and approval status</CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Shift Time</TableHead>
+                      <TableHead>Calls</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {dcrs.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center text-xs text-slate-500 py-6">
+                          No DCRs recorded in this date range.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      dcrs.map((d) => (
+                        <TableRow key={d.id}>
+                          <TableCell className="text-xs font-semibold">{formatDate(d.date)}</TableCell>
+                          <TableCell className="text-xs font-mono text-slate-500">
+                            {formatTime(d.workStartTime)} – {formatTime(d.workEndTime)}
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            {d.totalExecutedCalls}/{d.totalPlannedCalls}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                d.status === "APPROVED"
+                                  ? "success"
+                                  : d.status === "REJECTED"
+                                  ? "destructive"
+                                  : "warning"
+                              }
+                              className="text-[10px]"
+                            >
+                              {d.status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                  <Building className="h-4 w-4 text-indigo-600" />
+                  Recent Pharmacy Stock Presence Audits ({productActivity.auditsCount})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Pharmacy</TableHead>
+                      <TableHead>Product</TableHead>
+                      <TableHead className="text-right">Stock Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {productActivity.recentAudits.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center text-xs text-slate-500 py-6">
+                          No shelf presence audits recorded yet.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      productActivity.recentAudits.map((a) => (
+                        <TableRow key={a.id}>
+                          <TableCell className="text-xs font-medium">{a.pharmacyName}</TableCell>
+                          <TableCell className="text-xs text-slate-600">{a.productName}</TableCell>
+                          <TableCell className="text-right">
+                            <Badge
+                              variant={
+                                a.status === "AVAILABLE"
+                                  ? "success"
+                                  : a.status === "LOW_STOCK"
+                                  ? "warning"
+                                  : "destructive"
+                              }
+                              className="text-[10px]"
+                            >
+                              {a.status.replace("_", " ")}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                  <Receipt className="h-4 w-4 text-emerald-600" />
+                  Expense Claims ({expenses.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Claim</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {expenses.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center text-xs text-slate-500 py-6">
+                          No expense claims in this range.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      expenses.map((e) => (
+                        <TableRow key={e.id}>
+                          <TableCell className="text-xs font-semibold">{e.title}</TableCell>
+                          <TableCell className="text-xs text-slate-500">{formatDate(e.startDate)}</TableCell>
+                          <TableCell>
+                            <Badge variant={e.status === "APPROVED" ? "success" : "warning"} className="text-[10px]">
+                              {e.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right text-xs font-bold">
+                            {formatCurrency(e.totalAmount)}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 7: TARGET TRACKING */}
       {activeTab === "TARGET" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-bold">Monthly Sales Quota Breakdown</CardTitle>
-              <CardDescription>Fiscal month target performance and run-rate</CardDescription>
+              <CardDescription>{currentMonthLabel} target performance and run-rate</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 text-xs">
               <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
@@ -613,15 +1396,15 @@ export function MRDetailsView({ id }: { id: string }) {
               </div>
               <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
                 <span className="text-slate-500">Achieved Commercial Value</span>
-                <span className="font-bold text-emerald-600">{formatCurrency(target.achievedAmount)}</span>
+                <span className="font-bold text-emerald-600">{formatCurrency(liveAchievedAmount)}</span>
               </div>
               <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
                 <span className="text-slate-500">Achievement Rate</span>
-                <span className="font-semibold">{target.achievementRate}%</span>
+                <span className="font-semibold">{liveAchievementRate}%</span>
               </div>
               <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
                 <span className="text-slate-500">Shortfall to Quota</span>
-                <span className="font-semibold text-rose-600">{formatCurrency(target.shortfall)}</span>
+                <span className="font-semibold text-rose-600">{formatCurrency(liveShortfall)}</span>
               </div>
               <div className="flex justify-between py-1.5">
                 <span className="text-slate-500">Pacing Status</span>
@@ -656,102 +1439,6 @@ export function MRDetailsView({ id }: { id: string }) {
               </div>
             </CardContent>
           </Card>
-        </div>
-      )}
-
-      {/* TAB 5: PRODUCTS ACTIVITY & AUDITS */}
-      {activeTab === "PRODUCTS" && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Products Detailed */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <Package className="h-4 w-4 text-sky-600" />
-                  Product Formulations Detailed & Promoted
-                </CardTitle>
-                <CardDescription>
-                  Molecules detailed to physicians and sample units distributed
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Formulation Name</TableHead>
-                      <TableHead>Times Detailed</TableHead>
-                      <TableHead className="text-right">Samples Handed</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {productActivity.promotedProducts.map((p) => (
-                      <TableRow key={p.productId}>
-                        <TableCell className="font-semibold text-xs text-slate-900 dark:text-slate-100">
-                          {p.productName}
-                        </TableCell>
-                        <TableCell className="text-xs text-slate-600">
-                          {p.detailingCount} calls
-                        </TableCell>
-                        <TableCell className="text-right text-xs font-bold text-sky-600">
-                          {p.samplesDistributed} units
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-
-            {/* Pharmacy Presence Audits */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <Building className="h-4 w-4 text-indigo-600" />
-                  Recent Pharmacy Stock Presence Audits
-                </CardTitle>
-                <CardDescription>
-                  Retail stock availability recorded by this representative
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Pharmacy</TableHead>
-                      <TableHead>Product Molecule</TableHead>
-                      <TableHead className="text-right">Stock Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {productActivity.recentAudits.map((a) => (
-                      <TableRow key={a.id}>
-                        <TableCell className="text-xs font-medium text-slate-800 dark:text-slate-200">
-                          {a.pharmacyName}
-                        </TableCell>
-                        <TableCell className="text-xs text-slate-600">
-                          {a.productName}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Badge
-                            variant={
-                              a.status === "AVAILABLE"
-                                ? "success"
-                                : a.status === "LOW_STOCK"
-                                ? "warning"
-                                : "destructive"
-                            }
-                            className="text-[10px]"
-                          >
-                            {a.status.replace("_", " ")}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </div>
         </div>
       )}
     </div>

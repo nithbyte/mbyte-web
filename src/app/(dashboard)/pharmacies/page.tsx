@@ -295,6 +295,10 @@ export default function PharmaciesPage() {
     setSearch("");
     setTerritoryId("ALL");
     setApprovalStatusFilter("ALL");
+    if (typeof window !== "undefined" && window.location.search.includes("search=")) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+    setTimeout(() => refetch(), 0);
   };
 
   // History query for selected pharmacy

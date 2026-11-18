@@ -39,19 +39,28 @@ export const presenceService = {
       if (params?.mrId && params.mrId !== "ALL") queryParams.mrId = params.mrId;
       if (params?.pharmacyId && params.pharmacyId !== "ALL") queryParams.customerId = params.pharmacyId;
       if (params?.status && params.status !== "ALL") queryParams.status = params.status;
+      if (params?.date && params.date !== "ALL") queryParams.date = params.date;
+      if (params?.search && params.search.trim()) queryParams.search = params.search.trim();
 
       const res = await apiClient.get<any>("/product-presence", { params: queryParams });
       const apiItems = Array.isArray(res) ? res : (Array.isArray(res?.items) ? res.items : null);
       if (apiItems !== null) {
         let list = apiItems.map(mapApiPresenceAudit);
 
-        if (params?.search) {
-          const q = params.search.toLowerCase();
+        if (params?.date && params.date !== "ALL") {
+          list = list.filter((a: ProductPresenceAudit) => (a.checkedAt || a.auditedAt || "").startsWith(params.date!));
+        }
+
+        if (params?.search && params.search.trim()) {
+          const q = params.search.toLowerCase().trim();
           list = list.filter(
             (a: ProductPresenceAudit) =>
               a.pharmacyName.toLowerCase().includes(q) ||
               a.productName.toLowerCase().includes(q) ||
-              (a.mrName && a.mrName.toLowerCase().includes(q))
+              (a.mrName && a.mrName.toLowerCase().includes(q)) ||
+              (a.territoryName && a.territoryName.toLowerCase().includes(q)) ||
+              (a.batchNumber && a.batchNumber.toLowerCase().includes(q)) ||
+              (a.notes && a.notes.toLowerCase().includes(q))
           );
         }
 

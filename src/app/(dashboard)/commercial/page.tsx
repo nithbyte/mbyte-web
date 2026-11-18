@@ -53,7 +53,11 @@ export default function CommercialDashboardPage() {
       <PageHeader
         title="Commercial & Revenue Intelligence"
         description="Executive visibility into order bookings, realized collections, clearance rates, and field representative financial performance."
-        badge={<Badge variant="success">October 2026 Active</Badge>}
+        badge={
+          <Badge variant="success">
+            {new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" })} Active
+          </Badge>
+        }
         actions={
           <div className="flex items-center gap-2">
             <Link href="/orders">
@@ -96,7 +100,9 @@ export default function CommercialDashboardPage() {
                   <span className="font-semibold text-sky-600 dark:text-sky-400">
                     {kpis?.todayOrdersCount || 0} orders
                   </span>
-                  <span>booked on Oct 08</span>
+                  <span>
+                    booked on {new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
+                  </span>
                 </div>
               </div>
             )}
@@ -198,7 +204,8 @@ export default function CommercialDashboardPage() {
             <div>
               <CardTitle className="text-base font-bold flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-sky-600" />
-                Commercial Booking & Realization Trends (October 2026)
+                Commercial Booking & Realization Trends (
+                {new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" })})
               </CardTitle>
               <CardDescription>
                 Daily breakdown of orders booked in the field vs payment collections deposited
@@ -206,7 +213,7 @@ export default function CommercialDashboardPage() {
             </div>
             <div className="flex items-center gap-2 text-xs">
               <Badge variant="outline" className="text-slate-600 dark:text-slate-300">
-                Daily Timeline: Oct 01 – Oct 08
+                Daily Timeline: Last 7 Days
               </Badge>
             </div>
           </div>

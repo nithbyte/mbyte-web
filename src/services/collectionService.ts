@@ -69,14 +69,16 @@ export const collectionService = {
       if (list !== null) {
         let mapped: Collection[] = list.map(mapApiCollection);
 
-        if (params?.search) {
+        if (params?.search && params.search.trim()) {
           const q = params.search.toLowerCase().trim();
           mapped = mapped.filter(
             (c: any) =>
               c.receiptNumber.toLowerCase().includes(q) ||
               c.pharmacyName.toLowerCase().includes(q) ||
               (c.mrName && c.mrName.toLowerCase().includes(q)) ||
+              (c.mrEmployeeCode && c.mrEmployeeCode.toLowerCase().includes(q)) ||
               (c.referenceNumber && c.referenceNumber.toLowerCase().includes(q)) ||
+              (c.paymentMode && c.paymentMode.toLowerCase().includes(q)) ||
               (c.notes && c.notes.toLowerCase().includes(q))
           );
         }

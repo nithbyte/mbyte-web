@@ -39,11 +39,13 @@ function mapApiOrder(o: any): Order {
     id: o.id,
     organizationId: o.organizationId || "",
     orderNumber: o.orderNumber,
-    orderDate: o.createdAt?.split("T")[0] || "2026-10-09",
+    orderDate: o.createdAt?.split("T")[0] || new Date().toISOString().split("T")[0],
     mrId: o.mrId || o.mr?.id || "mr_001",
     mrName: o.mr?.name || o.mrName || "Field MR",
+    mrEmployeeCode: o.mr?.employeeCode || o.mrEmployeeCode || "",
     pharmacyId: o.pharmacyId || o.customerId,
     pharmacyName: o.customer?.name || o.pharmacyName || "Pharmacy",
+    customerAddress: o.customer?.address || o.customerAddress || "",
     territoryId: o.territoryId || o.mr?.territoryId || "ter_001",
     territoryName: o.territoryName || o.mr?.territoryName || "Central Territory",
     distributorId: o.distributorId,
@@ -51,7 +53,10 @@ function mapApiOrder(o: any): Order {
     status: o.status,
     totalAmount: Number(o.totalAmount) || 0,
     subtotalAmount: Number(o.subtotalAmount) || 0,
+    discountAmount: Number(o.discountAmount) || 0,
     taxAmount: Number(o.taxAmount) || 0,
+    remarks: o.remarks,
+    notes: o.remarks || o.notes,
     items,
     createdAt: o.createdAt,
   };
@@ -64,6 +69,8 @@ export const orderService = {
       if (params?.status && params.status !== "ALL") queryParams.status = params.status;
       if (params?.mrId && params.mrId !== "ALL") queryParams.mrId = params.mrId;
       if (params?.customerId && params.customerId !== "ALL") queryParams.customerId = params.customerId;
+      if (params?.date) queryParams.date = params.date;
+      if (params?.search && params.search.trim()) queryParams.search = params.search.trim();
       if (params?.organizationId) queryParams.organizationId = params.organizationId;
 
       const res = await apiClient.get<any>("/orders", { params: queryParams });
@@ -79,13 +86,22 @@ export const orderService = {
           list = list.filter((o: any) => o.orderDate === params.date);
         }
 
-        if (params?.search) {
+        if (params?.search && params.search.trim()) {
           const q = params.search.toLowerCase().trim();
           list = list.filter(
             (o: any) =>
               o.orderNumber.toLowerCase().includes(q) ||
               o.pharmacyName.toLowerCase().includes(q) ||
-              (o.mrName && o.mrName.toLowerCase().includes(q))
+              (o.distributorName && o.distributorName.toLowerCase().includes(q)) ||
+              (o.mrName && o.mrName.toLowerCase().includes(q)) ||
+              (o.mrEmployeeCode && o.mrEmployeeCode.toLowerCase().includes(q)) ||
+              (o.remarks && o.remarks.toLowerCase().includes(q)) ||
+              (Array.isArray(o.items) &&
+                o.items.some(
+                  (it: any) =>
+                    it.productName?.toLowerCase().includes(q) ||
+                    it.sku?.toLowerCase().includes(q)
+                ))
           );
         }
 
@@ -227,13 +243,20 @@ export const orderService = {
     return Promise.resolve(days);
   },
 
-  async updateOrderStatus(id: string, status: string): Promise<Order> {
+  async updateOrderStatus(id: string, status: string, remarks?: string): Promise<Order> {
     try {
-      const res = await apiClient.put<any>(`/orders/${id}/status`, { status });
+      const payload: Record<string, any> = { status };
+      if (remarks && remarks.trim()) {
+        payload.remarks = remarks.trim();
+      }
+      const res = await apiClient.put<any>(`/orders/${id}/status`, payload);
       if (res && res.id) {
         return mapApiOrder(res);
       }
     } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       console.warn("Real PUT /orders/:id/status failed, using mock:", err);
     }
     const order = mockOrders.find((o) => o.id === id);
@@ -241,23 +264,27 @@ export const orderService = {
       order.status = status as any;
       return order;
     }
-    // If not found in mock, create a dummy updated record
-    return {
-      id,
-      organizationId: "org_novis_001",
-      orderNumber: id,
-      orderDate: "2026-10-09",
-      mrId: "mr_001",
-      mrName: "Field MR",
-      pharmacyId: "phm_001",
-      pharmacyName: "Pharmacy",
-      status: status as any,
-      totalAmount: 1000,
-      subtotalAmount: 900,
-      taxAmount: 100,
-      items: [],
-      createdAt: new Date().toISOString(),
-    };
+    throw new Error("Failed to update order status");
+  },
+
+  async cancelOrder(id: string, reason?: string): Promise<Order> {
+    try {
+      const res = await apiClient.post<any>(`/orders/${id}/cancel`, reason ? { reason } : {});
+      if (res && res.id) {
+        return mapApiOrder(res);
+      }
+    } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
+      console.warn("Real POST /orders/:id/cancel failed, using mock:", err);
+    }
+    const order = mockOrders.find((o) => o.id === id);
+    if (order) {
+      order.status = "CANCELLED" as any;
+      return order;
+    }
+    throw new Error("Failed to cancel order");
   },
 };
 

@@ -41,16 +41,46 @@ import {
   Calendar,
   CreditCard,
   RotateCcw,
+  RefreshCw,
+  X,
   ShieldCheck,
   FileCheck2,
 } from "lucide-react";
 import { PaymentMode } from "@/types";
+
+function getRecentDateOptions() {
+  const opts: Array<{ value: string; label: string }> = [];
+  const now = new Date();
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - i);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const val = `${yyyy}-${mm}-${dd}`;
+    const nice = d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+    opts.push({
+      value: val,
+      label: i === 0 ? `Today (${nice})` : i === 1 ? `Yesterday (${nice})` : nice,
+    });
+  }
+  return opts;
+}
 
 export default function CollectionsPage() {
   const [modeFilter, setModeFilter] = useState<PaymentMode | "ALL">("ALL");
   const [mrFilter, setMrFilter] = useState<string>("ALL");
   const [dateFilter, setDateFilter] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const recentDates = React.useMemo(() => getRecentDateOptions(), []);
+  const currentMonthLabel = React.useMemo(
+    () => new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" }),
+    []
+  );
+  const todayShortLabel = React.useMemo(
+    () => new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short" }),
+    []
+  );
   React.useEffect(() => {
     if (typeof window === "undefined") return;
     const q = new URLSearchParams(window.location.search).get("search");
@@ -58,14 +88,19 @@ export default function CollectionsPage() {
   }, []);
   const [selectedColId, setSelectedColId] = useState<string | null>(null);
 
-  const { data: kpis, isLoading: kpisLoading } = useCollectionKPIs({
+  const { data: kpis, isLoading: kpisLoading, refetch: refetchKpis } = useCollectionKPIs({
     mrId: mrFilter !== "ALL" ? mrFilter : undefined,
   });
 
-  const { data: trendData, isLoading: trendLoading } = useCollectionTrend();
+  const { data: trendData, isLoading: trendLoading, refetch: refetchTrend } = useCollectionTrend();
   const { data: mrs } = useMRList();
 
-  const { data: collections, isLoading: colsLoading } = useCollections({
+  const {
+    data: collections,
+    isLoading: colsLoading,
+    isFetching: colsFetching,
+    refetch: refetchCollections,
+  } = useCollections({
     mode: modeFilter,
     mrId: mrFilter,
     date: dateFilter || undefined,
@@ -74,11 +109,21 @@ export default function CollectionsPage() {
 
   const { data: activeCol, isLoading: colDetailLoading } = useCollectionDetail(selectedColId);
 
+  const handleRefresh = () => {
+    refetchCollections();
+    refetchKpis();
+    refetchTrend();
+  };
+
   const resetFilters = () => {
     setModeFilter("ALL");
     setMrFilter("ALL");
     setDateFilter("");
     setSearchQuery("");
+    if (typeof window !== "undefined" && window.location.search.includes("search=")) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+    setTimeout(() => handleRefresh(), 0);
   };
 
   const getModeBadgeVariant = (mode: PaymentMode): "default" | "secondary" | "destructive" | "outline" | "success" | "warning" | "info" => {
@@ -147,7 +192,7 @@ export default function CollectionsPage() {
                   <span className="font-bold text-emerald-600 dark:text-emerald-400">
                     {kpis?.todayCount || 0} vouchers
                   </span>
-                  <span>collected on Oct 08</span>
+                  <span>collected on {todayShortLabel}</span>
                 </div>
               </div>
             )}
@@ -243,7 +288,7 @@ export default function CollectionsPage() {
             <div>
               <CardTitle className="text-sm font-bold flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-emerald-600" />
-                Daily Collections Trend (October 2026)
+                Daily Collections Trend ({currentMonthLabel})
               </CardTitle>
               <CardDescription className="text-xs">
                 Real-time deposits and invoice collections brought in by medical representatives
@@ -302,11 +347,21 @@ export default function CollectionsPage() {
               <div className="relative min-w-[220px] flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input
-                  placeholder="Search receipt #, customer, or reference #..."
+                  placeholder="Search receipt #, customer, MR, or reference #..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 h-9 text-xs"
+                  className="pl-9 pr-8 h-9 text-xs"
                 />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    aria-label="Clear search"
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
 
               {/* Mode Filter */}
@@ -346,26 +401,39 @@ export default function CollectionsPage() {
                 className="h-9 rounded-md border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 shadow-xs dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300"
               >
                 <option value="">All Dates</option>
-                <option value="2026-10-08">Today (08 Oct 2026)</option>
-                <option value="2026-10-07">07 Oct 2026</option>
-                <option value="2026-10-06">06 Oct 2026</option>
-                <option value="2026-10-05">05 Oct 2026</option>
-                <option value="2026-10-04">04 Oct 2026</option>
+                {recentDates.map((d) => (
+                  <option key={d.value} value={d.value}>
+                    {d.label}
+                  </option>
+                ))}
               </select>
             </div>
 
-            {/* Reset */}
-            {(modeFilter !== "ALL" || mrFilter !== "ALL" || dateFilter || searchQuery) && (
+            <div className="flex items-center gap-1.5">
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                onClick={resetFilters}
-                className="text-xs text-rose-600 hover:text-rose-700 gap-1.5 h-9"
+                onClick={handleRefresh}
+                disabled={colsFetching}
+                className="text-xs gap-1.5 h-9"
               >
-                <RotateCcw className="h-3.5 w-3.5" />
-                Reset
+                <RefreshCw className={`h-3.5 w-3.5 ${colsFetching ? "animate-spin" : ""}`} />
+                Refresh
               </Button>
-            )}
+
+              {/* Reset */}
+              {(modeFilter !== "ALL" || mrFilter !== "ALL" || dateFilter || searchQuery) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={resetFilters}
+                  className="text-xs text-rose-600 hover:text-rose-700 gap-1.5 h-9"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  Reset
+                </Button>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>

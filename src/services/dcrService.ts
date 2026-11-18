@@ -1,6 +1,7 @@
 import { apiClient } from "../lib/api-client";
 
 export type DcrStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED" | "REOPENED";
+export type DcrUnlockRequestStatus = "NONE" | "PENDING" | "APPROVED" | "REJECTED";
 
 export interface DcrAudit {
   id: string;
@@ -10,6 +11,57 @@ export interface DcrAudit {
   comments?: string;
   createdAt: string;
   actor?: { firstName: string; lastName: string; email: string };
+}
+
+export interface DcrProductDiscussed {
+  productId: string;
+  brandName: string;
+  dosageForm?: string | null;
+  sku?: string | null;
+  samplesQty: number;
+  visitCount: number;
+  customers: string[];
+  feedbacks: string[];
+}
+
+export interface DcrVisualAidShown {
+  sessionId: string;
+  visualAidId: string;
+  title: string;
+  type: string;
+  productName?: string | null;
+  visitId?: string | null;
+  customerName?: string | null;
+  durationSeconds: number;
+  startedAt: string;
+  endedAt?: string | null;
+  completed: boolean;
+  notes?: string | null;
+}
+
+export interface DcrOrderBooked {
+  id: string;
+  orderNumber: string;
+  status: string;
+  customerName: string;
+  visitId?: string | null;
+  totalAmount: number;
+  itemsCount: number;
+  items: Array<{ productName: string; quantity: number; lineTotal: number }>;
+  remarks?: string | null;
+  createdAt: string;
+}
+
+export interface DcrFeedbackItem {
+  visitId: string;
+  customerName: string;
+  customerType: string;
+  status: string;
+  startTime?: string | null;
+  endTime?: string | null;
+  durationSeconds?: number | null;
+  feedbackNotes?: string | null;
+  productFeedbacks: Array<{ productName: string; feedback: string }>;
 }
 
 export interface DailyCallReport {
@@ -27,6 +79,13 @@ export interface DailyCallReport {
   reopenedAt?: string;
   reopenedById?: string;
   reopenReason?: string;
+  unlockRequestStatus?: DcrUnlockRequestStatus;
+  unlockRequestedAt?: string;
+  unlockRequestReason?: string;
+  unlockReviewedAt?: string;
+  unlockReviewedById?: string;
+  unlockReviewComments?: string;
+  unlockReviewedBy?: { id: string; firstName: string; lastName: string; email: string };
   totalPlannedCalls: number;
   totalExecutedCalls: number;
   totalDoctorsVisited: number;
@@ -50,6 +109,12 @@ export interface DailyCallReport {
   approvedBy?: { id: string; firstName: string; lastName: string; email: string };
   reopenedBy?: { id: string; firstName: string; lastName: string; email: string };
   visits?: any[];
+  orders?: any[];
+  collections?: any[];
+  productsDiscussed?: DcrProductDiscussed[];
+  visualAidsShown?: DcrVisualAidShown[];
+  ordersBooked?: DcrOrderBooked[];
+  feedbacks?: DcrFeedbackItem[];
   audits?: DcrAudit[];
 }
 
@@ -58,6 +123,7 @@ export interface DcrQueryParams {
   startDate?: string;
   endDate?: string;
   status?: DcrStatus | "ALL";
+  unlockRequestStatus?: DcrUnlockRequestStatus | "ALL";
   mrId?: string;
   territoryId?: string;
   page?: number;
@@ -95,6 +161,9 @@ export const dcrService = {
       if (params?.startDate) query.startDate = params.startDate;
       if (params?.endDate) query.endDate = params.endDate;
       if (params?.status && params.status !== "ALL") query.status = params.status;
+      if (params?.unlockRequestStatus && params.unlockRequestStatus !== "ALL") {
+        query.unlockRequestStatus = params.unlockRequestStatus;
+      }
       if (params?.mrId && params.mrId !== "ALL") query.mrId = params.mrId;
       if (params?.territoryId && params.territoryId !== "ALL") query.territoryId = params.territoryId;
 
@@ -139,5 +208,16 @@ export const dcrService = {
 
   async reopenDcr(id: string, reopenReason: string): Promise<DailyCallReport> {
     return apiClient.post<DailyCallReport>(`/dcr/${id}/reopen`, { reopenReason });
+  },
+
+  async reviewUnlockRequest(
+    id: string,
+    status: "APPROVED" | "REJECTED",
+    comments?: string
+  ): Promise<DailyCallReport> {
+    return apiClient.post<DailyCallReport>(`/dcr/${id}/unlock-request/review`, {
+      status,
+      comments: comments?.trim() || undefined,
+    });
   },
 };

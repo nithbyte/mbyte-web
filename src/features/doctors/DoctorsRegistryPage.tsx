@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -162,6 +163,14 @@ export function DoctorsRegistryPage({
     setSpecialty("ALL");
     setTier("ALL");
     setApprovalStatusFilter("ALL");
+    if (typeof window !== "undefined" && window.location.search.includes("search=")) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+    setTimeout(() => {
+      refetch();
+      refetchPending();
+      refetchRejected();
+    }, 0);
   };
 
   const handleOpenCreate = () => {
@@ -604,9 +613,12 @@ export function DoctorsRegistryPage({
                     {doctors?.map((doc) => (
                       <TableRow key={doc.id}>
                         <TableCell>
-                          <div className="font-bold text-xs text-slate-900 dark:text-slate-100">
+                          <Link
+                            href={`/doctors/${doc.id}`}
+                            className="font-bold text-xs text-slate-900 dark:text-slate-100 hover:text-sky-600 hover:underline transition-colors"
+                          >
                             {doc.name}
-                          </div>
+                          </Link>
                           <div className="text-[11px] text-slate-500 truncate max-w-xs">
                             {doc.clinicName} • {doc.address}
                           </div>
@@ -704,15 +716,15 @@ export function DoctorsRegistryPage({
                               <span className="hidden xl:inline">Direction</span>
                             </a>
 
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 text-xs px-2"
-                              onClick={() => setSelectedDetails(doc)}
-                              title="View Profile Details"
-                            >
-                              Details
-                            </Button>
+                            <Link href={`/doctors/${doc.id}`} title="View Full Doctor Profile & Past Visits">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs px-2"
+                              >
+                                Details
+                              </Button>
+                            </Link>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -722,15 +734,15 @@ export function DoctorsRegistryPage({
                             >
                               <Edit2 className="h-3 w-3 text-slate-500" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 text-xs px-2"
-                              onClick={() => setHistoryDoctor(doc)}
-                              title="View Interaction History"
-                            >
-                              <HistoryIcon className="h-3 w-3 text-sky-600" />
-                            </Button>
+                            <Link href={`/doctors/${doc.id}`} title="View Full Visit & Interaction History">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs px-2"
+                              >
+                                <HistoryIcon className="h-3 w-3 text-sky-600" />
+                              </Button>
+                            </Link>
                           </div>
                         </TableCell>
                       </TableRow>
