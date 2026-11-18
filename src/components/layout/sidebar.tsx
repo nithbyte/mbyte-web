@@ -38,7 +38,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useSidebarStore, useAuthStore } from "@/store";
 import { useCurrentUser, useLogout } from "@/hooks";
-import { normalizeRole, getRoleLabel, type CanonicalRole } from "@/types";
+import { normalizeRole, type CanonicalRole } from "@/types";
 import { APP_CONFIG } from "@/lib/constants";
 import { MByteLogo } from "@/components/ui/mbyte-logo";
 
@@ -490,19 +490,6 @@ export function Sidebar() {
   const canonicalRole = normalizeRole(currentUser?.role);
   const navSections = getNavSections(canonicalRole);
 
-  const userName = currentUser?.name || [currentUser?.firstName, currentUser?.lastName].filter(Boolean).join(" ").trim() || "Loading...";
-  const userRole = getRoleLabel(canonicalRole);
-  const initials =
-    userName === "Loading..."
-      ? "MB"
-      : userName
-          .split(" ")
-          .map((part) => part[0])
-          .filter(Boolean)
-          .slice(0, 2)
-          .join("")
-          .toUpperCase() || "MB";
-
   const handleLogout = async () => {
     try {
       await logoutMutation.mutateAsync();
@@ -675,24 +662,8 @@ export function Sidebar() {
           ))}
       </div>
 
-      {/* Footer, Profile & Logout */}
-      <div className="shrink-0 border-t border-slate-200/80 p-3 dark:border-[#123261] space-y-2">
-        {!isCollapsed && (
-          <div className="flex items-center gap-3 rounded-xl bg-slate-50/80 p-2.5 dark:bg-[#0b2247]/60">
-            <div suppressHydrationWarning className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-100 text-xs font-bold text-sky-700 dark:bg-sky-900 dark:text-sky-300 shrink-0">
-              {initials}
-            </div>
-            <div className="flex flex-col truncate flex-1 min-w-0">
-              <span suppressHydrationWarning className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
-                {userName}
-              </span>
-              <span suppressHydrationWarning className="text-[10px] text-sky-600 dark:text-sky-400 font-semibold truncate">
-                {userRole}
-              </span>
-            </div>
-          </div>
-        )}
-
+      {/* Footer & Logout */}
+      <div className="shrink-0 border-t border-slate-200/80 p-3 dark:border-[#123261]">
         {/* Sign Out Button */}
         <button
           onClick={handleLogout}
