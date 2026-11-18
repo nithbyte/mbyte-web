@@ -32,7 +32,8 @@ import {
   useCollectionReport,
   useTargetAchievementReport,
 } from "@/hooks";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, formatOperatingDateDisplay } from "@/lib/utils";
+import { useFilterStore } from "@/store";
 import {
   Calendar,
   MapPin,
@@ -55,16 +56,31 @@ import { ReportTab } from "@/types";
 import { reportService } from "@/services";
 
 export default function ReportsPage() {
+  const { selectedTerritoryId, operatingDate, dateSelectionVersion } = useFilterStore();
+
   // Tab State
   const [activeTab, setActiveTab] = useState<ReportTab>("VISITS");
 
   // Global Filter State (date, territory, MR, product)
-  const [selectedDate, setSelectedDate] = useState<string>("ALL");
-  const [selectedTerritory, setSelectedTerritory] = useState<string>("ALL");
+  const [selectedDate, setSelectedDate] = useState<string>(() =>
+    dateSelectionVersion > 0 ? operatingDate : "ALL"
+  );
+  const [selectedTerritory, setSelectedTerritory] = useState<string>(selectedTerritoryId || "ALL");
   const [selectedMR, setSelectedMR] = useState<string>("ALL");
   const [selectedProduct, setSelectedProduct] = useState<string>("ALL");
   const [exportNotice, setExportNotice] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState<boolean>(false);
+
+  React.useEffect(() => {
+    setSelectedTerritory(selectedTerritoryId || "ALL");
+    setSelectedMR("ALL");
+  }, [selectedTerritoryId]);
+
+  React.useEffect(() => {
+    if (dateSelectionVersion > 0) {
+      setSelectedDate(operatingDate);
+    }
+  }, [operatingDate, dateSelectionVersion]);
 
   // Filter master datasets
   const { data: territories } = useTerritories();
@@ -207,6 +223,17 @@ export default function ReportsPage() {
                   className="w-full h-8 px-2.5 rounded-md border border-slate-200 bg-white text-xs font-medium text-slate-700 shadow-xs dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 >
                   <option value="ALL">All Dates (Current Month MTD)</option>
+                  {selectedDate !== "ALL" &&
+                    !Array.from({ length: 8 }).some((_, idx) => {
+                      const d = new Date();
+                      d.setDate(d.getDate() - idx);
+                      const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+                      return val === selectedDate;
+                    }) && (
+                      <option value={selectedDate}>
+                        Selected ({formatOperatingDateDisplay(selectedDate)})
+                      </option>
+                    )}
                   {Array.from({ length: 8 }).map((_, idx) => {
                     const d = new Date();
                     d.setDate(d.getDate() - idx);

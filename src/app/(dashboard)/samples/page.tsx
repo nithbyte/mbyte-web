@@ -29,6 +29,7 @@ import {
 } from "@/services/sampleService";
 import { productService } from "@/services/productService";
 import { fieldForceService } from "@/services/fieldForceService";
+import { useFilterStore } from "@/store";
 
 // Modular feature components
 import {
@@ -52,6 +53,7 @@ import {
 } from "@/features/samples";
 
 export default function SampleInventoryPage() {
+  const { selectedTerritoryId, operatingDate, dateSelectionVersion } = useFilterStore();
   const [activeTab, setActiveTab] = useState<
     "overview" | "balances" | "dispatches" | "mr-inventory" | "batches" | "adjustments" | "ledger" | "reports"
   >("overview");
@@ -280,11 +282,23 @@ export default function SampleInventoryPage() {
     );
   }, [ledgerEntries]);
 
+  const territoryMrIds = useMemo(() => {
+    if (selectedTerritoryId === "ALL") return null;
+    return new Set(
+      mrs
+        .filter((m: any) => m.territoryId === selectedTerritoryId)
+        .map((m: any) => m.id)
+    );
+  }, [mrs, selectedTerritoryId]);
+
   // Filtered Balances
   const filteredBalances = useMemo(() => {
     return balances.filter((b) => {
       if (filterHolder === "WAREHOUSE" && !b.isWarehouse) return false;
       if (filterHolder === "MR" && b.isWarehouse) return false;
+      if (territoryMrIds && !b.isWarehouse && (!b.mrId || !territoryMrIds.has(b.mrId))) {
+        return false;
+      }
 
       if (searchTerm) {
         const term = searchTerm.toLowerCase();
@@ -298,13 +312,23 @@ export default function SampleInventoryPage() {
 
       return true;
     });
-  }, [balances, filterHolder, searchTerm]);
+  }, [balances, filterHolder, searchTerm, territoryMrIds]);
 
   // Filtered Ledger
   const filteredLedger = useMemo(() => {
     return ledgerEntries.filter((entry) => {
       if (filterMovementType !== "ALL" && entry.movementType !== filterMovementType) {
         return false;
+      }
+      if (territoryMrIds) {
+        const matchesMr =
+          (entry.targetMrId && territoryMrIds.has(entry.targetMrId)) ||
+          (entry.sourceMrId && territoryMrIds.has(entry.sourceMrId));
+        if (!matchesMr) return false;
+      }
+      if (dateSelectionVersion > 0 && operatingDate) {
+        const entryDate = String(entry.createdAt || "").slice(0, 10);
+        if (entryDate && entryDate !== operatingDate) return false;
       }
       if (searchTerm) {
         const term = searchTerm.toLowerCase();
@@ -316,7 +340,7 @@ export default function SampleInventoryPage() {
       }
       return true;
     });
-  }, [ledgerEntries, filterMovementType, searchTerm]);
+  }, [ledgerEntries, filterMovementType, searchTerm, territoryMrIds, dateSelectionVersion, operatingDate]);
 
   // Form Handlers
   const handleRegisterBatch = async (e: React.FormEvent) => {

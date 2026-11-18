@@ -62,9 +62,12 @@ const QUICK_PAGES: Array<{
   { title: "Pharmacies & Retail", subtitle: "Chemist & retail outlets", href: "/pharmacies", keywords: "pharmacy chemist retail store" },
   { title: "Distributors & Stockists", subtitle: "Stockist network", href: "/distributors", keywords: "distributor stockist agency" },
   { title: "Products & Visual Aids", subtitle: "Formulations & e-detailing", href: "/products", keywords: "product sku medicine visual aid" },
+  { title: "Product Presence & Audits", subtitle: "Chemist shelf stock & heatmap", href: "/products/presence", keywords: "presence shelf stock audit heatmap" },
   { title: "Sample Inventory & Gifts", subtitle: "Samples, paperweights & promo inputs", href: "/samples", keywords: "sample gift input paperweight batch dispatch" },
+  { title: "Commercial Overview", subtitle: "Revenue intelligence & leaderboard", href: "/commercial", keywords: "commercial revenue intelligence dashboard" },
   { title: "Orders Booking", subtitle: "Secondary sales orders", href: "/orders", keywords: "order sales booking invoice" },
   { title: "Collections & Receipts", subtitle: "Payment receipts & recovery", href: "/collections", keywords: "collection payment receipt cash upi cheque" },
+  { title: "Accounts Receivable", subtitle: "Invoices, aging & credit statements", href: "/receivables", keywords: "receivable invoice aging overdue ar credit" },
   { title: "Expense Claims", subtitle: "TA/DA & field expenses", href: "/expenses", keywords: "expense claim travel allowance" },
   { title: "Attendance & Shifts", subtitle: "Daily punch-in & punch-out", href: "/attendance", keywords: "attendance shift punch in out" },
   { title: "Team Chat & Calls", subtitle: "Messaging, audio & video calls", href: "/chat", keywords: "chat message call voice video" },
@@ -193,7 +196,7 @@ export function GlobalSearch({ role }: { role: CanonicalRole }) {
               category: "DOCTOR",
               title: d.name || "Doctor",
               subtitle: [d.specialty, d.clinicName].filter(Boolean).join(" • "),
-              href: `/doctors?search=${encodeURIComponent(d.name || q)}`,
+              href: `/doctors/${d.id}`,
             });
           });
 
@@ -289,7 +292,7 @@ export function GlobalSearch({ role }: { role: CanonicalRole }) {
               category: "TERRITORY",
               title: `${t.name} (${t.code})`,
               subtitle: [t.region, t.zone].filter(Boolean).join(" • "),
-              href: `/territories`,
+              href: `/territories?territory=${encodeURIComponent(t.id)}`,
             });
           });
 

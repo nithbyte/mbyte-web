@@ -9,10 +9,13 @@ export function useOrders(params?: OrderQueryParams) {
   });
 }
 
-export function useRecentOrders(limit: number = 5) {
+export function useRecentOrders(
+  limit: number = 5,
+  params?: { territoryId?: string; date?: string }
+) {
   return useQuery({
-    queryKey: ["orders", "recent", limit],
-    queryFn: () => orderService.getRecentOrders(limit),
+    queryKey: ["orders", "recent", limit, params],
+    queryFn: () => orderService.getRecentOrders(limit, params),
   });
 }
 
@@ -24,17 +27,17 @@ export function useOrderDetail(id: string | null) {
   });
 }
 
-export function useOrderKPIs(params?: { mrId?: string; territoryId?: string }) {
+export function useOrderKPIs(params?: { mrId?: string; territoryId?: string; date?: string }) {
   return useQuery({
     queryKey: ["orders", "kpis", params],
     queryFn: () => orderService.getOrderKPIs(params),
   });
 }
 
-export function useOrderTrend() {
+export function useOrderTrend(params?: { territoryId?: string; mrId?: string; date?: string }) {
   return useQuery({
-    queryKey: ["orders", "trend"],
-    queryFn: () => orderService.getOrderTrend(),
+    queryKey: ["orders", "trend", params],
+    queryFn: () => orderService.getOrderTrend(params),
   });
 }
 

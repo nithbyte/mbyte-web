@@ -10,9 +10,15 @@ import type {
 } from "../types";
 
 export const commercialService = {
-  async getCommercialKPIs(): Promise<CommercialKPIs> {
-    const orderKpis = await orderService.getOrderKPIs();
-    const colKpis = await collectionService.getCollectionKPIs();
+  async getCommercialKPIs(params?: { territoryId?: string; date?: string }): Promise<CommercialKPIs> {
+    const orderKpis = await orderService.getOrderKPIs({
+      territoryId: params?.territoryId,
+      date: params?.date,
+    });
+    const colKpis = await collectionService.getCollectionKPIs({
+      territoryId: params?.territoryId,
+      date: params?.date,
+    });
 
     const realizationRate =
       orderKpis.monthlyValue > 0
@@ -34,9 +40,15 @@ export const commercialService = {
     };
   },
 
-  async getDailyTrends(): Promise<DailyCommercialTrend[]> {
-    const orderTrends = await orderService.getOrderTrend();
-    const colTrends = await collectionService.getCollectionTrend();
+  async getDailyTrends(params?: { territoryId?: string; date?: string }): Promise<DailyCommercialTrend[]> {
+    const orderTrends = await orderService.getOrderTrend({
+      territoryId: params?.territoryId,
+      date: params?.date,
+    });
+    const colTrends = await collectionService.getCollectionTrend({
+      territoryId: params?.territoryId,
+      date: params?.date,
+    });
 
     const result: DailyCommercialTrend[] = [];
 
@@ -60,12 +72,16 @@ export const commercialService = {
     return result;
   },
 
-  async getMrLeaderboard(): Promise<MrCommercialPerformance[]> {
+  async getMrLeaderboard(params?: { territoryId?: string; date?: string }): Promise<MrCommercialPerformance[]> {
     try {
+      const territoryFilter =
+        params?.territoryId && params.territoryId !== "ALL"
+          ? params.territoryId
+          : undefined;
       const [mrList, orders, collections] = await Promise.all([
-        fieldForceService.getMRList(),
-        orderService.getOrders({ limit: 200 }),
-        collectionService.getCollections({ limit: 100 }),
+        fieldForceService.getMRList(territoryFilter ? { territoryId: territoryFilter } : undefined),
+        orderService.getOrders({ limit: 200, territoryId: territoryFilter }),
+        collectionService.getCollections({ limit: 100, territoryId: territoryFilter }),
       ]);
 
       if (mrList && mrList.length > 0) {

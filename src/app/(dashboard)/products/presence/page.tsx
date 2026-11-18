@@ -26,7 +26,8 @@ import {
   usePharmacies,
   useMRList,
 } from "@/hooks";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatOperatingDateDisplay } from "@/lib/utils";
+import { useFilterStore } from "@/store";
 import type { ProductPresenceAudit, ProductPresenceStatus, PresenceQueryParams } from "@/types";
 import {
   MapPin,
@@ -49,14 +50,28 @@ import {
 } from "lucide-react";
 
 export default function ProductPresencePage() {
+  const { selectedTerritoryId, operatingDate, dateSelectionVersion } = useFilterStore();
+
   // Filter States
   const [selectedProduct, setSelectedProduct] = useState("ALL");
-  const [selectedTerritory, setSelectedTerritory] = useState("ALL");
+  const [selectedTerritory, setSelectedTerritory] = useState(selectedTerritoryId || "ALL");
   const [selectedMR, setSelectedMR] = useState("ALL");
   const [selectedCustomer, setSelectedCustomer] = useState("ALL");
-  const [selectedDate, setSelectedDate] = useState("ALL");
+  const [selectedDate, setSelectedDate] = useState(() =>
+    dateSelectionVersion > 0 ? operatingDate : "ALL"
+  );
   const [selectedStatus, setSelectedStatus] = useState("ALL");
   const [search, setSearch] = useState("");
+
+  React.useEffect(() => {
+    setSelectedTerritory(selectedTerritoryId || "ALL");
+  }, [selectedTerritoryId]);
+
+  React.useEffect(() => {
+    if (dateSelectionVersion > 0) {
+      setSelectedDate(operatingDate);
+    }
+  }, [operatingDate, dateSelectionVersion]);
 
   // UI View Mode (Table vs Map vs Both)
   const [viewTab, setViewTab] = useState<"ALL" | "MAP_ONLY" | "TABLE_ONLY">("ALL");
@@ -85,7 +100,14 @@ export default function ProductPresencePage() {
   const { data: territories } = useTerritories();
   const { data: pharmacies } = usePharmacies();
   const { data: mrList } = useMRList();
-  const { data: auditDates } = useAuditDates();
+  const { data: rawAuditDates } = useAuditDates();
+  const auditDates = useMemo(() => {
+    const base = Array.isArray(rawAuditDates) ? [...rawAuditDates] : [];
+    if (selectedDate !== "ALL" && !base.includes(selectedDate)) {
+      base.unshift(selectedDate);
+    }
+    return base;
+  }, [rawAuditDates, selectedDate]);
 
   const handleResetFilters = () => {
     setSelectedProduct("ALL");

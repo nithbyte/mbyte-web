@@ -28,7 +28,8 @@ import {
   useRecentOrders,
   useRecentCollections,
 } from "@/hooks";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, formatOperatingDateDisplay } from "@/lib/utils";
+import { useFilterStore } from "@/store";
 import { CommercialTrendChart } from "@/components/ui/charts/CommercialTrendChart";
 import {
   TrendingUp,
@@ -41,11 +42,30 @@ import {
 } from "lucide-react";
 
 export default function CommercialDashboardPage() {
-  const { data: kpis, isLoading: kpisLoading } = useCommercialKPIs();
-  const { data: trends, isLoading: trendsLoading } = useCommercialTrends();
-  const { data: leaderboard, isLoading: lbLoading } = useCommercialLeaderboard();
-  const { data: recentOrders, isLoading: ordersLoading } = useRecentOrders(5);
-  const { data: recentCollections, isLoading: colsLoading } = useRecentCollections(5);
+  const { selectedTerritoryId, operatingDate, dateSelectionVersion } = useFilterStore();
+  const territoryParam = selectedTerritoryId !== "ALL" ? selectedTerritoryId : undefined;
+  const activeDateLabel = formatOperatingDateDisplay(operatingDate);
+
+  const { data: kpis, isLoading: kpisLoading } = useCommercialKPIs({
+    territoryId: territoryParam,
+    date: operatingDate,
+  });
+  const { data: trends, isLoading: trendsLoading } = useCommercialTrends({
+    territoryId: territoryParam,
+    date: operatingDate,
+  });
+  const { data: leaderboard, isLoading: lbLoading } = useCommercialLeaderboard({
+    territoryId: territoryParam,
+    date: operatingDate,
+  });
+  const { data: recentOrders, isLoading: ordersLoading } = useRecentOrders(5, {
+    territoryId: territoryParam,
+    date: dateSelectionVersion > 0 ? operatingDate : undefined,
+  });
+  const { data: recentCollections, isLoading: colsLoading } = useRecentCollections(5, {
+    territoryId: territoryParam,
+    date: dateSelectionVersion > 0 ? operatingDate : undefined,
+  });
 
   return (
     <div className="space-y-6">
@@ -100,9 +120,7 @@ export default function CommercialDashboardPage() {
                   <span className="font-semibold text-sky-600 dark:text-sky-400">
                     {kpis?.todayOrdersCount || 0} orders
                   </span>
-                  <span>
-                    booked on {new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
-                  </span>
+                  <span>booked on {activeDateLabel}</span>
                 </div>
               </div>
             )}
@@ -131,7 +149,7 @@ export default function CommercialDashboardPage() {
                   <span className="font-semibold text-emerald-600 dark:text-emerald-400">
                     {kpis?.todayCollectionsCount || 0} receipts
                   </span>
-                  <span>realized today</span>
+                  <span>realized on {activeDateLabel}</span>
                 </div>
               </div>
             )}

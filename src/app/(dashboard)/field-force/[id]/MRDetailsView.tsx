@@ -18,6 +18,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { useMRDetails, useCurrentUser } from "@/hooks";
+import { useFilterStore } from "@/store";
 import { analysisService, MrAnalysisData } from "@/services/analysisService";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { normalizeRole } from "@/types";
@@ -96,13 +97,28 @@ const formatTime = (iso?: string | null) => {
 
 export function MRDetailsView({ id }: { id: string }) {
   const { data: currentUser } = useCurrentUser();
+  const { operatingDate, dateSelectionVersion } = useFilterStore();
   const canonicalRole = normalizeRole(currentUser?.role);
   const { data, isLoading } = useMRDetails(id);
 
   // Analysis & Multi-Facet Filter State
-  const [datePreset, setDatePreset] = useState<DatePreset>("ALL_TIME");
-  const [startDate, setStartDate] = useState<string>("");
-  const [endDate, setEndDate] = useState<string>("");
+  const [datePreset, setDatePreset] = useState<DatePreset>(() =>
+    dateSelectionVersion > 0 ? "CUSTOM" : "ALL_TIME"
+  );
+  const [startDate, setStartDate] = useState<string>(() =>
+    dateSelectionVersion > 0 ? operatingDate : ""
+  );
+  const [endDate, setEndDate] = useState<string>(() =>
+    dateSelectionVersion > 0 ? operatingDate : ""
+  );
+
+  useEffect(() => {
+    if (dateSelectionVersion > 0) {
+      setDatePreset("CUSTOM");
+      setStartDate(operatingDate);
+      setEndDate(operatingDate);
+    }
+  }, [operatingDate, dateSelectionVersion]);
   const [customerType, setCustomerType] = useState<string>("ALL");
   const [customerId, setCustomerId] = useState<string>("ALL");
   const [productId, setProductId] = useState<string>("ALL");

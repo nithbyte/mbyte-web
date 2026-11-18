@@ -1,23 +1,23 @@
 import { useQuery } from "@tanstack/react-query";
 import { commercialService } from "../services";
 
-export function useCommercialKPIs() {
+export function useCommercialKPIs(params?: { territoryId?: string; date?: string }) {
   return useQuery({
-    queryKey: ["commercial", "kpis"],
-    queryFn: () => commercialService.getCommercialKPIs(),
+    queryKey: ["commercial", "kpis", params],
+    queryFn: () => commercialService.getCommercialKPIs(params),
   });
 }
 
-export function useCommercialTrends() {
+export function useCommercialTrends(params?: { territoryId?: string; date?: string }) {
   return useQuery({
-    queryKey: ["commercial", "trends"],
-    queryFn: () => commercialService.getDailyTrends(),
+    queryKey: ["commercial", "trends", params],
+    queryFn: () => commercialService.getDailyTrends(params),
   });
 }
 
-export function useCommercialLeaderboard() {
+export function useCommercialLeaderboard(params?: { territoryId?: string; date?: string }) {
   return useQuery({
-    queryKey: ["commercial", "leaderboard"],
-    queryFn: () => commercialService.getMrLeaderboard(),
+    queryKey: ["commercial", "leaderboard", params],
+    queryFn: () => commercialService.getMrLeaderboard(params),
   });
 }

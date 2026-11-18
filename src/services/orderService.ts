@@ -171,8 +171,15 @@ export const orderService = {
     return Promise.resolve(list);
   },
 
-  async getRecentOrders(limit: number = 5): Promise<Order[]> {
-    return this.getOrders({ limit });
+  async getRecentOrders(
+    limit: number = 5,
+    params?: { territoryId?: string; date?: string }
+  ): Promise<Order[]> {
+    return this.getOrders({
+      limit,
+      territoryId: params?.territoryId,
+      date: params?.date,
+    });
   },
 
   async getOrderById(id: string): Promise<Order | null> {
@@ -189,10 +196,17 @@ export const orderService = {
     return Promise.resolve(order || null);
   },
 
-  async getOrderKPIs(params?: { mrId?: string; territoryId?: string }): Promise<OrderKPIs> {
-    const list = await this.getOrders(params);
+  async getOrderKPIs(params?: {
+    mrId?: string;
+    territoryId?: string;
+    date?: string;
+  }): Promise<OrderKPIs> {
+    const list = await this.getOrders({
+      mrId: params?.mrId,
+      territoryId: params?.territoryId,
+    });
 
-    const todayDate = new Date().toISOString().split("T")[0];
+    const todayDate = params?.date || new Date().toISOString().split("T")[0];
     const currentMonthPrefix = todayDate.substring(0, 7);
 
     const todayOrders = list.filter((o) => o.orderDate === todayDate);
@@ -221,14 +235,25 @@ export const orderService = {
     });
   },
 
-  async getOrderTrend(): Promise<OrderTrendItem[]> {
-    const orders = await this.getOrders();
+  async getOrderTrend(params?: {
+    territoryId?: string;
+    mrId?: string;
+    date?: string;
+  }): Promise<OrderTrendItem[]> {
+    const orders = await this.getOrders({
+      territoryId: params?.territoryId,
+      mrId: params?.mrId,
+    });
     const days: OrderTrendItem[] = [];
-    const now = new Date();
+    const anchor = params?.date ? new Date(`${params.date}T12:00:00`) : new Date();
+    const baseDate = isNaN(anchor.getTime()) ? new Date() : anchor;
     for (let i = 6; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(now.getDate() - i);
-      const dateStr = d.toISOString().split("T")[0];
+      const d = new Date(baseDate);
+      d.setDate(baseDate.getDate() - i);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      const dateStr = `${yyyy}-${mm}-${dd}`;
       const label = d.toLocaleDateString("en-IN", { month: "short", day: "2-digit" });
       const ordersOnDay = orders.filter((o) => o.orderDate === dateStr);
       const totalVal = Math.round(ordersOnDay.reduce((s, o) => s + o.totalAmount, 0));

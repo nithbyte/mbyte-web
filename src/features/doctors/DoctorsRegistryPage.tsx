@@ -32,7 +32,7 @@ import {
   useSpecialties,
   useTerritories,
 } from "@/hooks";
-import { useAuthStore } from "@/store";
+import { useAuthStore, useFilterStore } from "@/store";
 import { formatDate } from "@/lib/utils";
 import type { Doctor, DoctorInput, DoctorTier, DoctorApprovalStatus } from "@/types";
 import {
@@ -70,6 +70,7 @@ export function DoctorsRegistryPage({
 
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
+  const { selectedTerritoryId } = useFilterStore();
   const isCompanyAdmin =
     user?.role === "COMPANY_ADMIN" ||
     user?.role === "ADMIN" ||
@@ -85,7 +86,10 @@ export function DoctorsRegistryPage({
     const q = new URLSearchParams(window.location.search).get("search");
     if (q) setSearch(q);
   }, []);
-  const [territoryId, setTerritoryId] = useState("ALL");
+  const [territoryId, setTerritoryId] = useState(selectedTerritoryId || "ALL");
+  React.useEffect(() => {
+    setTerritoryId(selectedTerritoryId || "ALL");
+  }, [selectedTerritoryId]);
   const [specialty, setSpecialty] = useState("ALL");
   const [tier, setTier] = useState("ALL");
   const [approvalStatusFilter, setApprovalStatusFilter] = useState<string>("ALL");
@@ -109,17 +113,31 @@ export function DoctorsRegistryPage({
 
   // 2. Pending Approvals
   const {
-    data: pendingDoctors,
+    data: rawPendingDoctors,
     isLoading: isPendingLoading,
     refetch: refetchPending,
   } = usePendingDoctors({ doctorCategory });
+  const pendingDoctors = React.useMemo(
+    () =>
+      territoryId === "ALL"
+        ? rawPendingDoctors
+        : (rawPendingDoctors ?? []).filter((d) => d.territoryId === territoryId),
+    [rawPendingDoctors, territoryId],
+  );
 
   // 3. Rejected Doctors
   const {
-    data: rejectedDoctors,
+    data: rawRejectedDoctors,
     isLoading: isRejectedLoading,
     refetch: refetchRejected,
   } = useRejectedDoctors({ doctorCategory });
+  const rejectedDoctors = React.useMemo(
+    () =>
+      territoryId === "ALL"
+        ? rawRejectedDoctors
+        : (rawRejectedDoctors ?? []).filter((d) => d.territoryId === territoryId),
+    [rawRejectedDoctors, territoryId],
+  );
 
   // Mutations
   const createMutation = useCreateDoctor();

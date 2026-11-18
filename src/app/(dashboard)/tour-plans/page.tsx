@@ -38,7 +38,7 @@ import { tourPlanService, TourPlan, PlannedVsActualReport, TourPlanStatus } from
 import { useFilterStore } from "@/store";
 
 export default function TourPlansPage() {
-  const { operatingDate, setOperatingDate } = useFilterStore();
+  const { operatingDate, setOperatingDate, selectedTerritoryId } = useFilterStore();
   const [selectedYear, setSelectedYear] = useState<number>(2026);
   const [selectedMonth, setSelectedMonth] = useState<number>(10);
   const [statusFilter, setStatusFilter] = useState<TourPlanStatus | "ALL">("ALL");
@@ -94,6 +94,7 @@ export default function TourPlansPage() {
         year: selectedYear,
         month: selectedMonth,
         status: statusFilter,
+        territoryId: selectedTerritoryId && selectedTerritoryId !== "ALL" ? selectedTerritoryId : undefined,
       });
       setPlans(res.items);
     } catch (err) {
@@ -101,7 +102,7 @@ export default function TourPlansPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedYear, selectedMonth, statusFilter]);
+  }, [selectedYear, selectedMonth, statusFilter, selectedTerritoryId]);
 
   useEffect(() => {
     if (isMounted) {

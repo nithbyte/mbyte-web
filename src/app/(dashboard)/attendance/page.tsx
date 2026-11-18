@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import { useCurrentUser, useIsMounted } from "@/hooks";
+import { useCurrentUser, useIsMounted, useTerritories } from "@/hooks";
 import { useFilterStore } from "@/store";
 import { attendanceService } from "@/services/growthServices";
 import { formatOperatingDateDisplay } from "@/lib/utils";
@@ -77,7 +77,8 @@ function isPhotoPurged(attendanceDate: string): boolean {
 export default function AttendancePage() {
   const isMounted = useIsMounted();
   const { data: user } = useCurrentUser();
-  const { operatingDate } = useFilterStore();
+  const { data: territories = [] } = useTerritories();
+  const { operatingDate, selectedTerritoryId } = useFilterStore();
   const [filterByOperatingDate, setFilterByOperatingDate] = useState(true);
 
   const [activeTab, setActiveTab] = useState<"records" | "corrections" | "leaves">("records");
@@ -150,10 +151,77 @@ export default function AttendancePage() {
     }
   }, [isMounted, operatingDate, filterByOperatingDate]);
 
+  const selectedTerritoryObj = useMemo(
+    () =>
+      selectedTerritoryId === "ALL"
+        ? null
+        : territories.find((t) => t.id === selectedTerritoryId) ?? null,
+    [selectedTerritoryId, territories],
+  );
+
+  const matchesSelectedTerritory = (mr?: any): boolean => {
+    if (selectedTerritoryId === "ALL") return true;
+    const directId =
+      mr?.territoryId ||
+      (typeof mr?.territory === "object" ? mr?.territory?.id : undefined);
+    if (directId) return directId === selectedTerritoryId;
+    if (selectedTerritoryObj) {
+      const label = formatTerritory(mr?.territory).toLowerCase();
+      if (
+        label &&
+        (label === selectedTerritoryObj.name.toLowerCase() ||
+          label.includes(selectedTerritoryObj.name.toLowerCase()) ||
+          (selectedTerritoryObj.code &&
+            label.includes(selectedTerritoryObj.code.toLowerCase())))
+      ) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const territoryRecords = useMemo(
+    () => records.filter((r) => matchesSelectedTerritory(r.mr)),
+    [records, selectedTerritoryId, selectedTerritoryObj],
+  );
+
+  const territoryCorrections = useMemo(
+    () =>
+      corrections.filter((c: any) =>
+        matchesSelectedTerritory(c.mr || c.attendance?.mr || c.user?.mrProfile),
+      ),
+    [corrections, selectedTerritoryId, selectedTerritoryObj],
+  );
+
+  const territoryLeaves = useMemo(
+    () => leaves.filter((lv) => matchesSelectedTerritory(lv.mr)),
+    [leaves, selectedTerritoryId, selectedTerritoryObj],
+  );
+
+  const displaySummary = useMemo(() => {
+    if (selectedTerritoryId === "ALL" && summary) return summary;
+    const presentCount = territoryRecords.filter((r) => r.status === "PRESENT").length;
+    const onLeaveCount = territoryRecords.filter((r) => r.status === "ON_LEAVE").length;
+    const hoursList = territoryRecords
+      .map((r) => Number(r.totalWorkHours ?? 0))
+      .filter((h) => h > 0);
+    const avgHours =
+      hoursList.length > 0
+        ? Math.round((hoursList.reduce((a, b) => a + b, 0) / hoursList.length) * 10) / 10
+        : 0;
+    return {
+      ...(summary || {}),
+      totalRecords: territoryRecords.length,
+      presentCount,
+      onLeaveCount,
+      averageDailyHours: avgHours,
+    };
+  }, [selectedTerritoryId, summary, territoryRecords]);
+
   const filteredRecords = useMemo(() => {
-    if (!search.trim()) return records;
+    if (!search.trim()) return territoryRecords;
     const q = search.toLowerCase();
-    return records.filter(
+    return territoryRecords.filter(
       (r) =>
         r.user?.firstName?.toLowerCase().includes(q) ||
         r.user?.lastName?.toLowerCase().includes(q) ||
@@ -161,10 +229,10 @@ export default function AttendancePage() {
         r.mr?.employeeCode?.toLowerCase().includes(q) ||
         formatTerritory(r.mr?.territory).toLowerCase().includes(q),
     );
-  }, [records, search]);
+  }, [territoryRecords, search]);
 
   const filteredCorrections = useMemo(() => {
-    return corrections.filter((c) => {
+    return territoryCorrections.filter((c) => {
       const matchesStatus =
         selectedCorrectionStatus === "ALL" || c.status === selectedCorrectionStatus;
       const q = search.toLowerCase();
@@ -175,10 +243,10 @@ export default function AttendancePage() {
         c.reason.toLowerCase().includes(q);
       return matchesStatus && matchesSearch;
     });
-  }, [corrections, selectedCorrectionStatus, search]);
+  }, [territoryCorrections, selectedCorrectionStatus, search]);
 
   const filteredLeaves = useMemo(() => {
-    return leaves.filter((lv) => {
+    return territoryLeaves.filter((lv) => {
       const matchesStatus = selectedLeaveStatus === "ALL" || lv.status === selectedLeaveStatus;
       const q = search.toLowerCase();
       const matchesSearch =
@@ -192,7 +260,7 @@ export default function AttendancePage() {
         lv.reason.toLowerCase().includes(q);
       return matchesStatus && matchesSearch;
     });
-  }, [leaves, selectedLeaveStatus, search]);
+  }, [territoryLeaves, selectedLeaveStatus, search]);
 
   const handleReviewLeave = async () => {
     if (!selectedLeave) return;
@@ -261,7 +329,7 @@ export default function AttendancePage() {
               <p className="text-xs text-muted-foreground uppercase tracking-wide">
                 Total Shifts ({filterByOperatingDate ? "Operating Date" : "All Dates"})
               </p>
-              <h3 className="text-2xl font-bold mt-1">{summary?.totalRecords ?? 0}</h3>
+              <h3 className="text-2xl font-bold mt-1">{displaySummary?.totalRecords ?? 0}</h3>
               <p className="text-[11px] text-muted-foreground mt-0.5">
                 {filterByOperatingDate ? formatOperatingDateDisplay(operatingDate) : "Full History"}
               </p>
@@ -274,7 +342,7 @@ export default function AttendancePage() {
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Present Shifts</p>
-              <h3 className="text-2xl font-bold mt-1 text-emerald-600">{summary?.presentCount ?? 0}</h3>
+              <h3 className="text-2xl font-bold mt-1 text-emerald-600">{displaySummary?.presentCount ?? 0}</h3>
             </div>
             <UserCheck className="w-8 h-8 text-emerald-500 opacity-80" />
           </CardContent>
@@ -284,7 +352,7 @@ export default function AttendancePage() {
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Avg Daily Hours</p>
-              <h3 className="text-2xl font-bold mt-1">{summary?.averageDailyHours ?? 0} hrs</h3>
+              <h3 className="text-2xl font-bold mt-1">{displaySummary?.averageDailyHours ?? 0} hrs</h3>
             </div>
             <Calendar className="w-8 h-8 text-indigo-500 opacity-80" />
           </CardContent>
@@ -298,7 +366,7 @@ export default function AttendancePage() {
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Pending Regularizations</p>
               <h3 className="text-2xl font-bold mt-1 text-amber-600">
-                {corrections.filter((c) => c.status === "PENDING").length}
+                {territoryCorrections.filter((c) => c.status === "PENDING").length}
               </h3>
             </div>
             <AlertCircle className="w-8 h-8 text-amber-500 opacity-80" />
@@ -313,11 +381,11 @@ export default function AttendancePage() {
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Pending Leave Requests</p>
               <h3 className="text-2xl font-bold mt-1 text-purple-600">
-                {leaves.filter((l) => l.status === "PENDING").length}
+                {territoryLeaves.filter((l) => l.status === "PENDING").length}
               </h3>
-              {(summary?.onLeaveCount ?? 0) > 0 && (
+              {(displaySummary?.onLeaveCount ?? 0) > 0 && (
                 <p className="text-[11px] text-muted-foreground mt-0.5">
-                  {summary?.onLeaveCount} on leave
+                  {displaySummary?.onLeaveCount} on leave
                 </p>
               )}
             </div>
@@ -337,7 +405,7 @@ export default function AttendancePage() {
           }`}
         >
           <Clock className="w-4 h-4" />
-          <span>Shift Records ({records.length})</span>
+          <span>Shift Records ({territoryRecords.length})</span>
         </button>
 
         <button
@@ -351,7 +419,7 @@ export default function AttendancePage() {
           <AlertCircle className="w-4 h-4" />
           <span>
             Regularization Requests (
-            {corrections.filter((c) => c.status === "PENDING").length} pending)
+            {territoryCorrections.filter((c) => c.status === "PENDING").length} pending)
           </span>
         </button>
 
@@ -366,7 +434,7 @@ export default function AttendancePage() {
           <CalendarOff className="w-4 h-4" />
           <span>
             Leave Requests (
-            {leaves.filter((l) => l.status === "PENDING").length} pending)
+            {territoryLeaves.filter((l) => l.status === "PENDING").length} pending)
           </span>
         </button>
       </div>

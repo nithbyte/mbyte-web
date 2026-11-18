@@ -18,6 +18,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useCurrentUser, useIsMounted } from "@/hooks";
+import { useFilterStore } from "@/store";
+import { formatOperatingDateDisplay } from "@/lib/utils";
 import { campaignService } from "@/services/growthServices";
 import type { Campaign, CampaignMetrics, CampaignStatus } from "@/types";
 import {
@@ -36,6 +38,16 @@ import {
 export default function CampaignsPage() {
   const isMounted = useIsMounted();
   const { data: user } = useCurrentUser();
+  const { operatingDate, dateSelectionVersion } = useFilterStore();
+  const [filterByOperatingDate, setFilterByOperatingDate] = useState(
+    () => dateSelectionVersion > 0
+  );
+
+  useEffect(() => {
+    if (dateSelectionVersion > 0) {
+      setFilterByOperatingDate(true);
+    }
+  }, [operatingDate, dateSelectionVersion]);
 
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [metrics, setMetrics] = useState<CampaignMetrics | null>(null);
@@ -90,6 +102,13 @@ export default function CampaignsPage() {
   const filteredCampaigns = useMemo(() => {
     return campaigns.filter((c) => {
       const matchesStatus = statusFilter === "ALL" || c.status === statusFilter;
+      if (filterByOperatingDate && operatingDate) {
+        const start = String(c.startDate || "").slice(0, 10);
+        const end = String(c.endDate || "").slice(0, 10);
+        const inRange =
+          (!start || operatingDate >= start) && (!end || operatingDate <= end);
+        if (!inRange) return false;
+      }
       const q = search.toLowerCase();
       const matchesSearch =
         !search.trim() ||
@@ -98,7 +117,7 @@ export default function CampaignsPage() {
         c.targetAudience?.toLowerCase().includes(q);
       return matchesStatus && matchesSearch;
     });
-  }, [campaigns, statusFilter, search]);
+  }, [campaigns, statusFilter, search, filterByOperatingDate, operatingDate]);
 
   const handleCreateCampaign = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -198,6 +217,16 @@ export default function CampaignsPage() {
         </div>
 
         <div className="flex items-center space-x-2">
+          {filterByOperatingDate && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setFilterByOperatingDate(false)}
+              className="text-xs border-orange-300 text-orange-700 bg-orange-50/70 hover:bg-orange-100/70"
+            >
+              Date: {formatOperatingDateDisplay(operatingDate)} • Show All
+            </Button>
+          )}
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}

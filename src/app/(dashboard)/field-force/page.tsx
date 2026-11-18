@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
+import { useFilterStore } from "@/store";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AtWorkBadge } from "@/components/ui/at-work-badge";
@@ -68,10 +69,15 @@ export default function FieldForcePage() {
   });
   const { data: userList, isLoading: isUsersLoading, refetch: refetchUsers } = useUserList();
 
+  const { selectedTerritoryId } = useFilterStore();
   const [search, setSearch] = useState("");
   const [selectedOrgId, setSelectedOrgId] = useState("ALL");
   const [lastSelectedOrgId, setLastSelectedOrgId] = useState("");
-  const [territoryId, setTerritoryId] = useState("ALL");
+  const [territoryId, setTerritoryId] = useState(selectedTerritoryId || "ALL");
+
+  useEffect(() => {
+    setTerritoryId(selectedTerritoryId || "ALL");
+  }, [selectedTerritoryId]);
   const [managerId, setManagerId] = useState("ALL");
   const [status, setStatus] = useState("ALL");
   const [performance, setPerformance] = useState<"ALL" | "ON_TRACK" | "BELOW_TARGET" | "AHEAD">("ALL");

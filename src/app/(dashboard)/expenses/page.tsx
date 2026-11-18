@@ -17,7 +17,9 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import { useCurrentUser, useIsMounted } from "@/hooks";
+import { useCurrentUser, useIsMounted, useTerritories } from "@/hooks";
+import { useFilterStore } from "@/store";
+import { formatOperatingDateDisplay } from "@/lib/utils";
 import { expenseService } from "@/services/expenseService";
 import type { ExpenseClaim, ExpensePolicy, ExpenseSummary } from "@/types";
 import {
@@ -45,6 +47,17 @@ import {
 export default function ExpensesPage() {
   const isMounted = useIsMounted();
   const { data: user } = useCurrentUser();
+  const { data: territories = [] } = useTerritories();
+  const { selectedTerritoryId, operatingDate, dateSelectionVersion } = useFilterStore();
+  const [filterByOperatingDate, setFilterByOperatingDate] = useState(
+    () => dateSelectionVersion > 0
+  );
+
+  useEffect(() => {
+    if (dateSelectionVersion > 0) {
+      setFilterByOperatingDate(true);
+    }
+  }, [operatingDate, dateSelectionVersion]);
 
 
   // State
@@ -161,6 +174,66 @@ export default function ExpensesPage() {
     return claim.mr?.user?.email === user?.email;
   };
 
+  const selectedTerritoryObj = useMemo(
+    () =>
+      selectedTerritoryId === "ALL"
+        ? null
+        : territories.find((t) => t.id === selectedTerritoryId) ?? null,
+    [selectedTerritoryId, territories],
+  );
+
+  const visibleClaims = useMemo(() => {
+    return claims.filter((claim: any) => {
+      if (selectedTerritoryId !== "ALL") {
+        const directId = claim.mr?.territoryId || claim.mr?.territory?.id;
+        const terrName = String(claim.mr?.territory?.name || "").toLowerCase();
+        const matchesTerr = directId
+          ? directId === selectedTerritoryId
+          : selectedTerritoryObj
+            ? terrName === selectedTerritoryObj.name.toLowerCase()
+            : false;
+        if (!matchesTerr) return false;
+      }
+      if (filterByOperatingDate && operatingDate) {
+        const start = String(claim.startDate || "").slice(0, 10);
+        const end = String(claim.endDate || start).slice(0, 10);
+        const created = String(claim.createdAt || "").slice(0, 10);
+        const inRange =
+          (start && end && operatingDate >= start && operatingDate <= end) ||
+          created === operatingDate;
+        if (!inRange) return false;
+      }
+      return true;
+    });
+  }, [claims, selectedTerritoryId, selectedTerritoryObj, filterByOperatingDate, operatingDate]);
+
+  const displaySummary = useMemo(() => {
+    if (selectedTerritoryId === "ALL" && !filterByOperatingDate && summary) {
+      return summary;
+    }
+    const approvedAmount = visibleClaims
+      .filter((c) => c.status === "APPROVED")
+      .reduce((sum, c) => sum + Number(c.totalAmount || 0), 0);
+    const pendingAmount = visibleClaims
+      .filter((c) => c.status === "SUBMITTED")
+      .reduce((sum, c) => sum + Number(c.totalAmount || 0), 0);
+    const travelAmount = visibleClaims.reduce((sum, c) => {
+      const items = Array.isArray(c.items) ? c.items : [];
+      const travelSum = items
+        .filter((it: any) => String(it.category || "").toUpperCase() === "TRAVEL")
+        .reduce((s: number, it: any) => s + Number(it.amount || 0), 0);
+      return sum + travelSum;
+    }, 0);
+    return {
+      totalClaims: visibleClaims.length,
+      approvedAmount,
+      pendingAmount,
+      categoryBreakdown: {
+        TRAVEL: { totalAmount: travelAmount },
+      },
+    };
+  }, [selectedTerritoryId, filterByOperatingDate, summary, visibleClaims]);
+
   return (
     <div className="space-y-6 p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -205,7 +278,7 @@ export default function ExpensesPage() {
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Claims</p>
-              <h3 className="text-2xl font-bold mt-1">{summary?.totalClaims ?? 0}</h3>
+              <h3 className="text-2xl font-bold mt-1">{displaySummary?.totalClaims ?? 0}</h3>
               <p className="text-xs text-muted-foreground mt-0.5">Across active field force</p>
             </div>
             <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center">
@@ -219,7 +292,7 @@ export default function ExpensesPage() {
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Approved Amount</p>
               <h3 className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
-                ₹{Number(summary?.approvedAmount ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                ₹{Number(displaySummary?.approvedAmount ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
               </h3>
               <p className="text-xs text-muted-foreground mt-0.5">Authorized for reimbursement</p>
             </div>
@@ -234,7 +307,7 @@ export default function ExpensesPage() {
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Pending Review</p>
               <h3 className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">
-                ₹{Number(summary?.pendingAmount ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                ₹{Number(displaySummary?.pendingAmount ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
               </h3>
               <p className="text-xs text-muted-foreground mt-0.5">Requires manager authorization</p>
             </div>
@@ -249,7 +322,7 @@ export default function ExpensesPage() {
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Travel & Mileage</p>
               <h3 className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">
-                ₹{Number(summary?.categoryBreakdown?.TRAVEL?.totalAmount ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                ₹{Number(displaySummary?.categoryBreakdown?.TRAVEL?.totalAmount ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
               </h3>
               <p className="text-xs text-muted-foreground mt-0.5">Fuel & transport reimbursements</p>
             </div>
@@ -263,7 +336,7 @@ export default function ExpensesPage() {
       {/* FILTER BAR */}
       <Card className="border border-border/50 shadow-sm">
         <CardContent className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div className="flex flex-1 items-center gap-2">
+          <div className="flex flex-1 items-center gap-2 flex-wrap">
             <Search className="w-4 h-4 text-muted-foreground shrink-0" />
             <Input
               placeholder="Search claim number, representative, or tour title..."
@@ -271,6 +344,16 @@ export default function ExpensesPage() {
               onChange={(e) => setSearch(e.target.value)}
               className="max-w-md h-9"
             />
+            {filterByOperatingDate && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setFilterByOperatingDate(false)}
+                className="h-9 text-xs gap-1.5 border-orange-300 text-orange-700 bg-orange-50/70 hover:bg-orange-100/70"
+              >
+                Date: {formatOperatingDateDisplay(operatingDate)} • Show All
+              </Button>
+            )}
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
@@ -301,7 +384,7 @@ export default function ExpensesPage() {
               <Skeleton className="h-8 w-full" />
               <Skeleton className="h-8 w-full" />
             </div>
-          ) : claims.length === 0 ? (
+          ) : visibleClaims.length === 0 ? (
             <EmptyState
               title="No expense claims found"
               description="No expense claims match your selected filters. Representatives can draft claims from the mobile app."
@@ -320,7 +403,7 @@ export default function ExpensesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {claims.map((claim) => (
+                {visibleClaims.map((claim) => (
                   <TableRow key={claim.id} className="hover:bg-muted/40 cursor-pointer" onClick={() => setSelectedClaim(claim)}>
                     <TableCell>
                       <div className="font-semibold text-sm">{claim.claimNumber}</div>

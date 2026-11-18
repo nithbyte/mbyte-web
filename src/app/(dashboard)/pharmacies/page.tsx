@@ -30,7 +30,7 @@ import {
   useUpdatePharmacy,
   useTerritories,
 } from "@/hooks";
-import { useAuthStore } from "@/store";
+import { useAuthStore, useFilterStore } from "@/store";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import type { Pharmacy, PharmacyInput, DoctorApprovalStatus } from "@/types";
 import {
@@ -60,6 +60,7 @@ import {
 export default function PharmaciesPage() {
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
+  const { selectedTerritoryId } = useFilterStore();
   const isCompanyAdmin =
     user?.role === "COMPANY_ADMIN" ||
     user?.role === "ADMIN" ||
@@ -75,7 +76,10 @@ export default function PharmaciesPage() {
     const q = new URLSearchParams(window.location.search).get("search");
     if (q) setSearch(q);
   }, []);
-  const [territoryId, setTerritoryId] = useState("ALL");
+  const [territoryId, setTerritoryId] = useState(selectedTerritoryId || "ALL");
+  React.useEffect(() => {
+    setTerritoryId(selectedTerritoryId || "ALL");
+  }, [selectedTerritoryId]);
   const [approvalStatusFilter, setApprovalStatusFilter] = useState<string>("ALL");
 
   // Queries
@@ -90,14 +94,28 @@ export default function PharmaciesPage() {
   });
 
   const {
-    data: pendingPharmacies,
+    data: rawPendingPharmacies,
     isLoading: isPendingLoading,
   } = usePendingPharmacies();
+  const pendingPharmacies = React.useMemo(
+    () =>
+      territoryId === "ALL"
+        ? rawPendingPharmacies
+        : (rawPendingPharmacies ?? []).filter((p) => p.territoryId === territoryId),
+    [rawPendingPharmacies, territoryId],
+  );
 
   const {
-    data: rejectedPharmacies,
+    data: rawRejectedPharmacies,
     isLoading: isRejectedLoading,
   } = useRejectedPharmacies();
+  const rejectedPharmacies = React.useMemo(
+    () =>
+      territoryId === "ALL"
+        ? rawRejectedPharmacies
+        : (rawRejectedPharmacies ?? []).filter((p) => p.territoryId === territoryId),
+    [rawRejectedPharmacies, territoryId],
+  );
 
   // Mutations
   const createMutation = useCreatePharmacy();

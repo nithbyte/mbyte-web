@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
+import { useFilterStore } from "@/store";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AtWorkBadge } from "@/components/ui/at-work-badge";
@@ -48,6 +49,7 @@ import {
 } from "lucide-react";
 
 export default function TerritoriesPage() {
+  const { selectedTerritoryId } = useFilterStore();
   const { data: currentUser } = useCurrentUser();
   const canonicalRole = normalizeRole(currentUser?.role);
   const companyOrgId = canonicalRole === "SUPER_ADMIN" ? undefined : currentUser?.organizationId || undefined;
@@ -264,7 +266,9 @@ export default function TerritoriesPage() {
       (t.headquarters && t.headquarters.toLowerCase().includes(search.toLowerCase()));
 
     const matchesZone = zoneFilter === "ALL" || (t.zone && t.zone.toLowerCase() === zoneFilter.toLowerCase());
-    return matchesSearch && matchesZone;
+    const matchesHeaderTerritory =
+      !selectedTerritoryId || selectedTerritoryId === "ALL" || t.id === selectedTerritoryId;
+    return matchesSearch && matchesZone && matchesHeaderTerritory;
   });
 
   const totalTerritories = territories?.length || 0;

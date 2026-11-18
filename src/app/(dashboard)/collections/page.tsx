@@ -30,7 +30,8 @@ import {
   useCollectionDetail,
   useMRList,
 } from "@/hooks";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, formatOperatingDateDisplay } from "@/lib/utils";
+import { useFilterStore } from "@/store";
 import {
   Receipt,
   ShoppingCart,
@@ -68,18 +69,39 @@ function getRecentDateOptions() {
 }
 
 export default function CollectionsPage() {
+  const { selectedTerritoryId, operatingDate, dateSelectionVersion } = useFilterStore();
+  const territoryParam = selectedTerritoryId !== "ALL" ? selectedTerritoryId : undefined;
   const [modeFilter, setModeFilter] = useState<PaymentMode | "ALL">("ALL");
   const [mrFilter, setMrFilter] = useState<string>("ALL");
-  const [dateFilter, setDateFilter] = useState<string>("");
+  const [dateFilter, setDateFilter] = useState<string>(() =>
+    dateSelectionVersion > 0 ? operatingDate : ""
+  );
+  React.useEffect(() => {
+    if (dateSelectionVersion > 0) {
+      setDateFilter(operatingDate);
+    }
+  }, [operatingDate, dateSelectionVersion]);
+  React.useEffect(() => {
+    setMrFilter("ALL");
+  }, [selectedTerritoryId]);
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const recentDates = React.useMemo(() => getRecentDateOptions(), []);
+  const recentDates = React.useMemo(() => {
+    const opts = getRecentDateOptions();
+    if (dateFilter && !opts.some((o) => o.value === dateFilter)) {
+      opts.unshift({
+        value: dateFilter,
+        label: `Selected (${formatOperatingDateDisplay(dateFilter)})`,
+      });
+    }
+    return opts;
+  }, [dateFilter]);
   const currentMonthLabel = React.useMemo(
-    () => new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" }),
-    []
+    () => new Date(`${operatingDate}T12:00:00`).toLocaleDateString("en-IN", { month: "long", year: "numeric" }),
+    [operatingDate]
   );
   const todayShortLabel = React.useMemo(
-    () => new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short" }),
-    []
+    () => formatOperatingDateDisplay(operatingDate),
+    [operatingDate]
   );
   React.useEffect(() => {
     if (typeof window === "undefined") return;
@@ -90,10 +112,16 @@ export default function CollectionsPage() {
 
   const { data: kpis, isLoading: kpisLoading, refetch: refetchKpis } = useCollectionKPIs({
     mrId: mrFilter !== "ALL" ? mrFilter : undefined,
+    territoryId: territoryParam,
+    date: operatingDate,
   });
 
-  const { data: trendData, isLoading: trendLoading, refetch: refetchTrend } = useCollectionTrend();
-  const { data: mrs } = useMRList();
+  const { data: trendData, isLoading: trendLoading, refetch: refetchTrend } = useCollectionTrend({
+    territoryId: territoryParam,
+    mrId: mrFilter !== "ALL" ? mrFilter : undefined,
+    date: operatingDate,
+  });
+  const { data: mrs } = useMRList(territoryParam ? { territoryId: territoryParam } : undefined);
 
   const {
     data: collections,
@@ -103,6 +131,7 @@ export default function CollectionsPage() {
   } = useCollections({
     mode: modeFilter,
     mrId: mrFilter,
+    territoryId: territoryParam,
     date: dateFilter || undefined,
     search: searchQuery || undefined,
   });

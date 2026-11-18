@@ -50,13 +50,14 @@ export function Header() {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const notificationButtonRef = useRef<HTMLButtonElement>(null);
   const lastSyncedUrlDateRef = useRef<string | null>(null);
+  const lastSyncedUrlTerritoryRef = useRef<string | null>(null);
 
   // Compute local dates when mounted in the browser
   const todayDate = isMounted ? getLocalTodayDate() : "";
   const yesterdayDate = isMounted ? getLocalYesterdayDate() : "";
 
-  // URL query parameter synchronization (?date=YYYY-MM-DD)
-  // Only react when the URL ?date= param itself changes (never revert local selection!)
+  // URL query parameter synchronization (?date=YYYY-MM-DD and ?territory=<id>)
+  // Only react when the URL param itself changes (never revert local selection!)
   const urlDateParam = searchParams?.get("date") ?? null;
   useEffect(() => {
     if (urlDateParam && urlDateParam !== lastSyncedUrlDateRef.current) {
@@ -66,6 +67,28 @@ export function Header() {
       }
     }
   }, [urlDateParam, setOperatingDate]);
+
+  const urlTerritoryParam = searchParams?.get("territory") ?? null;
+  useEffect(() => {
+    if (urlTerritoryParam && urlTerritoryParam !== lastSyncedUrlTerritoryRef.current) {
+      lastSyncedUrlTerritoryRef.current = urlTerritoryParam;
+      setSelectedTerritoryId(urlTerritoryParam);
+    }
+  }, [urlTerritoryParam, setSelectedTerritoryId]);
+
+  const handleTerritoryChange = (newTerritoryId: string) => {
+    lastSyncedUrlTerritoryRef.current = newTerritoryId;
+    setSelectedTerritoryId(newTerritoryId);
+
+    const params = new URLSearchParams(searchParams ? searchParams.toString() : "");
+    if (newTerritoryId === "ALL") {
+      params.delete("territory");
+    } else {
+      params.set("territory", newTerritoryId);
+    }
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  };
 
   const handleDateChange = (newDate: string) => {
     if (!newDate || !isValidIsoDate(newDate)) return;
@@ -179,7 +202,7 @@ export function Header() {
               id="header-territory-select"
               aria-label="Filter territory"
               value={selectedTerritoryId}
-              onChange={(e) => setSelectedTerritoryId(e.target.value)}
+              onChange={(e) => handleTerritoryChange(e.target.value)}
               suppressHydrationWarning
               className="bg-transparent font-medium text-slate-900 focus:outline-none dark:text-slate-100 cursor-pointer text-xs max-w-[100px] sm:max-w-[130px] md:max-w-[160px] truncate"
             >

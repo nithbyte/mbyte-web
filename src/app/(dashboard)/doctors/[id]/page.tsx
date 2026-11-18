@@ -20,6 +20,7 @@ import {
 import { analysisService, CustomerFullHistoryData } from "@/services/analysisService";
 import { doctorService } from "@/services/doctorService";
 import { useCurrentUser } from "@/hooks";
+import { useFilterStore } from "@/store";
 import { normalizeRole } from "@/types";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
@@ -95,13 +96,28 @@ export default function DoctorDetailsPage() {
   const id = typeof params?.id === "string" ? params.id : Array.isArray(params?.id) ? params.id[0] : "";
 
   const { data: currentUser } = useCurrentUser();
+  const { operatingDate, dateSelectionVersion } = useFilterStore();
   const canonicalRole = normalizeRole(currentUser?.role);
   const isCompanyAdmin = canonicalRole === "ADMIN" || canonicalRole === "SUPER_ADMIN";
 
   // Filters
-  const [datePreset, setDatePreset] = useState<DatePreset>("ALL_TIME");
-  const [startDate, setStartDate] = useState<string>("");
-  const [endDate, setEndDate] = useState<string>("");
+  const [datePreset, setDatePreset] = useState<DatePreset>(() =>
+    dateSelectionVersion > 0 ? "CUSTOM" : "ALL_TIME"
+  );
+  const [startDate, setStartDate] = useState<string>(() =>
+    dateSelectionVersion > 0 ? operatingDate : ""
+  );
+  const [endDate, setEndDate] = useState<string>(() =>
+    dateSelectionVersion > 0 ? operatingDate : ""
+  );
+
+  useEffect(() => {
+    if (dateSelectionVersion > 0) {
+      setDatePreset("CUSTOM");
+      setStartDate(operatingDate);
+      setEndDate(operatingDate);
+    }
+  }, [operatingDate, dateSelectionVersion]);
   const [mrId, setMrId] = useState<string>("ALL");
   const [productId, setProductId] = useState<string>("ALL");
   const [visitStatus, setVisitStatus] = useState<string>("ALL");

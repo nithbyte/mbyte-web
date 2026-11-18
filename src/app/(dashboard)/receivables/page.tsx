@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
 import {
@@ -24,7 +24,9 @@ import {
 import { Modal } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { invoiceService } from "@/services/invoiceService";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { usePharmacies } from "@/hooks";
+import { useFilterStore } from "@/store";
+import { formatCurrency, formatDate, formatOperatingDateDisplay } from "@/lib/utils";
 import type {
   Invoice,
   CustomerAging,
@@ -52,6 +54,17 @@ import {
 } from "lucide-react";
 
 export default function ReceivablesPage() {
+  const { selectedTerritoryId, operatingDate, dateSelectionVersion } = useFilterStore();
+  const { data: allPharmacies = [] } = usePharmacies();
+  const [filterByOperatingDate, setFilterByOperatingDate] = useState(
+    () => dateSelectionVersion > 0
+  );
+  useEffect(() => {
+    if (dateSelectionVersion > 0) {
+      setFilterByOperatingDate(true);
+    }
+  }, [operatingDate, dateSelectionVersion]);
+
   const [activeTab, setActiveTab] = useState<"invoices" | "aging">("invoices");
   const [summary, setSummary] = useState<ReceivablesSummary | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -191,7 +204,29 @@ export default function ReceivablesPage() {
     }
   };
 
-  const filteredInvoices = invoices.filter((inv) => {
+  const customerTerritoryMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const p of allPharmacies) {
+      if (p.id && p.territoryId) map.set(p.id, p.territoryId);
+    }
+    return map;
+  }, [allPharmacies]);
+
+  const matchesCustomerTerritory = (customerId?: string, directTerritoryId?: string) => {
+    if (selectedTerritoryId === "ALL") return true;
+    const tid = directTerritoryId || (customerId ? customerTerritoryMap.get(customerId) : undefined);
+    return tid === selectedTerritoryId;
+  };
+
+  const filteredInvoices = invoices.filter((inv: any) => {
+    if (!matchesCustomerTerritory(inv.customerId, inv.territoryId || inv.customer?.territoryId)) {
+      return false;
+    }
+    if (filterByOperatingDate && operatingDate) {
+      const issued = String(inv.issueDate || inv.invoiceDate || inv.createdAt || "").slice(0, 10);
+      const due = String(inv.dueDate || "").slice(0, 10);
+      if (issued !== operatingDate && due !== operatingDate) return false;
+    }
     const q = searchQuery.toLowerCase();
     return (
       inv.invoiceNumber.toLowerCase().includes(q) ||
@@ -200,9 +235,10 @@ export default function ReceivablesPage() {
     );
   });
 
-  const filteredAging = agingList.filter((a) =>
-    a.customerName.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredAging = agingList.filter((a: any) => {
+    if (!matchesCustomerTerritory(a.customerId, a.territoryId)) return false;
+    return a.customerName.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   return (
     <div className="space-y-6">
@@ -211,6 +247,16 @@ export default function ReceivablesPage() {
         description="Manage commercial invoices, match payment collections, monitor overdue aging, and view customer account statements."
         actions={
           <div className="flex gap-2">
+            {filterByOperatingDate && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setFilterByOperatingDate(false)}
+                className="text-xs border-orange-300 text-orange-700 bg-orange-50/70 hover:bg-orange-100/70"
+              >
+                Date: {formatOperatingDateDisplay(operatingDate)} • Show All
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"

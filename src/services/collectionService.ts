@@ -87,6 +87,14 @@ export const collectionService = {
           mapped = mapped.filter((c: any) => c.territoryId === params.territoryId);
         }
 
+        if (params?.date) {
+          mapped = mapped.filter(
+            (c: any) =>
+              c.paymentDate === params.date ||
+              (typeof c.createdAt === "string" && c.createdAt.startsWith(params.date!))
+          );
+        }
+
         mapped.sort((a, b) => {
           const timeA = new Date(a.createdAt || a.paymentDate).getTime();
           const timeB = new Date(b.createdAt || b.paymentDate).getTime();
@@ -154,8 +162,15 @@ export const collectionService = {
     return Promise.resolve(list);
   },
 
-  async getRecentCollections(limit: number = 5): Promise<Collection[]> {
-    return this.getCollections({ limit });
+  async getRecentCollections(
+    limit: number = 5,
+    params?: { territoryId?: string; date?: string }
+  ): Promise<Collection[]> {
+    return this.getCollections({
+      limit,
+      territoryId: params?.territoryId,
+      date: params?.date,
+    });
   },
 
   async getCollectionById(id: string): Promise<Collection | null> {
@@ -171,10 +186,17 @@ export const collectionService = {
     return Promise.resolve(item || null);
   },
 
-  async getCollectionKPIs(params?: { mrId?: string; territoryId?: string }): Promise<CollectionKPIs> {
+  async getCollectionKPIs(params?: {
+    mrId?: string;
+    territoryId?: string;
+    date?: string;
+  }): Promise<CollectionKPIs> {
     try {
-      const list = await this.getCollections(params);
-      const todayDate = new Date().toISOString().split("T")[0];
+      const list = await this.getCollections({
+        mrId: params?.mrId,
+        territoryId: params?.territoryId,
+      });
+      const todayDate = params?.date || new Date().toISOString().split("T")[0];
       const currentMonthPrefix = todayDate.substring(0, 7);
 
       const todayCollections = list.filter((c) => c.paymentDate === todayDate || c.createdAt.startsWith(todayDate));
@@ -256,15 +278,27 @@ export const collectionService = {
     });
   },
 
-  async getCollectionTrend(): Promise<CollectionTrendItem[]> {
+  async getCollectionTrend(params?: {
+    territoryId?: string;
+    mrId?: string;
+    date?: string;
+  }): Promise<CollectionTrendItem[]> {
     try {
-      const list = await this.getCollections({ limit: 100 });
+      const list = await this.getCollections({
+        limit: 100,
+        territoryId: params?.territoryId,
+        mrId: params?.mrId,
+      });
       const days: CollectionTrendItem[] = [];
-      const now = new Date();
+      const anchor = params?.date ? new Date(`${params.date}T12:00:00`) : new Date();
+      const baseDate = isNaN(anchor.getTime()) ? new Date() : anchor;
       for (let i = 6; i >= 0; i--) {
-        const d = new Date(now);
-        d.setDate(now.getDate() - i);
-        const dateStr = d.toISOString().split("T")[0];
+        const d = new Date(baseDate);
+        d.setDate(baseDate.getDate() - i);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        const dateStr = `${yyyy}-${mm}-${dd}`;
         const label = d.toLocaleDateString("en-IN", { month: "short", day: "2-digit" });
         const colsOnDay = (list || []).filter(
           (c) => c.paymentDate === dateStr || c.createdAt.startsWith(dateStr)

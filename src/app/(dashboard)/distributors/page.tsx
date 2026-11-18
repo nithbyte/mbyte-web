@@ -30,6 +30,7 @@ import {
   useTerritories,
 } from "@/hooks";
 import { SecondarySalesUploadModal } from "@/features/distributors/SecondarySalesUploadModal";
+import { useFilterStore } from "@/store";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import type { Distributor, DistributorInput, StockInwardInput } from "@/types";
 import {
@@ -60,8 +61,17 @@ import {
 } from "lucide-react";
 
 export default function DistributorsPage() {
+  const { selectedTerritoryId } = useFilterStore();
   const [search, setSearch] = useState("");
-  const [territoryId, setTerritoryId] = useState("ALL");
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const q = new URLSearchParams(window.location.search).get("search");
+    if (q) setSearch(q);
+  }, []);
+  const [territoryId, setTerritoryId] = useState(selectedTerritoryId || "ALL");
+  React.useEffect(() => {
+    setTerritoryId(selectedTerritoryId || "ALL");
+  }, [selectedTerritoryId]);
 
   // Queries
   const { data: territories } = useTerritories();

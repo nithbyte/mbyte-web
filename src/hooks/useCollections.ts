@@ -9,10 +9,13 @@ export function useCollections(params?: CollectionQueryParams) {
   });
 }
 
-export function useRecentCollections(limit: number = 5) {
+export function useRecentCollections(
+  limit: number = 5,
+  params?: { territoryId?: string; date?: string }
+) {
   return useQuery({
-    queryKey: ["collections", "recent", limit],
-    queryFn: () => collectionService.getRecentCollections(limit),
+    queryKey: ["collections", "recent", limit, params],
+    queryFn: () => collectionService.getRecentCollections(limit, params),
   });
 }
 
@@ -24,16 +27,16 @@ export function useCollectionDetail(id: string | null) {
   });
 }
 
-export function useCollectionKPIs(params?: { mrId?: string; territoryId?: string }) {
+export function useCollectionKPIs(params?: { mrId?: string; territoryId?: string; date?: string }) {
   return useQuery({
     queryKey: ["collections", "kpis", params],
     queryFn: () => collectionService.getCollectionKPIs(params),
   });
 }
 
-export function useCollectionTrend() {
+export function useCollectionTrend(params?: { territoryId?: string; mrId?: string; date?: string }) {
   return useQuery({
-    queryKey: ["collections", "trend"],
-    queryFn: () => collectionService.getCollectionTrend(),
+    queryKey: ["collections", "trend", params],
+    queryFn: () => collectionService.getCollectionTrend(params),
   });
 }

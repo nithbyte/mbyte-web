@@ -45,7 +45,7 @@ import { useFilterStore } from "@/store";
 import { getLocalTodayDate, formatOperatingDateDisplay } from "@/lib/utils";
 
 export default function DailyCallReportsPage() {
-  const { operatingDate, setOperatingDate } = useFilterStore();
+  const { operatingDate, setOperatingDate, selectedTerritoryId } = useFilterStore();
   const [showAllDates, setShowAllDates] = useState(false);
   const activeDate = showAllDates ? "" : operatingDate;
   const [statusFilter, setStatusFilter] = useState<DcrStatus | "ALL">("ALL");
@@ -75,14 +75,17 @@ export default function DailyCallReportsPage() {
   const fetchDcrs = useCallback(async () => {
     setIsLoading(true);
     try {
+      const territoryParam = selectedTerritoryId && selectedTerritoryId !== "ALL" ? selectedTerritoryId : undefined;
       const [res, pendingUnlocksRes] = await Promise.all([
         dcrService.getDcrs({
           date: unlockRequestsOnly ? undefined : activeDate || undefined,
           status: unlockRequestsOnly ? "ALL" : statusFilter,
           unlockRequestStatus: unlockRequestsOnly ? "PENDING" : undefined,
+          territoryId: territoryParam,
         }),
         dcrService.getDcrs({
           unlockRequestStatus: "PENDING",
+          territoryId: territoryParam,
           limit: 100,
         }),
       ]);
@@ -93,7 +96,7 @@ export default function DailyCallReportsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [activeDate, statusFilter, unlockRequestsOnly]);
+  }, [activeDate, statusFilter, unlockRequestsOnly, selectedTerritoryId]);
 
   useEffect(() => {
     if (isMounted) {
