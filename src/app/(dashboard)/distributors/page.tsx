@@ -21,6 +21,7 @@ import { ErrorState } from "@/components/ui/error-state";
 import {
   useDistributors,
   useDistributorHistory,
+  useDistributorStocks,
   useCreateDistributor,
   useUpdateDistributor,
   useRecordStockInward,
@@ -28,6 +29,7 @@ import {
   useMRList,
   useTerritories,
 } from "@/hooks";
+import { SecondarySalesUploadModal } from "@/features/distributors/SecondarySalesUploadModal";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import type { Distributor, DistributorInput, StockInwardInput } from "@/types";
 import {
@@ -54,6 +56,7 @@ import {
   AlertCircle,
   Building2,
   CheckCircle2,
+  FileSpreadsheet,
 } from "lucide-react";
 
 export default function DistributorsPage() {
@@ -83,6 +86,15 @@ export default function DistributorsPage() {
   // Stock Inward Modal State
   const [isStockInwardOpen, setIsStockInwardOpen] = useState(false);
   const [stockInwardTarget, setStockInwardTarget] = useState<Distributor | null>(null);
+
+  // Secondary Sales Report Upload Modal State
+  const [isSecondarySalesOpen, setIsSecondarySalesOpen] = useState(false);
+  const [secondarySalesTarget, setSecondarySalesTarget] = useState<Distributor | null>(null);
+
+  const handleOpenSecondarySales = (dst?: Distributor | null) => {
+    setSecondarySalesTarget(dst || null);
+    setIsSecondarySalesOpen(true);
+  };
   const initialStockForm: StockInwardInput = {
     distributorId: "",
     productId: "",
@@ -248,9 +260,12 @@ export default function DistributorsPage() {
     setTerritoryId("ALL");
   };
 
-  // History query for selected distributor
+  // History & live stocks queries for selected distributor
   const { data: historyItems, isLoading: isHistoryLoading } = useDistributorHistory(
     historyDistributor?.id || ""
+  );
+  const { data: stockistInventory, isLoading: isStocksLoading } = useDistributorStocks(
+    selectedDetails?.id || ""
   );
 
   return (
@@ -260,7 +275,16 @@ export default function DistributorsPage() {
         description="Authorized pharmaceutical wholesale stockists, consignment agents, wholesale drug licenses, and supply fulfillment centers."
         badge={<Badge variant="default">{distributors?.length || 0} Registered Stockists</Badge>}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleOpenSecondarySales(null)}
+              className="gap-1.5 text-xs border-orange-300 dark:border-orange-800/80 text-[#FF6B00] hover:bg-orange-50 dark:hover:bg-orange-950/30"
+            >
+              <FileSpreadsheet className="h-3.5 w-3.5 text-[#FF6B00]" />
+              <span>Upload Secondary Sales</span>
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -429,6 +453,16 @@ export default function DistributorsPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 px-2 text-xs text-[#FF6B00] border-orange-200 dark:border-orange-800/60 hover:bg-orange-50 dark:hover:bg-orange-950/30"
+                            onClick={() => handleOpenSecondarySales(dst)}
+                            title="Upload Secondary Sales PDF / Excel Report to Auto-Set Stocks"
+                          >
+                            <FileSpreadsheet className="h-3.5 w-3.5 mr-1 text-[#FF6B00]" />
+                            Secondary Sales
+                          </Button>
                           <Button
                             variant="outline"
                             size="sm"
@@ -911,6 +945,73 @@ export default function DistributorsPage() {
               </div>
             </div>
 
+            {/* Live Stockist Inventory Snapshot */}
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+              <div className="flex items-center justify-between px-3 py-2 bg-slate-50 dark:bg-slate-900/70 border-b border-slate-200 dark:border-slate-800">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200">
+                  <Boxes className="h-3.5 w-3.5 text-[#FF6B00]" />
+                  <span>Current Stockist Inventory</span>
+                  {stockistInventory && (
+                    <Badge variant="outline" className="text-[10px]">
+                      {stockistInventory.totalUnitsInStock.toLocaleString()} units ({stockistInventory.totalProductsTracked} SKUs)
+                    </Badge>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const curr = selectedDetails;
+                    setSelectedDetails(null);
+                    handleOpenSecondarySales(curr);
+                  }}
+                  className="text-[11px] font-semibold text-[#FF6B00] hover:underline cursor-pointer"
+                >
+                  + Upload Secondary Sales
+                </button>
+              </div>
+
+              <div className="max-h-48 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+                {isStocksLoading ? (
+                  <div className="p-3 text-center text-slate-400">Loading stockist inventory...</div>
+                ) : stockistInventory && stockistInventory.stocks.length > 0 ? (
+                  stockistInventory.stocks.map((s) => (
+                    <div key={s.id} className="flex items-center justify-between px-3 py-2">
+                      <div className="min-w-0">
+                        <div className="font-semibold text-slate-800 dark:text-slate-200 truncate">
+                          {s.productName}
+                        </div>
+                        <div className="text-[10px] text-slate-400 truncate">
+                          {s.sku} {s.batchNumber ? `• Batch: ${s.batchNumber}` : ""} • Updated{" "}
+                          {formatDate(s.checkedAt)}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0 ml-2">
+                        <span className="font-mono font-bold text-slate-900 dark:text-white">
+                          {s.quantity} units
+                        </span>
+                        <Badge
+                          variant={
+                            s.status === "AVAILABLE"
+                              ? "success"
+                              : s.status === "LOW_STOCK"
+                              ? "warning"
+                              : "destructive"
+                          }
+                          className="text-[9px]"
+                        >
+                          {s.status.replace("_", " ")}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-4 text-center text-slate-400">
+                    No stock synced yet. Upload a secondary sales report or record inward stock.
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
               <Button
                 variant="outline"
@@ -1302,6 +1403,14 @@ export default function DistributorsPage() {
           </div>
         </form>
       </Modal>
+      {/* SECONDARY SALES REPORT UPLOAD & AUTO-STOCK SYNC MODAL */}
+      <SecondarySalesUploadModal
+        isOpen={isSecondarySalesOpen}
+        onClose={() => setIsSecondarySalesOpen(false)}
+        distributors={distributors || []}
+        products={productList || []}
+        initialDistributor={secondarySalesTarget}
+      />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
   MessageSquare,
   Search,
@@ -37,10 +38,12 @@ import { useWebRTCCall } from "@/features/chat/useWebRTCCall";
 import { CallOverlay } from "@/features/chat/CallOverlay";
 
 export default function ChatPage() {
+  const router = useRouter();
   const { data: currentUserQuery } = useCurrentUser();
   const authStoreUser = useAuthStore((s) => s.user);
   const currentUser = currentUserQuery || authStoreUser;
   const currentUserId = currentUser?.id || "curr_user";
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
@@ -63,6 +66,50 @@ export default function ChatPage() {
 
   // WebRTC Calling Hook
   const callState = useWebRTCCall(currentUserId);
+
+  const closeChatPanel = useCallback(() => {
+    const prevRoute =
+      typeof window !== "undefined"
+        ? sessionStorage.getItem("mbyte_prev_non_chat_route")
+        : null;
+    const fallback = currentUser?.role === "SUPER_ADMIN" ? "/companies" : "/";
+    const target = prevRoute && !prevRoute.startsWith("/chat") ? prevRoute : fallback;
+    router.push(target);
+  }, [currentUser?.role, router]);
+
+  // Close chat when clicking outside the chat panel (on outer backdrop) or pressing Escape
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (isNewChatModalOpen || callState.activeCall) return;
+      const target = event.target as HTMLElement | null;
+      if (!target || !chatContainerRef.current) return;
+      if (chatContainerRef.current.contains(target)) return;
+      // Ignore clicks on header/sidebar controls (they handle their own actions / chat toggle)
+      if (target.closest("header") || target.closest("aside") || target.closest("[role='dialog']")) {
+        return;
+      }
+      closeChatPanel();
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (isNewChatModalOpen) {
+        setIsNewChatModalOpen(false);
+        setIsGroupMode(false);
+        return;
+      }
+      if (!callState.activeCall) {
+        closeChatPanel();
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [callState.activeCall, closeChatPanel, isNewChatModalOpen]);
 
   // Load initial conversations and contacts
   useEffect(() => {
@@ -347,7 +394,10 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-5.5rem)] overflow-hidden rounded-3xl border border-[#E5E1D9] bg-white shadow-xl dark:border-[#333333] dark:bg-[#1E1E1E]">
+    <div
+      ref={chatContainerRef}
+      className="flex h-[calc(100vh-5.5rem)] overflow-hidden rounded-3xl border border-[#E5E1D9] bg-white shadow-xl dark:border-[#333333] dark:bg-[#1E1E1E]"
+    >
       {/* Global Call Overlay (Mounts Audio/Video Call View) */}
       <CallOverlay
         activeCall={callState.activeCall}
@@ -793,8 +843,19 @@ export default function ChatPage() {
 
       {/* NEW CHAT / START CONVERSATION MODAL */}
       {isNewChatModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="w-full max-w-lg rounded-3xl bg-white dark:bg-[#1E1E1E] border border-[#E5E1D9] dark:border-[#333333] shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => {
+            setIsNewChatModalOpen(false);
+            setIsGroupMode(false);
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-lg rounded-3xl bg-white dark:bg-[#1E1E1E] border border-[#E5E1D9] dark:border-[#333333] shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
+          >
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-[#E5E1D9] dark:border-[#333333] flex items-center justify-between">
               <div>

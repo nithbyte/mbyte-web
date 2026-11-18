@@ -70,6 +70,11 @@ export default function PharmaciesPage() {
 
   // Filters
   const [search, setSearch] = useState("");
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const q = new URLSearchParams(window.location.search).get("search");
+    if (q) setSearch(q);
+  }, []);
   const [territoryId, setTerritoryId] = useState("ALL");
   const [approvalStatusFilter, setApprovalStatusFilter] = useState<string>("ALL");
 

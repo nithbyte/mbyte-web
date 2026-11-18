@@ -52,7 +52,7 @@ export interface Visit {
   mrPhone?: string;
   customerId: string;
   customerName: string;
-  customerType: "DOCTOR" | "PHARMACY";
+  customerType: "DOCTOR" | "PURCHASING_DOCTOR" | "PHARMACY";
   customerAddress?: string;
   specialty?: string;
   territoryId?: string;

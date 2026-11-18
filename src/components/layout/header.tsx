@@ -28,6 +28,7 @@ import { normalizeRole, getRoleLabel, type CanonicalRole } from "@/types";
 import { Modal } from "@/components/ui/dialog";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NotificationDropdown } from "./notification-dropdown";
+import { GlobalSearch } from "./global-search";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { getLocalTodayDate, getLocalYesterdayDate, isValidIsoDate, cn } from "@/lib/utils";
@@ -48,24 +49,27 @@ export function Header() {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const notificationButtonRef = useRef<HTMLButtonElement>(null);
+  const lastSyncedUrlDateRef = useRef<string | null>(null);
 
   // Compute local dates when mounted in the browser
   const todayDate = isMounted ? getLocalTodayDate() : "";
   const yesterdayDate = isMounted ? getLocalYesterdayDate() : "";
 
   // URL query parameter synchronization (?date=YYYY-MM-DD)
+  // Only react when the URL ?date= param itself changes (never revert local selection!)
+  const urlDateParam = searchParams?.get("date") ?? null;
   useEffect(() => {
-    const urlDate = searchParams?.get("date");
-    if (urlDate) {
-      // Validate strictly to prevent invalid dates like 2026-02-31 from corrupting store
-      if (isValidIsoDate(urlDate) && urlDate !== operatingDate) {
-        setOperatingDate(urlDate);
+    if (urlDateParam && urlDateParam !== lastSyncedUrlDateRef.current) {
+      lastSyncedUrlDateRef.current = urlDateParam;
+      if (isValidIsoDate(urlDateParam)) {
+        setOperatingDate(urlDateParam);
       }
     }
-  }, [searchParams, operatingDate, setOperatingDate]);
+  }, [urlDateParam, setOperatingDate]);
 
   const handleDateChange = (newDate: string) => {
-    if (!newDate || !isValidIsoDate(newDate) || newDate === operatingDate) return;
+    if (!newDate || !isValidIsoDate(newDate)) return;
+    lastSyncedUrlDateRef.current = newDate;
     setOperatingDate(newDate);
 
     // Update URL parameter without reload
@@ -77,6 +81,30 @@ export function Header() {
   };
 
   const canonicalRole = normalizeRole(currentUser?.role);
+  const isChatOpen = pathname === "/chat" || pathname.startsWith("/chat/");
+
+  // Track last visited non-chat route so toggling/closing Chat returns cleanly
+  useEffect(() => {
+    if (!isChatOpen && pathname && typeof window !== "undefined") {
+      const qs = searchParams?.toString();
+      const fullPath = qs ? `${pathname}?${qs}` : pathname;
+      sessionStorage.setItem("mbyte_prev_non_chat_route", fullPath);
+    }
+  }, [isChatOpen, pathname, searchParams]);
+
+  const handleToggleChat = () => {
+    if (isChatOpen) {
+      const fallback = canonicalRole === "SUPER_ADMIN" ? "/companies" : "/";
+      const prevRoute =
+        typeof window !== "undefined"
+          ? sessionStorage.getItem("mbyte_prev_non_chat_route")
+          : null;
+      const target = prevRoute && !prevRoute.startsWith("/chat") ? prevRoute : fallback;
+      router.push(target);
+    } else {
+      router.push("/chat");
+    }
+  };
   const userName = currentUser?.name || [currentUser?.firstName, currentUser?.lastName].filter(Boolean).join(" ").trim() || "Loading...";
   const userRole = getRoleLabel(canonicalRole);
   const initials =
@@ -191,12 +219,12 @@ export function Header() {
               Today
             </button>
 
-            {/* Yesterday Shortcut Button (only on extra large screens to preserve layout space) */}
+            {/* Yesterday Shortcut Button */}
             <button
               type="button"
               onClick={() => handleDateChange(getLocalYesterdayDate())}
               className={cn(
-                "hidden 2xl:inline-block rounded px-2 py-1 text-xs font-medium transition-colors cursor-pointer",
+                "hidden xl:inline-block rounded px-1.5 py-0.5 text-xs font-medium transition-colors cursor-pointer",
                 yesterdayDate && operatingDate === yesterdayDate
                   ? "bg-orange-50 font-semibold text-[#FF6B00] dark:bg-[#FF6B00]/20 dark:text-[#FF6B00]"
                   : "text-slate-600 hover:bg-[#F5F3EE] dark:text-slate-300 dark:hover:bg-[#333333]"
@@ -218,22 +246,14 @@ export function Header() {
                 }
               }}
               suppressHydrationWarning
-className="w-[110px] rounded border border-transparent bg-transparent px-1 py-0.5 text-xs font-semibold text-slate-900 focus:border-[#FF6B00] focus:outline-none dark:text-slate-100 dark:hover:border-slate-700 cursor-pointer"
+              className="w-[122px] rounded border border-transparent bg-transparent px-1 py-0.5 text-xs font-semibold text-slate-900 focus:border-[#FF6B00] focus:outline-none dark:text-slate-100 dark:hover:border-slate-700 cursor-pointer"
             />
           </div>
         </div>
 
         {/* Center: Flexible Global Search Bar */}
         <div className="hidden lg:flex flex-1 items-center justify-center max-w-xs xl:max-w-sm 2xl:max-w-md mx-2 min-w-0">
-          <div className="relative w-full">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 dark:text-slate-500 pointer-events-none" aria-hidden="true" />
-            <input
-              type="text"
-              aria-label="Search portal records"
-              placeholder="Search records, doctors, orders..."
-              className="h-8.5 w-full rounded-lg border border-[#E5E1D9] bg-[#F5F3EE]/60 pl-8 pr-8 text-xs text-slate-900 placeholder:text-slate-400 transition-all focus:border-[#FF6B00] focus:bg-white focus:outline-none dark:border-[#333333] dark:bg-[#242424] dark:text-slate-100 dark:focus:bg-[#2C2C2C] shadow-2xs"
-            />
-          </div>
+          <GlobalSearch role={canonicalRole} />
         </div>
 
         {/* Right: Tenant Badge, Notifications & User Info */}
@@ -247,15 +267,20 @@ className="w-[110px] rounded border border-transparent bg-transparent px-1 py-0.
           {/* Light / Dark Theme Mode Toggle */}
           <ThemeToggle />
 
-          {/* Team Chat Quick Access */}
-          <Link
-            href="/chat"
-            className="relative rounded-lg p-2 text-slate-600 hover:bg-[#F5F3EE] dark:text-slate-300 dark:hover:bg-[#2C2C2C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] dark:focus-visible:ring-[#FF6B00] shrink-0 transition-colors"
-            title="Team Chat & Calls"
-            aria-label="Open Team Chat & Calls"
+          {/* Team Chat Quick Access Toggle */}
+          <button
+            type="button"
+            onClick={handleToggleChat}
+            className={cn(
+              "relative rounded-lg p-2 text-slate-600 hover:bg-[#F5F3EE] dark:text-slate-300 dark:hover:bg-[#2C2C2C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] dark:focus-visible:ring-[#FF6B00] shrink-0 transition-colors cursor-pointer",
+              isChatOpen && "bg-orange-50 text-[#FF6B00] dark:bg-[#2C2C2C] dark:text-[#FF6B00]"
+            )}
+            title={isChatOpen ? "Close Team Chat & Calls" : "Team Chat & Calls"}
+            aria-label={isChatOpen ? "Close Team Chat & Calls" : "Open Team Chat & Calls"}
+            aria-pressed={isChatOpen}
           >
             <MessageSquare className="h-5 w-5" />
-          </Link>
+          </button>
 
           {/* Notification Bell with Popover Dropdown */}
           <div className="relative shrink-0">

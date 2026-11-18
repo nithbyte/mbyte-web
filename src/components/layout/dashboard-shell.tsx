@@ -11,6 +11,8 @@ import { useCurrentUser } from "@/hooks";
 import { tokenStorage } from "@/lib/api-client";
 import { normalizeRole } from "@/types";
 import { cn } from "@/lib/utils";
+import { useWebRTCCall } from "@/features/chat/useWebRTCCall";
+import { CallOverlay } from "@/features/chat/CallOverlay";
 
 const MR_RESTRICTED_PREFIXES = [
   "/orders",
@@ -19,6 +21,7 @@ const MR_RESTRICTED_PREFIXES = [
   "/distributors",
   "/pharmacies",
   "/doctors",
+  "/purchasing-doctors",
   "/commercial",
   "/reports",
   "/companies",
@@ -32,6 +35,7 @@ const SUPER_ADMIN_RESTRICTED_PREFIXES = [
   "/distributors",
   "/pharmacies",
   "/doctors",
+  "/purchasing-doctors",
   "/products",
   "/product-presence",
   "/commercial",
@@ -46,6 +50,17 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [authChecked, setAuthChecked] = useState(false);
 
   const canonicalRole = normalizeRole(currentUser?.role);
+
+  // Global incoming call listener on all dashboard pages except /chat (which manages its own call state)
+  const isChatRoute = pathname.startsWith("/chat");
+  const globalCall = useWebRTCCall(currentUser?.id, !isChatRoute && Boolean(currentUser?.id));
+
+  // Request browser Notification permission once when logged in so background-tab call alerts work
+  useEffect(() => {
+    if (currentUser?.id && typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission().catch(() => {});
+    }
+  }, [currentUser?.id]);
 
   useEffect(() => {
     const token = tokenStorage.getAccessToken();
@@ -155,6 +170,25 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>
         </main>
       </div>
+
+      {!isChatRoute && globalCall.activeCall && (
+        <CallOverlay
+          activeCall={globalCall.activeCall}
+          callDuration={globalCall.callDuration}
+          isMuted={globalCall.isMuted}
+          isVideoEnabled={globalCall.isVideoEnabled}
+          isScreenSharing={globalCall.isScreenSharing}
+          localStream={globalCall.localStream}
+          remoteStream={globalCall.remoteStream}
+          currentUserId={currentUser?.id}
+          onAccept={globalCall.acceptCall}
+          onReject={globalCall.rejectCall}
+          onEndCall={globalCall.endCall}
+          onToggleMute={globalCall.toggleMute}
+          onToggleVideo={globalCall.toggleVideo}
+          onToggleScreenShare={globalCall.toggleScreenShare}
+        />
+      )}
     </div>
   );
 }

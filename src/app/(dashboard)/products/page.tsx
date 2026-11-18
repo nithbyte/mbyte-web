@@ -39,6 +39,11 @@ import {
 
 export default function ProductsPage() {
   const [search, setSearch] = useState("");
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const q = new URLSearchParams(window.location.search).get("search");
+    if (q) setSearch(q);
+  }, []);
   const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [selectedStatus, setSelectedStatus] = useState("ALL");
 

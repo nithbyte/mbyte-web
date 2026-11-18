@@ -24,7 +24,7 @@ export interface WebRTCCallState {
   error: string | null;
 }
 
-export function useWebRTCCall(currentUserId?: string) {
+export function useWebRTCCall(currentUserId?: string, enabled: boolean = true) {
   const [activeCall, setActiveCall] = useState<CallSession | null>(null);
   const [callDuration, setCallDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
@@ -35,6 +35,8 @@ export function useWebRTCCall(currentUserId?: string) {
   const [connectionState, setConnectionState] = useState<RTCPeerConnectionState | "idle" | "calling" | "ringing">("idle");
   const [error, setError] = useState<string | null>(null);
 
+  const activeCallRef = useRef<CallSession | null>(null);
+  const dismissedCallIdsRef = useRef<Set<string>>(new Set());
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteStreamRef = useRef<MediaStream | null>(null);
@@ -43,6 +45,23 @@ export function useWebRTCCall(currentUserId?: string) {
   const incomingCheckTimerRef = useRef<NodeJS.Timeout | null>(null);
   const processedSignalIdsRef = useRef<Set<string>>(new Set());
   const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
+
+  useEffect(() => {
+    activeCallRef.current = activeCall;
+  }, [activeCall]);
+
+  // Start duration timer STRICTLY once call is attended (CONNECTED)
+  const startDurationTimer = useCallback((connectedAt?: string | null) => {
+    if (durationTimerRef.current) return;
+    const baseMs = connectedAt ? new Date(connectedAt).getTime() : Date.now();
+    const initialElapsed = Number.isFinite(baseMs)
+      ? Math.max(0, Math.floor((Date.now() - baseMs) / 1000))
+      : 0;
+    setCallDuration(initialElapsed);
+    durationTimerRef.current = setInterval(() => {
+      setCallDuration((prev) => prev + 1);
+    }, 1000);
+  }, []);
 
   // Cleanup helper
   const cleanUpStreamsAndPC = useCallback(() => {
@@ -65,7 +84,11 @@ export function useWebRTCCall(currentUserId?: string) {
       setRemoteStream(null);
     }
     if (pcRef.current) {
-      pcRef.current.close();
+      try {
+        pcRef.current.close();
+      } catch {
+        // ignore
+      }
       pcRef.current = null;
     }
     pendingCandidatesRef.current = [];
@@ -107,21 +130,8 @@ export function useWebRTCCall(currentUserId?: string) {
       if (pc.connectionState) {
         setConnectionState(pc.connectionState);
       }
-      if (pc.connectionState === "connected") {
-        setActiveCall((prev) => (prev && prev.status !== "CONNECTED" ? { ...prev, status: "CONNECTED" } : prev));
-        if (!durationTimerRef.current) {
-          durationTimerRef.current = setInterval(() => {
-            setCallDuration((prev) => prev + 1);
-          }, 1000);
-        }
-      } else if (
-        pc.connectionState === "disconnected" ||
-        pc.connectionState === "failed" ||
-        pc.connectionState === "closed"
-      ) {
-        cleanUpStreamsAndPC();
-        setActiveCall(null);
-      }
+      // Do NOT start duration timer here before the callee has explicitly accepted (status === "CONNECTED").
+      // Remote hangup / end is driven authoritatively by backend CallSession status and END/REJECT signals.
     };
 
     pc.ontrack = (event) => {
@@ -138,7 +148,7 @@ export function useWebRTCCall(currentUserId?: string) {
     };
 
     return pc;
-  }, [cleanUpStreamsAndPC]);
+  }, []);
 
   // Request user media safely with animated canvas and audio fallback
   const acquireMedia = useCallback(async (callType: CallType) => {
@@ -217,7 +227,7 @@ export function useWebRTCCall(currentUserId?: string) {
 
     signalPollerRef.current = setInterval(async () => {
       try {
-        // Synchronize remote call status from backend
+        // 1. Synchronize authoritative remote call status from backend
         const remoteSession = await chatService.getCallSession(callId);
         if (remoteSession) {
           if (
@@ -225,6 +235,7 @@ export function useWebRTCCall(currentUserId?: string) {
             remoteSession.status === "ENDED" ||
             remoteSession.status === "MISSED"
           ) {
+            dismissedCallIdsRef.current.add(callId);
             cleanUpStreamsAndPC();
             setActiveCall(null);
             return;
@@ -232,17 +243,14 @@ export function useWebRTCCall(currentUserId?: string) {
           if (remoteSession.status === "CONNECTED") {
             setActiveCall((prev) =>
               prev && prev.status !== "CONNECTED"
-                ? { ...prev, status: "CONNECTED" }
+                ? { ...prev, status: "CONNECTED", connectedAt: remoteSession.connectedAt }
                 : prev
             );
-            if (!durationTimerRef.current) {
-              durationTimerRef.current = setInterval(() => {
-                setCallDuration((prev) => prev + 1);
-              }, 1000);
-            }
+            startDurationTimer(remoteSession.connectedAt);
           }
         }
 
+        // 2. Process signaling queue (END/REJECT checked even before PC is ready)
         const signals = await chatService.getSignals(callId);
         if (!Array.isArray(signals)) return;
 
@@ -252,29 +260,30 @@ export function useWebRTCCall(currentUserId?: string) {
           if (sig.senderId === currentUserId) continue; // Ignore own signals
 
           processedSignalIdsRef.current.add(sigKey);
-          const pc = pcRef.current;
-          if (!pc) continue;
 
           if (sig.type === "END" || sig.type === "REJECT" || sig.type === "BYE" || sig.type === "END_CALL") {
+            dismissedCallIdsRef.current.add(callId);
             cleanUpStreamsAndPC();
             setActiveCall(null);
             return;
           }
 
+          const pc = pcRef.current;
+          if (!pc) continue;
+
           if (sig.type === "OFFER" && sig.payload) {
-            await pc.setRemoteDescription(new RTCSessionDescription(sig.payload));
-            await flushPendingCandidates(pc);
-            const answer = await pc.createAnswer();
-            await pc.setLocalDescription(answer);
-            await chatService.sendSignal(callId, "ANSWER", answer);
+            if (pc.signalingState === "stable" || pc.signalingState === "have-local-offer") {
+              await pc.setRemoteDescription(new RTCSessionDescription(sig.payload));
+              await flushPendingCandidates(pc);
+              const answer = await pc.createAnswer();
+              await pc.setLocalDescription(answer);
+              await chatService.sendSignal(callId, "ANSWER", answer);
+            }
           } else if (sig.type === "ANSWER" && sig.payload) {
-            await pc.setRemoteDescription(new RTCSessionDescription(sig.payload));
-            await flushPendingCandidates(pc);
-            setActiveCall((prev) =>
-              prev && prev.status !== "CONNECTED"
-                ? { ...prev, status: "CONNECTED" }
-                : prev
-            );
+            if (pc.signalingState === "have-local-offer") {
+              await pc.setRemoteDescription(new RTCSessionDescription(sig.payload));
+              await flushPendingCandidates(pc);
+            }
           } else if (sig.type === "ICE_CANDIDATE" && sig.payload) {
             if (!pc.remoteDescription) {
               pendingCandidatesRef.current.push(sig.payload);
@@ -287,11 +296,11 @@ export function useWebRTCCall(currentUserId?: string) {
             }
           }
         }
-      } catch (err) {
+      } catch {
         // Suppress transient network poll errors
       }
-    }, 1200);
-  }, [cleanUpStreamsAndPC, currentUserId, flushPendingCandidates]);
+    }, 1000);
+  }, [cleanUpStreamsAndPC, currentUserId, flushPendingCandidates, startDurationTimer]);
 
   // Initiate an Outgoing Call
   const startCall = useCallback(
@@ -310,12 +319,17 @@ export function useWebRTCCall(currentUserId?: string) {
         });
 
         const callId = session?.id || session?.callId;
+        if (callId) {
+          dismissedCallIdsRef.current.delete(callId);
+        }
+
+        // Outgoing calls ALWAYS start in RINGING state; timer begins only after callee attends (CONNECTED)
         const enrichedSession: CallSession = {
           ...session,
           id: callId,
           callerId: session?.callerId || currentUserId,
           receiverId: session?.receiverId || receiverId,
-          status: session?.status || "RINGING",
+          status: "RINGING",
           receiver: session?.receiver || {
             firstName: receiverName.split(" ")[0] || receiverName,
             lastName: receiverName.split(" ").slice(1).join(" ") || "",
@@ -336,12 +350,6 @@ export function useWebRTCCall(currentUserId?: string) {
           }
         }
 
-        if (enrichedSession.status === "CONNECTED" && !durationTimerRef.current) {
-          durationTimerRef.current = setInterval(() => {
-            setCallDuration((prev) => prev + 1);
-          }, 1000);
-        }
-
         startSignalPolling(callId);
       } catch (err: any) {
         console.warn("Failed to start call:", err);
@@ -353,36 +361,40 @@ export function useWebRTCCall(currentUserId?: string) {
 
   // Accept Incoming Call
   const acceptCall = useCallback(async () => {
-    if (!activeCall) return;
+    const current = activeCallRef.current;
+    if (!current) return;
     try {
       setConnectionState("connecting");
-      const stream = await acquireMedia(activeCall.callType);
-      const callId = activeCall.id || (activeCall as any).callId;
+      const stream = await acquireMedia(current.callType);
+      const callId = current.id || (current as any).callId;
       const updated = await chatService.respondToCall(callId, "CONNECTED");
-      setActiveCall((prev) => (prev ? { ...prev, status: "CONNECTED" } : updated));
+      setActiveCall((prev) =>
+        prev
+          ? { ...prev, status: "CONNECTED", connectedAt: updated?.connectedAt || new Date().toISOString() }
+          : updated
+      );
 
       const pc = createPeerConnection(callId);
       if (pc && stream) {
         stream.getTracks().forEach((track) => pc.addTrack(track, stream));
       }
 
+      // Start duration timer strictly upon attending
+      startDurationTimer(updated?.connectedAt);
       startSignalPolling(callId);
-
-      // Start duration timer
-      if (!durationTimerRef.current) {
-        durationTimerRef.current = setInterval(() => {
-          setCallDuration((prev) => prev + 1);
-        }, 1000);
-      }
     } catch (err: any) {
       setError(err.message || "Failed to accept call");
     }
-  }, [activeCall, acquireMedia, createPeerConnection, startSignalPolling]);
+  }, [acquireMedia, createPeerConnection, startDurationTimer, startSignalPolling]);
 
   // Reject Incoming Call
   const rejectCall = useCallback(async () => {
-    if (!activeCall) return;
-    const callId = activeCall.id || (activeCall as any).callId;
+    const current = activeCallRef.current;
+    if (!current) return;
+    const callId = current.id || (current as any).callId;
+    if (callId) {
+      dismissedCallIdsRef.current.add(callId);
+    }
     try {
       await chatService.sendSignal(callId, "REJECT", { reason: "rejected" });
       await chatService.respondToCall(callId, "REJECTED");
@@ -390,12 +402,16 @@ export function useWebRTCCall(currentUserId?: string) {
       cleanUpStreamsAndPC();
       setActiveCall(null);
     }
-  }, [activeCall, cleanUpStreamsAndPC]);
+  }, [cleanUpStreamsAndPC]);
 
   // End Active Call (Hangs up on both sides)
   const endCall = useCallback(async () => {
-    if (activeCall) {
-      const callId = activeCall.id || (activeCall as any).callId;
+    const current = activeCallRef.current;
+    if (current) {
+      const callId = current.id || (current as any).callId;
+      if (callId) {
+        dismissedCallIdsRef.current.add(callId);
+      }
       try {
         await chatService.sendSignal(callId, "END", { reason: "ended" });
         await chatService.endCall(callId);
@@ -405,7 +421,7 @@ export function useWebRTCCall(currentUserId?: string) {
     }
     cleanUpStreamsAndPC();
     setActiveCall(null);
-  }, [activeCall, cleanUpStreamsAndPC]);
+  }, [cleanUpStreamsAndPC]);
 
   // Toggle Mute Audio
   const toggleMute = useCallback(() => {
@@ -467,28 +483,58 @@ export function useWebRTCCall(currentUserId?: string) {
 
   // Periodic check for incoming calls and remote hangup while ringing
   useEffect(() => {
-    if (!currentUserId) return;
+    if (!currentUserId || !enabled) return;
 
     incomingCheckTimerRef.current = setInterval(async () => {
-      if (!activeCall) {
+      const current = activeCallRef.current;
+      if (!current) {
         // No active call: check if one is ringing for us
-        const incoming = await chatService.getActiveCall();
-        if (
-          incoming &&
-          incoming.status === "RINGING" &&
-          (incoming.receiverId === currentUserId || incoming.callerId !== currentUserId)
-        ) {
-          setActiveCall(incoming);
-          setConnectionState("ringing");
+        try {
+          const incoming = await chatService.getActiveCall();
+          const incomingId = incoming?.id || (incoming as any)?.callId;
+          if (
+            incoming &&
+            incomingId &&
+            !dismissedCallIdsRef.current.has(incomingId) &&
+            incoming.status === "RINGING" &&
+            incoming.callerId !== currentUserId &&
+            (!incoming.receiverId || incoming.receiverId === currentUserId)
+          ) {
+            setActiveCall(incoming);
+            setConnectionState("ringing");
+
+            // Show browser notification if permitted (alerts admin even in background tab)
+            if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+              try {
+                const callerLabel = incoming.caller
+                  ? `${incoming.caller.firstName || ""} ${incoming.caller.lastName || ""}`.trim()
+                  : "Team Member";
+                new Notification(`Incoming ${incoming.callType === "VIDEO" ? "Video" : "Voice"} Call`, {
+                  body: `${callerLabel || "Colleague"} is calling you on MByte`,
+                  tag: `mbyte-call-${incomingId}`,
+                  requireInteraction: true,
+                });
+              } catch {
+                // ignore notification API errors
+              }
+            }
+          }
+        } catch {
+          // suppress transient poll errors
         }
-      } else if (activeCall.status === "RINGING") {
+      } else if (current.status === "RINGING") {
         // Call is ringing: check if caller cancelled or call ended remotely
-        const callId = activeCall.id || (activeCall as any).callId;
+        const callId = current.id || (current as any).callId;
         if (callId) {
-          const remote = await chatService.getCallSession(callId);
-          if (!remote || remote.status === "ENDED" || remote.status === "REJECTED" || remote.status === "MISSED") {
-            cleanUpStreamsAndPC();
-            setActiveCall(null);
+          try {
+            const remote = await chatService.getCallSession(callId);
+            if (!remote || remote.status === "ENDED" || remote.status === "REJECTED" || remote.status === "MISSED") {
+              dismissedCallIdsRef.current.add(callId);
+              cleanUpStreamsAndPC();
+              setActiveCall(null);
+            }
+          } catch {
+            // ignore
           }
         }
       }
@@ -497,7 +543,14 @@ export function useWebRTCCall(currentUserId?: string) {
     return () => {
       if (incomingCheckTimerRef.current) clearInterval(incomingCheckTimerRef.current);
     };
-  }, [activeCall, cleanUpStreamsAndPC, currentUserId]);
+  }, [cleanUpStreamsAndPC, currentUserId, enabled]);
+
+  // Cleanup all timers and streams on unmount
+  useEffect(() => {
+    return () => {
+      cleanUpStreamsAndPC();
+    };
+  }, [cleanUpStreamsAndPC]);
 
   return {
     activeCall,

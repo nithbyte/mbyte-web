@@ -1,4 +1,5 @@
 export type DoctorTier = "A_PLUS" | "A" | "B";
+export type DoctorCategory = "DOCTOR" | "PURCHASING_DOCTOR";
 export type DoctorApprovalStatus = "PENDING_APPROVAL" | "APPROVED" | "REJECTED";
 
 export interface Doctor {
@@ -15,6 +16,7 @@ export interface Doctor {
   territoryId: string;
   territoryName: string;
   tier: DoctorTier;
+  doctorCategory?: DoctorCategory;
   visitFrequency: number; // calls per month
   lastVisitDate?: string;
   latitude: number;
@@ -53,6 +55,7 @@ export interface DoctorInput {
   email?: string;
   territoryId: string;
   tier: DoctorTier;
+  doctorCategory?: DoctorCategory;
   visitFrequency: number;
   latitude: number;
   longitude: number;

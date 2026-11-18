@@ -1,13 +1,14 @@
 import { apiClient, isMockFallbackAllowed } from "../lib/api-client";
 import { mockDoctors, mockTerritories, mockVisits } from "../mock";
 import { authService } from "./authService";
-import type { Doctor, DoctorInput, CustomerHistoryItem, DoctorApprovalStatus } from "../types";
+import type { Doctor, DoctorInput, CustomerHistoryItem, DoctorApprovalStatus, DoctorCategory } from "../types";
 
 export interface DoctorQueryParams {
   search?: string;
   territoryId?: string;
   specialty?: string;
   tier?: string;
+  doctorCategory?: DoctorCategory | "ALL";
   organizationId?: string;
   approvalStatus?: DoctorApprovalStatus | "ALL";
   createdById?: string;
@@ -33,6 +34,7 @@ function mapApiDoctor(d: any): Doctor {
     territoryId: d.territoryId || d.territory?.id || "ter_001",
     territoryName: d.territory?.name || "Central Territory",
     tier: d.tier || "B",
+    doctorCategory: d.doctorCategory || "DOCTOR",
     visitFrequency: Number(d.visitFrequency) || 2,
     latitude: Number(d.latitude) || 13.0569,
     longitude: Number(d.longitude) || 80.2520,
@@ -58,6 +60,7 @@ export const doctorService = {
       if (params?.territoryId && params.territoryId !== "ALL") queryParams.territoryId = params.territoryId;
       if (params?.specialty && params.specialty !== "ALL") queryParams.specialty = params.specialty;
       if (params?.tier && params.tier !== "ALL") queryParams.tier = params.tier;
+      if (params?.doctorCategory && params.doctorCategory !== "ALL") queryParams.doctorCategory = params.doctorCategory;
       if (params?.search) queryParams.search = params.search;
       if (params?.organizationId) queryParams.organizationId = params.organizationId;
       if (params?.approvalStatus && params.approvalStatus !== "ALL") queryParams.approvalStatus = params.approvalStatus;
@@ -142,6 +145,7 @@ export const doctorService = {
         phone: input.phone.trim(),
         territoryId: input.territoryId,
         tier: input.tier || "B",
+        doctorCategory: input.doctorCategory || "DOCTOR",
         visitFrequency: input.visitFrequency || 2,
         latitude: Number(input.latitude) || 13.0569,
         longitude: Number(input.longitude) || 80.2520,

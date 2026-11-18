@@ -265,7 +265,7 @@ export const visitService = {
   async createVisit(input: {
     mrId: string;
     customerId: string;
-    customerType: 'DOCTOR' | 'PHARMACY';
+    customerType: 'DOCTOR' | 'PURCHASING_DOCTOR' | 'PHARMACY';
     scheduledDate: string;
     scheduledStartTime: string;
     scheduledEndTime?: string;
@@ -283,7 +283,7 @@ export const visitService = {
         scheduledDate: datePart,
       };
 
-      if (input.customerType === 'DOCTOR') {
+      if (input.customerType === 'DOCTOR' || input.customerType === 'PURCHASING_DOCTOR') {
         payload.doctorId = input.customerId;
       } else if (input.customerType === 'PHARMACY') {
         payload.pharmacyId = input.customerId;

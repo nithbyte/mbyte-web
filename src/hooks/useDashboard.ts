@@ -1,25 +1,25 @@
 import { useQuery } from "@tanstack/react-query";
 import { dashboardService } from "../services";
 
-export function useDashboardData(territoryId?: string) {
+export function useDashboardData(territoryId?: string, operatingDate?: string) {
   return useQuery({
-    queryKey: ["dashboard", "manager-data", territoryId || "ALL"],
-    queryFn: () => dashboardService.getManagerDashboard(territoryId),
+    queryKey: ["dashboard", "manager-data", territoryId || "ALL", operatingDate || "TODAY"],
+    queryFn: () => dashboardService.getManagerDashboard(territoryId, operatingDate),
     refetchInterval: 15_000,
   });
 }
 
-export function useDashboardKPIs(territoryId?: string) {
+export function useDashboardKPIs(territoryId?: string, operatingDate?: string) {
   return useQuery({
-    queryKey: ["dashboard", "kpis", territoryId || "ALL"],
-    queryFn: () => dashboardService.getKPIs(territoryId),
+    queryKey: ["dashboard", "kpis", territoryId || "ALL", operatingDate || "TODAY"],
+    queryFn: () => dashboardService.getKPIs(territoryId, operatingDate),
     refetchInterval: 15_000,
   });
 }
 
-export function useTerritoryPerformance() {
+export function useTerritoryPerformance(operatingDate?: string) {
   return useQuery({
-    queryKey: ["dashboard", "territory-performance"],
-    queryFn: () => dashboardService.getTerritoryPerformance(),
+    queryKey: ["dashboard", "territory-performance", operatingDate || "TODAY"],
+    queryFn: () => dashboardService.getTerritoryPerformance(operatingDate),
   });
 }

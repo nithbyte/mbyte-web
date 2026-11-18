@@ -48,8 +48,8 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 export function DashboardOverview() {
   const queryClient = useQueryClient();
   const { data: currentUser } = useCurrentUser();
-  const { selectedTerritoryId } = useFilterStore();
-  const { data, isLoading, isFetching } = useDashboardData(selectedTerritoryId);
+  const { selectedTerritoryId, operatingDate } = useFilterStore();
+  const { data, isLoading, isFetching } = useDashboardData(selectedTerritoryId, operatingDate);
 
   const tenantName =
     currentUser?.role === "SUPER_ADMIN"

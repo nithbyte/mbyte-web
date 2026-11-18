@@ -66,25 +66,32 @@ interface MockPresenceItem {
 }
 
 export const dashboardService = {
-  async getKPIs(territoryId?: string): Promise<DashboardKPIs> {
-    const today = new Date().toISOString().split("T")[0];
+  async getKPIs(territoryId?: string, operatingDate?: string): Promise<DashboardKPIs> {
+    const activeDate = operatingDate || new Date().toISOString().split("T")[0];
 
     try {
       const [dashSummary, fieldForce, visits, orders, collections, alerts] = await Promise.all([
         apiClient.get<any>("/reports/dashboard", {
-          params: { territoryId: territoryId !== "ALL" ? territoryId : undefined },
+          params: {
+            territoryId: territoryId !== "ALL" ? territoryId : undefined,
+            startDate: activeDate,
+            endDate: activeDate,
+          },
         }).catch(() => null),
         fieldForceService.getFieldForce(territoryId),
         visitService.getVisits({
           territoryId: territoryId !== "ALL" ? territoryId : undefined,
+          date: activeDate,
           limit: 100,
         }),
         orderService.getOrders({
           territoryId: territoryId !== "ALL" ? territoryId : undefined,
+          date: activeDate,
           limit: 100,
         }),
         collectionService.getCollections({
           territoryId: territoryId !== "ALL" ? territoryId : undefined,
+          date: activeDate,
           limit: 100,
         }),
         productService.getLowStockAlerts(10),
@@ -151,7 +158,7 @@ export const dashboardService = {
       ).length;
 
       return {
-        date: today,
+        date: activeDate,
         fieldForce: {
           total: fieldForce.length,
           activeToday,
@@ -161,22 +168,22 @@ export const dashboardService = {
           idleNow,
         },
         calls: {
-          plannedToday: dashSummary?.visits?.total || plannedToday,
-          completedToday: dashSummary?.visits?.completed || completedToday,
+          plannedToday: dashSummary?.visits?.total ?? plannedToday,
+          completedToday: dashSummary?.visits?.completed ?? completedToday,
           inProgressToday,
           missedToday,
-          verifiedGpsCount: dashSummary?.visits?.verified || verifiedGpsCount,
+          verifiedGpsCount: dashSummary?.visits?.verified ?? verifiedGpsCount,
           outsideRadiusCount,
-          complianceRate: Math.round(dashSummary?.visits?.completionRate || complianceRate),
+          complianceRate: Math.round(dashSummary?.visits?.completionRate ?? complianceRate),
           gpsComplianceRate,
         },
         commercial: {
-          ordersBookedCount: dashSummary?.sales?.totalOrders || orders.length,
-          totalOrderValue: Math.round(dashSummary?.sales?.totalRevenue || totalOrderValue),
+          ordersBookedCount: dashSummary?.sales?.totalOrders ?? orders.length,
+          totalOrderValue: Math.round(dashSummary?.sales?.totalRevenue ?? totalOrderValue),
           pendingOrdersCount: pendingOrders.length,
           pendingOrdersValue,
-          collectionsCount: dashSummary?.collections?.totalReceipts || collections.length,
-          totalCollectionsValue: Math.round(dashSummary?.collections?.totalCollected || totalCollectionsValue),
+          collectionsCount: dashSummary?.collections?.totalReceipts ?? collections.length,
+          totalCollectionsValue: Math.round(dashSummary?.collections?.totalCollected ?? totalCollectionsValue),
           collectionsByMode,
         },
         inventory: {
@@ -389,14 +396,14 @@ export const dashboardService = {
     });
   },
 
-  async getAttentionCenter(territoryId?: string): Promise<AttentionCenterData> {
+  async getAttentionCenter(territoryId?: string, operatingDate?: string): Promise<AttentionCenterData> {
     try {
       const [mrList, visits, criticalStockouts, orders, collections] = await Promise.all([
         fieldForceService.getMRList({ territoryId }),
-        visitService.getVisits({ territoryId, limit: 100 }),
+        visitService.getVisits({ territoryId, date: operatingDate, limit: 100 }),
         productService.getLowStockAlerts(6),
-        orderService.getOrders({ territoryId, limit: 100 }),
-        collectionService.getCollections({ territoryId, limit: 100 }),
+        orderService.getOrders({ territoryId, date: operatingDate, limit: 100 }),
+        collectionService.getCollections({ territoryId, date: operatingDate, limit: 100 }),
       ]);
 
       const belowTargetMRs: BelowTargetMRAlert[] = mrList
@@ -660,14 +667,14 @@ export const dashboardService = {
     });
   },
 
-  async getTerritoryPerformance(): Promise<TerritoryPerformance[]> {
+  async getTerritoryPerformance(operatingDate?: string): Promise<TerritoryPerformance[]> {
     try {
       const [territories, mrList, visits, orders, collections] = await Promise.all([
         territoryService.getTerritories(),
         fieldForceService.getMRList(),
-        visitService.getVisits({ limit: 100 }),
-        orderService.getOrders({ limit: 100 }),
-        collectionService.getCollections({ limit: 100 }),
+        visitService.getVisits({ date: operatingDate, limit: 100 }),
+        orderService.getOrders({ date: operatingDate, limit: 100 }),
+        collectionService.getCollections({ date: operatingDate, limit: 100 }),
       ]);
 
       if (Array.isArray(territories)) {
@@ -760,17 +767,17 @@ export const dashboardService = {
     );
   },
 
-  async getManagerDashboard(territoryId?: string): Promise<ManagerDashboardData> {
+  async getManagerDashboard(territoryId?: string, operatingDate?: string): Promise<ManagerDashboardData> {
     const [kpis, territorySummary, fieldForceSummary, stockAlerts, attentionCenter, recentVisits, recentOrders, recentCollections] =
       await Promise.all([
-        this.getKPIs(territoryId),
-        this.getTerritoryPerformance(),
+        this.getKPIs(territoryId, operatingDate),
+        this.getTerritoryPerformance(operatingDate),
         fieldForceService.getFieldForce(territoryId),
         productService.getLowStockAlerts(6),
-        this.getAttentionCenter(territoryId),
-        visitService.getVisits({ territoryId, limit: 8 }),
-        orderService.getRecentOrders(6),
-        collectionService.getRecentCollections(6),
+        this.getAttentionCenter(territoryId, operatingDate),
+        visitService.getVisits({ territoryId, date: operatingDate, limit: 8 }),
+        orderService.getOrders({ territoryId, date: operatingDate, limit: 6 }),
+        collectionService.getCollections({ territoryId, date: operatingDate, limit: 6 }),
       ]);
 
     return {

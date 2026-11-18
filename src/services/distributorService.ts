@@ -9,6 +9,89 @@ export interface DistributorQueryParams {
   organizationId?: string;
 }
 
+export interface AnalyzedSecondarySalesItem {
+  rowId: string;
+  rawProductName: string;
+  rawSku?: string;
+  matchedProductId: string | null;
+  matchedProductName: string | null;
+  matchedProductSku: string | null;
+  matchConfidence: number;
+  previousStock: number;
+  openingQty: number | null;
+  purchaseQty: number | null;
+  salesQty: number | null;
+  closingStock: number;
+  stockCalculationMode:
+    | "CLOSING_COLUMN"
+    | "OPENING_PURCHASE_MINUS_SALES"
+    | "PREVIOUS_MINUS_SALES";
+  computedStatus: "AVAILABLE" | "LOW_STOCK" | "OUT_OF_STOCK";
+  batchNumber?: string;
+  expiryDate?: string;
+  salesValue?: number | null;
+}
+
+export interface SecondarySalesAnalysisResponse {
+  distributor: {
+    id: string;
+    name: string;
+    territoryId: string;
+    territoryName?: string;
+  };
+  fileName: string;
+  fileType: "EXCEL" | "CSV" | "PDF";
+  reportPeriod?: string;
+  detectedColumns: string[];
+  summary: {
+    totalRows: number;
+    matchedCount: number;
+    unmatchedCount: number;
+    totalSalesQty: number;
+    totalClosingStock: number;
+    lowStockCount: number;
+    outOfStockCount: number;
+  };
+  items: AnalyzedSecondarySalesItem[];
+  autoApplied?: boolean;
+  appliedCount?: number;
+}
+
+export interface DistributorStockItem {
+  id: string;
+  productId: string;
+  productName: string;
+  genericName?: string;
+  sku?: string;
+  packSize?: string;
+  quantity: number;
+  status: "AVAILABLE" | "LOW_STOCK" | "OUT_OF_STOCK";
+  batchNumber?: string;
+  expiryDate?: string;
+  notes?: string;
+  checkedAt: string;
+}
+
+export interface DistributorStocksResponse {
+  distributorId: string;
+  distributorName: string;
+  totalProductsTracked: number;
+  totalUnitsInStock: number;
+  lowStockCount: number;
+  outOfStockCount: number;
+  stocks: DistributorStockItem[];
+  recentSyncs: Array<{
+    id: string;
+    createdAt: string;
+    actorName: string;
+    fileName?: string;
+    reportPeriod?: string;
+    updatedProductsCount?: number;
+    totalClosingStock?: number;
+    totalSalesQty?: number;
+  }>;
+}
+
 import { isOrgMatch } from "../lib/utils";
 
 const distributorsState: Distributor[] = [...mockDistributors];
@@ -289,5 +372,60 @@ export const distributorService = {
     };
     mockProductPresence.unshift(newAudit as any);
     return Promise.resolve(newAudit);
+  },
+
+  async getDistributorStocks(distributorId: string): Promise<DistributorStocksResponse> {
+    const res = await apiClient.get<any>(`/distributors/${distributorId}/stocks`);
+    return res;
+  },
+
+  async analyzeSecondarySalesReport(
+    distributorId: string,
+    file: File,
+    autoApply: boolean = false
+  ): Promise<SecondarySalesAnalysisResponse> {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await apiClient.post<any>(
+      `/distributors/${distributorId}/secondary-sales/analyze${autoApply ? "?autoApply=true" : ""}`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return res;
+  },
+
+  async applySecondarySalesStocks(
+    distributorId: string,
+    payload: {
+      fileName?: string;
+      reportPeriod?: string;
+      items: Array<{
+        productId: string;
+        closingStock: number;
+        openingQty?: number | null;
+        purchaseQty?: number | null;
+        salesQty?: number | null;
+        batchNumber?: string;
+        expiryDate?: string;
+        notes?: string;
+      }>;
+    }
+  ): Promise<{
+    success: boolean;
+    distributorId: string;
+    distributorName: string;
+    updatedCount: number;
+    syncedAt: string;
+    stocks: any[];
+  }> {
+    const res = await apiClient.post<any>(
+      `/distributors/${distributorId}/secondary-sales/apply`,
+      payload
+    );
+    return res;
   },
 };

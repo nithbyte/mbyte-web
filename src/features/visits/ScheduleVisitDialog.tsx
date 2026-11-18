@@ -30,7 +30,7 @@ interface ScheduleVisitDialogProps {
 const INITIAL_VISIT_FORM = {
   mrId: "",
   customerId: "",
-  customerType: "DOCTOR" as "DOCTOR" | "PHARMACY",
+  customerType: "DOCTOR" as "DOCTOR" | "PURCHASING_DOCTOR" | "PHARMACY",
   scheduledDate: "",
   scheduledStartTime: "10:00",
   scheduledEndTime: "10:30",
@@ -149,6 +149,18 @@ export const ScheduleVisitDialog: React.FC<ScheduleVisitDialogProps> = ({
             </button>
             <button
               type="button"
+              onClick={() => setForm((f) => ({ ...f, customerType: "PURCHASING_DOCTOR", customerId: "" }))}
+              className={`py-2 rounded-lg border text-xs font-semibold transition-colors ${
+                form.customerType === "PURCHASING_DOCTOR"
+                  ? "border-orange-500 bg-orange-50 text-[#FF6B00] dark:bg-orange-950/40"
+                  : "border-slate-200 dark:border-slate-700 text-slate-600 hover:border-orange-300"
+              }`}
+            >
+              <Stethoscope className="h-3.5 w-3.5 mx-auto mb-0.5" />
+              Purchasing Dr
+            </button>
+            <button
+              type="button"
               onClick={() => setForm((f) => ({ ...f, customerType: "PHARMACY", customerId: "" }))}
               className={`py-2 rounded-lg border text-xs font-semibold transition-colors ${
                 form.customerType === "PHARMACY"
@@ -159,18 +171,15 @@ export const ScheduleVisitDialog: React.FC<ScheduleVisitDialogProps> = ({
               <Building2 className="h-3.5 w-3.5 mx-auto mb-0.5" />
               Pharmacy
             </button>
-            <button
-              type="button"
-              disabled
-              className="py-2 rounded-lg border border-dashed border-slate-200 dark:border-slate-700 text-xs text-slate-400 cursor-not-allowed"
-            >
-              <Boxes className="h-3.5 w-3.5 mx-auto mb-0.5" />
-              Stockist
-            </button>
           </div>
           <div>
             <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-              {form.customerType === "DOCTOR" ? "Doctor" : "Pharmacy"} *
+              {form.customerType === "DOCTOR"
+                ? "Doctor"
+                : form.customerType === "PURCHASING_DOCTOR"
+                ? "Purchasing Doctor"
+                : "Pharmacy"}{" "}
+              *
             </label>
             <select
               id="visit-customer"
@@ -181,15 +190,32 @@ export const ScheduleVisitDialog: React.FC<ScheduleVisitDialogProps> = ({
               }`}
             >
               <option value="">
-                Select {form.customerType === "DOCTOR" ? "Doctor" : "Pharmacy"}…
+                Select{" "}
+                {form.customerType === "DOCTOR"
+                  ? "Doctor"
+                  : form.customerType === "PURCHASING_DOCTOR"
+                  ? "Purchasing Doctor"
+                  : "Pharmacy"}
+                …
               </option>
               {form.customerType === "DOCTOR"
-                ? eligibleDoctors.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name}
-                      {d.specialty ? ` — ${d.specialty}` : ""}
-                    </option>
-                  ))
+                ? eligibleDoctors
+                    .filter((d) => (d.doctorCategory || "DOCTOR") === "DOCTOR")
+                    .map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                        {d.specialty ? ` — ${d.specialty}` : ""}
+                      </option>
+                    ))
+                : form.customerType === "PURCHASING_DOCTOR"
+                ? eligibleDoctors
+                    .filter((d) => d.doctorCategory === "PURCHASING_DOCTOR")
+                    .map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                        {d.specialty ? ` — ${d.specialty}` : ""}
+                      </option>
+                    ))
                 : eligiblePharmacies.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name}

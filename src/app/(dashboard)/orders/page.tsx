@@ -53,6 +53,11 @@ export default function OrdersPage() {
   const [mrFilter, setMrFilter] = useState<string>("ALL");
   const [dateFilter, setDateFilter] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const q = new URLSearchParams(window.location.search).get("search");
+    if (q) setSearchQuery(q);
+  }, []);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
   const { data: kpis, isLoading: kpisLoading } = useOrderKPIs({

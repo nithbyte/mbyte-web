@@ -60,3 +60,55 @@ export function useRecordStockInward() {
     },
   });
 }
+
+export function useDistributorStocks(distributorId: string) {
+  return useQuery({
+    queryKey: ["distributors", "stocks", distributorId],
+    queryFn: () => distributorService.getDistributorStocks(distributorId),
+    enabled: Boolean(distributorId),
+  });
+}
+
+export function useAnalyzeSecondarySales() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      distributorId,
+      file,
+      autoApply,
+    }: {
+      distributorId: string;
+      file: File;
+      autoApply?: boolean;
+    }) => distributorService.analyzeSecondarySalesReport(distributorId, file, autoApply),
+    onSuccess: (data, variables) => {
+      if (data?.autoApplied) {
+        queryClient.invalidateQueries({ queryKey: ["distributors"] });
+        queryClient.invalidateQueries({ queryKey: ["distributors", "stocks", variables.distributorId] });
+        queryClient.invalidateQueries({ queryKey: ["presence"] });
+        queryClient.invalidateQueries({ queryKey: ["products"] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      }
+    },
+  });
+}
+
+export function useApplySecondarySales() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      distributorId,
+      payload,
+    }: {
+      distributorId: string;
+      payload: Parameters<typeof distributorService.applySecondarySalesStocks>[1];
+    }) => distributorService.applySecondarySalesStocks(distributorId, payload),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["distributors"] });
+      queryClient.invalidateQueries({ queryKey: ["distributors", "stocks", variables.distributorId] });
+      queryClient.invalidateQueries({ queryKey: ["presence"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}

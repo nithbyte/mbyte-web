@@ -147,6 +147,11 @@ function getNavSections(role: CanonicalRole): NavSection[] {
               icon: Stethoscope,
             },
             {
+              title: "Purchasing Doctors",
+              href: "/purchasing-doctors",
+              icon: Stethoscope,
+            },
+            {
               title: "Pharmacies & Retail",
               href: "/pharmacies",
               icon: Building2,
@@ -304,6 +309,11 @@ function getNavSections(role: CanonicalRole): NavSection[] {
             {
               title: "Doctors & Clinics",
               href: "/doctors",
+              icon: Stethoscope,
+            },
+            {
+              title: "Purchasing Doctors",
+              href: "/purchasing-doctors",
               icon: Stethoscope,
             },
             {
@@ -554,7 +564,20 @@ export function Sidebar() {
                     <Link
                       key={item.href}
                       href={item.href}
-                      onClick={() => setMobileOpen(false)}
+                      onClick={(e) => {
+                        setMobileOpen(false);
+                        if (item.href === "/chat" && isActive) {
+                          e.preventDefault();
+                          const fallback = canonicalRole === "SUPER_ADMIN" ? "/companies" : "/";
+                          const prevRoute =
+                            typeof window !== "undefined"
+                              ? sessionStorage.getItem("mbyte_prev_non_chat_route")
+                              : null;
+                          const target =
+                            prevRoute && !prevRoute.startsWith("/chat") ? prevRoute : fallback;
+                          router.push(target);
+                        }
+                      }}
                       title={isCollapsed ? item.title : undefined}
                       className={cn(
                         "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
