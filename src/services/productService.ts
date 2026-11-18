@@ -637,6 +637,7 @@ export const productService = {
 
   async uploadVisualAidFile(file: File): Promise<{
     fileUrl: string;
+    thumbnailUrl?: string;
     filename: string;
     sizeBytes: number;
     mimeType: string;
@@ -655,6 +656,7 @@ export const productService = {
         }
         return {
           fileUrl: resolvedUrl,
+          thumbnailUrl: data.thumbnailUrl,
           filename: data.filename || file.name,
           sizeBytes: data.sizeBytes || file.size,
           mimeType: data.mimeType || file.type,

@@ -25,6 +25,7 @@ import {
   Download,
 } from "lucide-react";
 import { chatService } from "@/services/chatService";
+import { apiClient } from "@/lib/api-client";
 import {
   Conversation,
   ChatMessage,
@@ -267,35 +268,53 @@ export default function ChatPage() {
 
     setIsUploading(true);
     try {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const base64Data = reader.result as string;
-        const isImage = file.type.startsWith("image/");
-        const msgType: ChatMessageType = isImage ? "IMAGE" : "FILE";
+      const formData = new FormData();
+      formData.append("file", file);
+      const isImage = file.type.startsWith("image/");
+      const msgType: ChatMessageType = isImage ? "IMAGE" : "FILE";
 
-        const newMsg = await chatService.sendMessage(selectedConversationId, {
-          content: isImage ? "Shared an image" : `Shared document: ${file.name}`,
-          messageType: msgType,
-          fileUrl: base64Data,
-          fileName: file.name,
-          fileSize: file.size,
+      let uploadedUrl: string | null = null;
+      try {
+        const uploadRes: any = await apiClient.post("/files/upload?folder=chat", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+          timeout: 60000,
         });
+        const uploadData = uploadRes?.data || uploadRes;
+        uploadedUrl = uploadData?.secureUrl || uploadData?.fileUrl || uploadData?.url || null;
+      } catch (uploadErr) {
+        console.warn("Direct Cloudinary chat upload failed, falling back to data URI:", uploadErr);
+      }
 
-        setMessages((prev) => [...prev, newMsg]);
-        setConversations((prev) =>
-          prev.map((c) =>
-            c.id === selectedConversationId
-              ? {
-                  ...c,
-                  lastMessageText: isImage ? "📷 Image" : `📎 ${file.name}`,
-                  lastMessageAt: new Date().toISOString(),
-                  lastMessageSender: "You",
-                }
-              : c
-          )
-        );
-      };
-      reader.readAsDataURL(file);
+      if (!uploadedUrl) {
+        uploadedUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = () => reject(new Error("Failed to read file"));
+          reader.readAsDataURL(file);
+        });
+      }
+
+      const newMsg = await chatService.sendMessage(selectedConversationId, {
+        content: isImage ? "Shared an image" : `Shared document: ${file.name}`,
+        messageType: msgType,
+        fileUrl: uploadedUrl,
+        fileName: file.name,
+        fileSize: file.size,
+      });
+
+      setMessages((prev) => [...prev, newMsg]);
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === selectedConversationId
+            ? {
+                ...c,
+                lastMessageText: isImage ? "📷 Image" : `📎 ${file.name}`,
+                lastMessageAt: new Date().toISOString(),
+                lastMessageSender: "You",
+              }
+            : c
+        )
+      );
     } catch (err) {
       console.error("Upload failed", err);
     } finally {

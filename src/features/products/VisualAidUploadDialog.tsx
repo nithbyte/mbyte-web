@@ -124,7 +124,7 @@ export const VisualAidUploadDialog: React.FC<VisualAidUploadDialogProps> = ({
       setForm((f) => ({
         ...f,
         fileUrl: uploadRes.fileUrl,
-        thumbnailUrl: isImage ? uploadRes.fileUrl : f.thumbnailUrl,
+        thumbnailUrl: uploadRes.thumbnailUrl || (isImage ? uploadRes.fileUrl : f.thumbnailUrl),
         fileSizeBytes: uploadRes.sizeBytes || file.size,
       }));
     } catch (err: any) {
