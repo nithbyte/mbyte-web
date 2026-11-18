@@ -111,6 +111,13 @@ function getNavSections(role: CanonicalRole): NavSection[] {
               badgeVariant: "live",
             },
             {
+              title: "Live MR Tracking",
+              href: "/live-tracking",
+              icon: Radio,
+              badge: "LIVE",
+              badgeVariant: "live",
+            },
+            {
               title: "Tour Plans (MTP)",
               href: "/tour-plans",
               icon: CalendarDays,
@@ -277,6 +284,13 @@ function getNavSections(role: CanonicalRole): NavSection[] {
               title: "Visits & GPS Tracking",
               href: "/visits",
               icon: CalendarCheck,
+              badge: "LIVE",
+              badgeVariant: "live",
+            },
+            {
+              title: "Live MR Tracking",
+              href: "/live-tracking",
+              icon: Radio,
               badge: "LIVE",
               badgeVariant: "live",
             },

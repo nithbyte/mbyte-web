@@ -53,6 +53,7 @@ const QUICK_PAGES: Array<{
 }> = [
   { title: "Company Overview", subtitle: "Dashboard & KPIs", href: "/", keywords: "dashboard home overview kpi" },
   { title: "Field Visits & GPS", subtitle: "Live visit tracking", href: "/visits", keywords: "visits gps calls" },
+  { title: "Live MR Tracking", subtitle: "Real-time GPS map & per-MR toggle", href: "/live-tracking", keywords: "live tracking gps radar map location mr route" },
   { title: "Tour Plans (MTP)", subtitle: "Monthly tour schedules", href: "/tour-plans", keywords: "tour plan mtp schedule" },
   { title: "Daily Call Reports (DCR)", subtitle: "Daily call logs & approvals", href: "/dcr", keywords: "dcr daily call report" },
   { title: "MR Team & Coverage", subtitle: "Medical representatives & attendance", href: "/field-force", keywords: "mr rep team field force staff" },
