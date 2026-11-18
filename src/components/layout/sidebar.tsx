@@ -498,51 +498,90 @@ export function Sidebar() {
   };
 
   const sidebarContent = (
-    <div className="flex h-full flex-col justify-between">
-      {/* Brand & Organization */}
-      <div>
-        <div className="flex h-16 items-center justify-between border-b border-[#E5E1D9] px-4 dark:border-[#333333]">
-          <Link
-            href={canonicalRole === "SUPER_ADMIN" ? "/companies" : canonicalRole === "MR" ? "/visits" : "/"}
-            className="flex items-center gap-3 overflow-hidden transition-opacity hover:opacity-90"
+    <div className="flex h-full flex-col">
+      {/* Brand & Organization Header */}
+      <div
+        className={cn(
+          "relative flex h-16 shrink-0 items-center border-b border-[#E5E1D9] dark:border-[#333333]",
+          isCollapsed ? "justify-center px-1.5" : "justify-between px-3.5"
+        )}
+      >
+        <Link
+          href={canonicalRole === "SUPER_ADMIN" ? "/companies" : canonicalRole === "MR" ? "/visits" : "/"}
+          className={cn(
+            "flex items-center transition-opacity hover:opacity-90",
+            isCollapsed ? "justify-center" : "gap-2.5 min-w-0 flex-1"
+          )}
+          title={isCollapsed ? "MByte FieldOps" : undefined}
+        >
+          <div
+            className={cn(
+              "flex shrink-0 items-center justify-center rounded-xl",
+              isCollapsed ? "h-9 w-9" : "h-9 w-9"
+            )}
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl overflow-hidden shadow-xs">
-              <MByteLogo variant="icon" width={38} height={38} />
-            </div>
+            <MByteLogo variant="icon" width={34} height={34} />
+          </div>
 
-            {!isCollapsed && (
-              <div className="flex flex-col truncate">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-extrabold tracking-tight text-slate-900 dark:text-white">
-                    M<span className="text-[#FF6B00]">Byte</span>
-                  </span>
-                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-50 text-[#FF6B00] dark:bg-[#FF6B00]/10 dark:text-[#FF6B00] border border-orange-200 dark:border-orange-900/60">
-                    FieldOps
-                  </span>
-                </div>
-                <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">
-                  {canonicalRole === "SUPER_ADMIN"
-                    ? "Platform Control"
-                    : currentUser?.organization?.name ||
-                      currentUser?.organizationName ||
-                      currentUser?.companyName ||
-                      (currentUser?.organizationId ? "Corporate Operations" : "Field Operations")}
+          {!isCollapsed && (
+            <div className="flex flex-col min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-extrabold tracking-tight text-slate-900 dark:text-white">
+                  M<span className="text-[#FF6B00]">Byte</span>
+                </span>
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-50 text-[#FF6B00] dark:bg-[#FF6B00]/10 dark:text-[#FF6B00] border border-orange-200 dark:border-orange-900/60">
+                  FieldOps
                 </span>
               </div>
-            )}
-          </Link>
+              <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">
+                {canonicalRole === "SUPER_ADMIN"
+                  ? "Platform Control"
+                  : currentUser?.organization?.name ||
+                    currentUser?.organizationName ||
+                    currentUser?.companyName ||
+                    (currentUser?.organizationId ? "Corporate Operations" : "Field Operations")}
+              </span>
+            </div>
+          )}
+        </Link>
 
-          {/* Close button for mobile drawer */}
+        {/* Desktop Collapse Arrow (<) next to MByte Logo when expanded */}
+        {!isCollapsed && (
           <button
-            onClick={() => setMobileOpen(false)}
-            className="lg:hidden rounded-lg p-1 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+            type="button"
+            onClick={toggleCollapsed}
+            className="hidden lg:flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-transparent text-slate-400 hover:border-[#E5E1D9] hover:bg-slate-100 hover:text-slate-700 dark:hover:border-[#333333] dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"
+            title="Collapse sidebar"
+            aria-label="Collapse sidebar"
           >
-            <X className="h-5 w-5" />
+            <ChevronLeft className="h-4 w-4" />
           </button>
-        </div>
+        )}
 
-        {/* Navigation Section List */}
-        <div className="space-y-6 px-3 py-4 overflow-y-auto max-h-[calc(100vh-14rem)]">
+        {/* Desktop Expand Arrow (>) cleanly on sidebar edge when collapsed so MByte icon is never clipped */}
+        {isCollapsed && (
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            className="hidden lg:flex absolute -right-3 top-1/2 -translate-y-1/2 z-40 h-6 w-6 items-center justify-center rounded-full border border-[#E5E1D9] bg-white text-slate-500 shadow-sm hover:border-[#FF6B00]/40 hover:text-[#FF6B00] dark:border-[#333333] dark:bg-[#242424] dark:text-slate-300 transition-colors cursor-pointer"
+            title="Expand sidebar"
+            aria-label="Expand sidebar"
+          >
+            <ChevronRight className="h-3.5 w-3.5" />
+          </button>
+        )}
+
+        {/* Close button for mobile drawer */}
+        <button
+          onClick={() => setMobileOpen(false)}
+          className="lg:hidden rounded-lg p-1 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+
+      {/* Navigation Section List (scrollable, scrollbar completely hidden) */}
+      <div className="flex-1 min-h-0 space-y-6 px-3 py-4 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {navSections.map((section) => (
             <div key={section.title} className="space-y-1">
               {!isCollapsed && (
@@ -620,11 +659,10 @@ export function Sidebar() {
               </nav>
             </div>
           ))}
-        </div>
       </div>
 
       {/* Footer, Profile & Logout */}
-      <div className="border-t border-slate-200/80 p-3 dark:border-[#123261] space-y-2">
+      <div className="shrink-0 border-t border-slate-200/80 p-3 dark:border-[#123261] space-y-2">
         {!isCollapsed && (
           <div className="flex items-center gap-3 rounded-xl bg-slate-50/80 p-2.5 dark:bg-[#0b2247]/60">
             <div suppressHydrationWarning className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-100 text-xs font-bold text-sky-700 dark:bg-sky-900 dark:text-sky-300 shrink-0">
@@ -652,25 +690,6 @@ export function Sidebar() {
         >
           <LogOut className="h-4 w-4 shrink-0" />
           {!isCollapsed && <span>Sign Out</span>}
-        </button>
-
-        {/* Collapse Toggle */}
-        <button
-          onClick={toggleCollapsed}
-          className={cn(
-            "hidden lg:flex w-full items-center justify-center rounded-lg py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800",
-            isCollapsed ? "px-0" : "gap-2 px-3"
-          )}
-          title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {isCollapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <>
-              <ChevronLeft className="h-4 w-4" />
-              <span>Collapse Sidebar</span>
-            </>
-          )}
         </button>
       </div>
     </div>
