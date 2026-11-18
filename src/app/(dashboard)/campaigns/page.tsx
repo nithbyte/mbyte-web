@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import { useCurrentUser, useIsMounted } from "@/hooks";
+import { useCurrentUser, useIsMounted, useTerritories, useMRList } from "@/hooks";
 import { useFilterStore } from "@/store";
 import { formatOperatingDateDisplay } from "@/lib/utils";
 import { campaignService } from "@/services/growthServices";
@@ -38,7 +38,9 @@ import {
 export default function CampaignsPage() {
   const isMounted = useIsMounted();
   const { data: user } = useCurrentUser();
-  const { operatingDate, dateSelectionVersion } = useFilterStore();
+  const { data: territories = [] } = useTerritories();
+  const { data: mrList = [] } = useMRList();
+  const { selectedTerritoryId, operatingDate, dateSelectionVersion } = useFilterStore();
   const [filterByOperatingDate, setFilterByOperatingDate] = useState(
     () => dateSelectionVersion > 0
   );
@@ -60,12 +62,15 @@ export default function CampaignsPage() {
   // Modals
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
+  const [enrollMrId, setEnrollMrId] = useState<string>("");
+  const [isEnrolling, setIsEnrolling] = useState<boolean>(false);
 
   // Create form state
   const [newTitle, setNewTitle] = useState("");
   const [newCode, setNewCode] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const [newStatus, setNewStatus] = useState<CampaignStatus>("ACTIVE");
+  const [newTargetTerritoryId, setNewTargetTerritoryId] = useState<string>("");
   const [newStartDate, setNewStartDate] = useState("");
   const [newEndDate, setNewEndDate] = useState("");
 
@@ -102,6 +107,13 @@ export default function CampaignsPage() {
   const filteredCampaigns = useMemo(() => {
     return campaigns.filter((c) => {
       const matchesStatus = statusFilter === "ALL" || c.status === statusFilter;
+      if (
+        selectedTerritoryId !== "ALL" &&
+        c.targetTerritoryId &&
+        c.targetTerritoryId !== selectedTerritoryId
+      ) {
+        return false;
+      }
       if (filterByOperatingDate && operatingDate) {
         const start = String(c.startDate || "").slice(0, 10);
         const end = String(c.endDate || "").slice(0, 10);
@@ -117,7 +129,7 @@ export default function CampaignsPage() {
         c.targetAudience?.toLowerCase().includes(q);
       return matchesStatus && matchesSearch;
     });
-  }, [campaigns, statusFilter, search, filterByOperatingDate, operatingDate]);
+  }, [campaigns, statusFilter, search, selectedTerritoryId, filterByOperatingDate, operatingDate]);
 
   const handleCreateCampaign = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,17 +144,35 @@ export default function CampaignsPage() {
         startDate: newStartDate,
         endDate: newEndDate,
         targetAudience: newTargetAudience,
+        targetTerritoryId: newTargetTerritoryId || undefined,
         contentUrl: newContentUrl,
       });
       setCreateModalOpen(false);
       setNewTitle("");
       setNewCode("");
       setNewDescription("");
+      setNewTargetTerritoryId("");
       await loadData();
     } catch (err: any) {
       alert(err.message || "Failed to create campaign");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleEnrollParticipants = async (ids: string[]) => {
+    if (!selectedCampaign || ids.length === 0) return;
+    setIsEnrolling(true);
+    try {
+      await campaignService.enrollParticipants(selectedCampaign.id, ids);
+      const refreshed = await campaignService.getCampaignById(selectedCampaign.id);
+      setSelectedCampaign(refreshed);
+      setEnrollMrId("");
+      await loadData();
+    } catch (err: any) {
+      alert(err?.message || "Failed to enroll participants");
+    } finally {
+      setIsEnrolling(false);
     }
   };
 
@@ -383,18 +413,38 @@ export default function CampaignsPage() {
               </div>
             </div>
 
-            <div>
-              <label className="text-xs font-medium text-foreground block mb-1">Status</label>
-              <select
-                value={newStatus}
-                onChange={(e) => setNewStatus(e.target.value as CampaignStatus)}
-                className="w-full text-sm bg-background border border-input rounded-md px-3 py-2"
-              >
-                <option value="ACTIVE">ACTIVE</option>
-                <option value="SCHEDULED">SCHEDULED</option>
-                <option value="DRAFT">DRAFT</option>
-              </select>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-foreground block mb-1">Status</label>
+                <select
+                  value={newStatus}
+                  onChange={(e) => setNewStatus(e.target.value as CampaignStatus)}
+                  className="w-full text-sm bg-background border border-input rounded-md px-3 py-2"
+                >
+                  <option value="ACTIVE">ACTIVE</option>
+                  <option value="SCHEDULED">SCHEDULED</option>
+                  <option value="DRAFT">DRAFT</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-foreground block mb-1">Target Territory</label>
+                <select
+                  value={newTargetTerritoryId}
+                  onChange={(e) => setNewTargetTerritoryId(e.target.value)}
+                  className="w-full text-sm bg-background border border-input rounded-md px-3 py-2"
+                >
+                  <option value="">All Territories (All Active MRs)</option>
+                  {territories.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} ({t.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
+            <p className="text-[11px] text-muted-foreground -mt-2">
+              Active and scheduled campaigns automatically enroll all active MRs in the selected territory scope and appear immediately on their mobile app.
+            </p>
 
             <div>
               <label className="text-xs font-medium text-foreground block mb-1">Target Audience</label>
@@ -470,9 +520,48 @@ export default function CampaignsPage() {
             )}
 
             <div>
-              <h4 className="text-sm font-semibold mb-2">
-                Enrolled Participants ({selectedCampaign.participants?.length || 0})
-              </h4>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <h4 className="text-sm font-semibold">
+                  Enrolled Participants ({selectedCampaign.participants?.length || 0})
+                </h4>
+                {mrList.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={isEnrolling}
+                    onClick={() => handleEnrollParticipants(mrList.map((m) => m.id))}
+                    className="h-7 text-xs"
+                  >
+                    {isEnrolling ? "Enrolling..." : "Enroll All MRs"}
+                  </Button>
+                )}
+              </div>
+              {mrList.length > 0 && (
+                <div className="flex items-center gap-2 mb-3">
+                  <select
+                    value={enrollMrId}
+                    onChange={(e) => setEnrollMrId(e.target.value)}
+                    className="flex-1 text-xs bg-background border border-input rounded-md px-2.5 py-1.5"
+                  >
+                    <option value="">Select an MR to enroll...</option>
+                    {mrList.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name} ({m.employeeId}) — {m.territoryName}
+                      </option>
+                    ))}
+                  </select>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={!enrollMrId || isEnrolling}
+                    onClick={() => handleEnrollParticipants([enrollMrId])}
+                    className="h-8 text-xs"
+                  >
+                    Enroll
+                  </Button>
+                </div>
+              )}
               {(!selectedCampaign.participants || selectedCampaign.participants.length === 0) ? (
                 <p className="text-xs text-muted-foreground italic">No participants enrolled yet.</p>
               ) : (
