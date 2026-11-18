@@ -988,11 +988,11 @@ export default function ReportsPage() {
             </CardHeader>
             <CardContent className="px-4 pb-4 pt-0">
               <div className="space-y-2">
-                {salesReport?.chartData?.map((item) => {
+                {salesReport?.chartData?.map((item, idx) => {
                   const maxVal = Math.max(...(salesReport.chartData.map((d) => d.value) || [1]), 1);
                   const pct = Math.round((item.value / maxVal) * 100);
                   return (
-                    <div key={item.label} className="space-y-1">
+                    <div key={`${item.label}-${idx}`} className="space-y-1">
                       <div className="flex justify-between text-xs">
                         <span className="font-semibold text-slate-800 dark:text-slate-200">
                           {item.label}

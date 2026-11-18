@@ -154,7 +154,7 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
       center: [13.0827, 80.2707], // Default India/Tamil Nadu center until fixes arrive
       zoom: 12,
       zoomControl: false,
-      preferCanvas: true,
+      preferCanvas: false,
     });
 
     L.control.zoom({ position: "bottomright" }).addTo(map);

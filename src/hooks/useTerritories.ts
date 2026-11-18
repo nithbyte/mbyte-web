@@ -1,11 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { territoryService } from "../services";
+import { useAuthStore } from "@/store/useAuthStore";
 import type { CreateTerritoryInput, UpdateTerritoryInput } from "../types";
 
 export function useTerritories(organizationId?: string) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   return useQuery({
     queryKey: ["territories", organizationId || "ALL"],
     queryFn: () => territoryService.getTerritories(organizationId),
+    enabled: isAuthenticated,
   });
 }
 

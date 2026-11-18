@@ -69,7 +69,12 @@ export function useLogout() {
 
   return useMutation({
     mutationFn: () => authService.logout(),
-    onSuccess: () => {
+    onMutate: async () => {
+      // Stop in-flight queries before tokens are cleared to prevent post-logout 401s
+      logout();
+      await queryClient.cancelQueries();
+    },
+    onSettled: () => {
       // Clear all cached data and territory filters on logout
       queryClient.clear();
       useFilterStore.getState().setSelectedTerritoryId("ALL");

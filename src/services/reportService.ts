@@ -547,22 +547,35 @@ export const reportService = {
           id: o.id,
           orderNumber: o.orderNumber,
           orderDate: typeof o.orderDate === "string" ? o.orderDate.slice(0, 10) : "2026-10-09",
-          customerName: o.customer?.name || o.pharmacyName || "Pharmacy Customer",
-          customerAddress: o.customer?.address || "Thousand Lights, Chennai",
-          territoryName: o.customer?.territory?.name || o.territoryName || "Chennai Central",
+          customerName:
+            o.pharmacy?.name ||
+            o.doctor?.name ||
+            o.distributor?.name ||
+            o.customer?.name ||
+            o.pharmacyName ||
+            "Customer",
+          customerAddress: o.pharmacy?.address || o.doctor?.address || o.customer?.address || "",
+          territoryName:
+            o.pharmacy?.territory?.name ||
+            o.doctor?.territory?.name ||
+            o.customer?.territory?.name ||
+            o.territoryName ||
+            "Assigned Territory",
           mrName: o.mr?.user ? `${o.mr.user.firstName} ${o.mr.user.lastName}` : o.mrName || "Medical Representative",
           mrEmployeeCode: o.mr?.employeeCode || o.mrEmployeeCode || "EMP-MR-001",
-          distributorName: o.distributor?.name || o.distributorName || "Apollo Distributor",
+          distributorName: o.distributor?.name || o.distributorName || "Direct / Stockist",
           status: o.status,
           itemsCount: o.items?.length || 1,
           totalAmount: Number(o.totalAmount || 0),
-          topProductNames: (o.items || []).map((i: any) => i.product?.name || i.productName || "Pharma Product"),
+          topProductNames: (o.items || []).map(
+            (i: any) => i.product?.brandName || i.product?.name || i.brandName || i.productName || "Pharma Product"
+          ),
         }));
 
         const topSellingProducts = (raw.topProducts || []).map((p: any) => ({
-          productName: p.productName || "Pharma Product",
+          productName: p.brandName || p.name || p.productName || p.product?.brandName || p.product?.name || "Pharma Product",
           quantity: p.quantity || 1,
-          revenue: Math.round(p.revenue || 0),
+          revenue: Math.round(Number(p.revenue || 0)),
         }));
 
         const chartData = topSellingProducts.map((p: any) => ({
@@ -682,17 +695,32 @@ export const reportService = {
         const totalCollectedValue = Math.round(raw.totalCollected || 0);
 
         const modeMap = raw.byPaymentMode || {};
-        const upi = Math.round(modeMap.UPI || 0);
-        const cheque = Math.round(modeMap.CHEQUE || 0);
-        const cash = Math.round(modeMap.CASH || 0);
-        const bankTransfer = Math.round(modeMap.BANK_TRANSFER || 0);
+        const extractModeAmount = (entry: any): number => {
+          if (typeof entry === "number") return Math.round(entry);
+          if (entry && typeof entry === "object") return Math.round(Number(entry.amount ?? entry.totalAmount ?? 0) || 0);
+          return 0;
+        };
+        const upi = extractModeAmount(modeMap.UPI);
+        const cheque = extractModeAmount(modeMap.CHEQUE);
+        const cash = extractModeAmount(modeMap.CASH);
+        const bankTransfer = extractModeAmount(modeMap.BANK_TRANSFER);
 
         const items: CollectionReportItem[] = (raw.items || []).map((c: any) => ({
           id: c.id,
           receiptNumber: c.receiptNumber,
           paymentDate: typeof c.paymentDate === "string" ? c.paymentDate.slice(0, 10) : "2026-10-09",
-          customerName: c.customer?.name || c.pharmacyName || "Pharmacy",
-          territoryName: c.customer?.territory?.name || c.territoryName || "Chennai Central",
+          customerName:
+            c.pharmacy?.name ||
+            c.distributor?.name ||
+            c.customer?.name ||
+            c.pharmacyName ||
+            "Customer",
+          territoryName:
+            c.pharmacy?.territory?.name ||
+            c.distributor?.territory?.name ||
+            c.customer?.territory?.name ||
+            c.territoryName ||
+            "Assigned Territory",
           mrName: c.mr?.name || (c.mr?.user ? `${c.mr.user.firstName} ${c.mr.user.lastName}` : "Medical Representative"),
           mrEmployeeCode: c.mr?.employeeCode || "EMP-MR-001",
           paymentMode: c.paymentMode,
@@ -1036,8 +1064,8 @@ export const reportService = {
           params.format === "csv"
             ? "text/csv;charset=utf-8;"
             : params.format === "xlsx"
-            ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            : "application/pdf";
+              ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              : "application/pdf";
 
         const blob = new Blob([response.data], { type: contentType });
         const url = window.URL.createObjectURL(blob);
