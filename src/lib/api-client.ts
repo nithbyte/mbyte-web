@@ -19,11 +19,10 @@ export const API_BASE_URL = resolveApiBaseUrl();
 
 /**
  * Determines whether mock data fallback is permitted.
- * Mock fallback is STRICTLY DISALLOWED in production environments.
- * It is only permitted if explicitly opted into via NEXT_PUBLIC_ENABLE_MOCKS="true" in development or test.
+ * Mock fallback is ONLY permitted if explicitly opted into via NEXT_PUBLIC_ENABLE_MOCKS="true".
  */
 export function isMockFallbackAllowed(): boolean {
-  return process.env.NEXT_PUBLIC_ENABLE_MOCKS === "true" || process.env.NODE_ENV !== "production";
+  return process.env.NEXT_PUBLIC_ENABLE_MOCKS === "true";
 }
 
 export class ApiError extends Error {
@@ -211,7 +210,8 @@ axiosInstance.interceptors.response.use(
       originalRequest &&
       !originalRequest._retry &&
       !originalRequest.url?.includes("/auth/login") &&
-      !originalRequest.url?.includes("/auth/refresh")
+      !originalRequest.url?.includes("/auth/refresh") &&
+      !originalRequest.url?.includes("/auth/logout")
     ) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {

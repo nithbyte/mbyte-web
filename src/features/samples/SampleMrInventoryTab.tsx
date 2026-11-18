@@ -15,6 +15,8 @@ import {
   SampleInventoryBalance,
   SampleLedgerEntry,
   SampleMovementType,
+  isPromoGiftProduct,
+  formatSampleExpiry,
 } from "@/services/sampleService";
 
 interface SampleMrInventoryTabProps {
@@ -103,21 +105,31 @@ export const SampleMrInventoryTab: React.FC<SampleMrInventoryTabProps> = ({
                   </TableCell>
                 </TableRow>
               ) : (
-                mrSpecificBalances.map((b) => (
-                  <TableRow key={b.id}>
-                    <TableCell className="text-xs font-semibold">{b.product?.brandName}</TableCell>
-                    <TableCell className="text-xs font-mono">{b.batch?.batchNumber}</TableCell>
-                    <TableCell className="text-xs">
-                      {b.batch?.expiryDate ? new Date(b.batch.expiryDate).toLocaleDateString() : "N/A"}
-                    </TableCell>
-                    <TableCell className="text-right text-xs font-bold text-emerald-600">
-                      {b.quantity} packs
-                    </TableCell>
-                    <TableCell className="text-right text-xs font-bold text-amber-600">
-                      {b.inTransitQuantity > 0 ? `+${b.inTransitQuantity}` : "—"}
-                    </TableCell>
-                  </TableRow>
-                ))
+                mrSpecificBalances.map((b) => {
+                  const isGift = isPromoGiftProduct(b.product);
+                  return (
+                    <TableRow key={b.id}>
+                      <TableCell className="text-xs font-semibold">
+                        <span>{b.product?.brandName}</span>
+                        {isGift && (
+                          <span className="ml-1.5 inline-flex items-center rounded-full bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 px-1.5 py-0.5 text-[9px] font-bold">
+                            GIFT
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-xs font-mono">{b.batch?.batchNumber}</TableCell>
+                      <TableCell className="text-xs">
+                        {formatSampleExpiry(b.batch?.expiryDate, b.product)}
+                      </TableCell>
+                      <TableCell className="text-right text-xs font-bold text-emerald-600">
+                        {b.quantity} {isGift ? "units" : "packs"}
+                      </TableCell>
+                      <TableCell className="text-right text-xs font-bold text-amber-600">
+                        {b.inTransitQuantity > 0 ? `+${b.inTransitQuantity}` : "—"}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>

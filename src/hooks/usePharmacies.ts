@@ -46,3 +46,44 @@ export function useUpdatePharmacy() {
     },
   });
 }
+
+export function usePendingPharmacies(params?: PharmacyQueryParams) {
+  return useQuery({
+    queryKey: ["pharmacies", "pending", params],
+    queryFn: () => pharmacyService.getPendingPharmacies(params),
+  });
+}
+
+export function useRejectedPharmacies(params?: PharmacyQueryParams) {
+  return useQuery({
+    queryKey: ["pharmacies", "rejected", params],
+    queryFn: () => pharmacyService.getPharmacies({ ...params, approvalStatus: "REJECTED" }),
+  });
+}
+
+export function useApprovePharmacy() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => pharmacyService.approvePharmacy(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ["pharmacies"] });
+      queryClient.invalidateQueries({ queryKey: ["pharmacies", "pending"] });
+      queryClient.invalidateQueries({ queryKey: ["pharmacies", "rejected"] });
+      queryClient.invalidateQueries({ queryKey: ["pharmacies", "detail", id] });
+    },
+  });
+}
+
+export function useRejectPharmacy() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      pharmacyService.rejectPharmacy(id, reason),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["pharmacies"] });
+      queryClient.invalidateQueries({ queryKey: ["pharmacies", "pending"] });
+      queryClient.invalidateQueries({ queryKey: ["pharmacies", "rejected"] });
+      queryClient.invalidateQueries({ queryKey: ["pharmacies", "detail", variables.id] });
+    },
+  });
+}

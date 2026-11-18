@@ -5,19 +5,23 @@ import { Modal } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
 import type { Product } from "@/types";
-import { ExternalLink, Upload, Loader2 } from "lucide-react";
+import { ExternalLink, Upload, Loader2, Trash2, FileText } from "lucide-react";
 import { useVisualAids } from "@/hooks/useProducts";
 
 interface ProductVisualAidsDialogProps {
   product: Product | null;
   onClose: () => void;
   onOpenUploadVA?: (product: Product) => void;
+  onDeleteVisualAid?: (id: string) => Promise<any>;
+  isDeleting?: boolean;
 }
 
 export const ProductVisualAidsDialog: React.FC<ProductVisualAidsDialogProps> = ({
   product,
   onClose,
   onOpenUploadVA,
+  onDeleteVisualAid,
+  isDeleting,
 }) => {
   const { data: fetchedVisualAids, isLoading } = useVisualAids(
     product?.id ? { productId: product.id } : undefined
@@ -48,21 +52,38 @@ export const ProductVisualAidsDialog: React.FC<ProductVisualAidsDialogProps> = (
                 key={va.id}
                 className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex items-start gap-3"
               >
-                <div className="h-16 w-16 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white shrink-0">
-                  <img
-                    src={va.thumbnailUrl || va.fileUrl}
-                    alt={va.title}
-                    className="h-full w-full object-cover"
-                  />
+                <div className="h-16 w-16 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 shrink-0 flex items-center justify-center">
+                  {va.type === "IMAGE" && (va.thumbnailUrl || va.fileUrl) ? (
+                    <img
+                      src={va.thumbnailUrl || va.fileUrl}
+                      alt={va.title}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <FileText className="h-7 w-7 text-amber-600" />
+                  )}
                 </div>
                 <div className="flex-1 space-y-1">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-amber-700 bg-amber-100 dark:bg-amber-950 dark:text-amber-300 px-1.5 py-0.5 rounded">
                       {va.type} Deck
                     </span>
-                    <span className="text-[11px] font-mono text-slate-400">
-                      v{va.version} • {formatDate(va.publishedDate || va.publishedAt || "")}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-mono text-slate-400">
+                        v{va.version}{va.publishedDate || va.publishedAt ? ` • ${formatDate(va.publishedDate || va.publishedAt || "")}` : ""}
+                      </span>
+                      {onDeleteVisualAid && (
+                        <button
+                          type="button"
+                          onClick={() => onDeleteVisualAid(va.id)}
+                          disabled={isDeleting}
+                          className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                          title="Remove visual aid from this product"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <h4 className="font-bold text-xs text-slate-900 dark:text-white">
                     {va.title}

@@ -1,11 +1,11 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Modal } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { ProductInput } from "@/types";
-import { Package, FileText, Percent, AlertCircle } from "lucide-react";
+import type { ProductCategory, ProductInput } from "@/types";
+import { Package, FileText, Percent, AlertCircle, Plus, Check, X } from "lucide-react";
 
 interface ProductFormDialogProps {
   isOpen: boolean;
@@ -15,7 +15,9 @@ interface ProductFormDialogProps {
   form: ProductInput;
   setForm: React.Dispatch<React.SetStateAction<ProductInput>>;
   errors: Record<string, string>;
-  categories?: any[];
+  categories?: ProductCategory[];
+  onQuickCreateCategory?: (input: { name: string; description?: string }) => Promise<ProductCategory>;
+  isCreatingCategory?: boolean;
   isSubmitting: boolean;
   productName?: string;
 }
@@ -29,10 +31,32 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
   setForm,
   errors,
   categories,
+  onQuickCreateCategory,
+  isCreatingCategory,
   isSubmitting,
   productName,
 }) => {
   const isEdit = mode === "edit";
+  const [showQuickCat, setShowQuickCat] = useState(false);
+  const [newCatName, setNewCatName] = useState("");
+  const [quickCatError, setQuickCatError] = useState<string | null>(null);
+
+  const handleQuickAddCategory = async () => {
+    if (!onQuickCreateCategory) return;
+    if (!newCatName.trim() || newCatName.trim().length < 2) {
+      setQuickCatError("Enter at least 2 characters.");
+      return;
+    }
+    setQuickCatError(null);
+    try {
+      const created = await onQuickCreateCategory({ name: newCatName.trim() });
+      setForm((f) => ({ ...f, categoryId: created.id }));
+      setNewCatName("");
+      setShowQuickCat(false);
+    } catch (err: any) {
+      setQuickCatError(err?.message || "Failed to add category.");
+    }
+  };
   const title = isEdit ? `Edit Product: ${productName || ""}` : "Add New Pharmaceutical Product";
   const description = isEdit
     ? "Update brand details, molecule composition, trade pricing, and market status for this formulation."
@@ -109,20 +133,91 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
               )}
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Therapeutic Category *</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400">
+                  Therapeutic Category *
+                </label>
+                {onQuickCreateCategory && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowQuickCat((v) => !v);
+                      setQuickCatError(null);
+                    }}
+                    className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-sky-600 hover:text-sky-700 dark:text-sky-400"
+                    id={isEdit ? "btn-edit-inline-add-category" : "btn-inline-add-category"}
+                  >
+                    <Plus className="h-3 w-3" />
+                    <span>New Category</span>
+                  </button>
+                )}
+              </div>
               <select
                 id={isEdit ? "edit-product-category" : "product-category"}
                 value={form.categoryId}
                 onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))}
                 className={`w-full h-9 px-3 rounded-md border bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500 ${errors.categoryId ? "border-rose-400" : "border-slate-200 dark:border-slate-800"}`}
               >
-                <option value="">Select Category…</option>
+                <option value="">
+                  {categories && categories.length > 0 ? "Select Category…" : "No categories yet — click + New Category"}
+                </option>
                 {categories?.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
                   </option>
                 ))}
               </select>
+
+              {showQuickCat && onQuickCreateCategory && (
+                <div className="mt-2 p-2 rounded-lg border border-sky-200 dark:border-sky-800 bg-sky-50/70 dark:bg-sky-950/30 space-y-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <Input
+                      id="inline-new-category-name"
+                      placeholder="e.g. Cardiology"
+                      value={newCatName}
+                      onChange={(e) => {
+                        setNewCatName(e.target.value);
+                        if (quickCatError) setQuickCatError(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleQuickAddCategory();
+                        }
+                      }}
+                      className="h-8 text-xs bg-white dark:bg-slate-950"
+                    />
+                    <Button
+                      type="button"
+                      variant="primary"
+                      size="sm"
+                      className="h-8 px-2.5 text-xs shrink-0"
+                      onClick={handleQuickAddCategory}
+                      disabled={isCreatingCategory}
+                      id="btn-save-inline-category"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2 text-xs shrink-0"
+                      onClick={() => {
+                        setShowQuickCat(false);
+                        setNewCatName("");
+                        setQuickCatError(null);
+                      }}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                  {quickCatError && (
+                    <p className="text-[11px] text-rose-600 font-medium">{quickCatError}</p>
+                  )}
+                </div>
+              )}
+
               {errors.categoryId && (
                 <p className="text-[11px] text-rose-500 mt-0.5 flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />

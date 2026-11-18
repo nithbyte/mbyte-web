@@ -15,6 +15,7 @@ import {
   SlidersHorizontal,
   FileSpreadsheet,
   Layers,
+  Gift,
 } from "lucide-react";
 import {
   sampleService,
@@ -24,6 +25,7 @@ import {
   SampleMovementType,
   SampleAckStatus,
   DoctorSampleReceipt,
+  isPromoGiftProduct,
 } from "@/services/sampleService";
 import { productService } from "@/services/productService";
 import { fieldForceService } from "@/services/fieldForceService";
@@ -40,6 +42,8 @@ import {
   SampleLedgerTab,
   SampleReportsTab,
   RegisterBatchDialog,
+  AddGiftInputDialog,
+  type GiftInputFormState,
   ReceiveStockDialog,
   DispatchSampleDialog,
   AdjustStockDialog,
@@ -72,6 +76,7 @@ export default function SampleInventoryPage() {
 
   // Modals
   const [isRegisterBatchOpen, setIsRegisterBatchOpen] = useState(false);
+  const [isAddGiftOpen, setIsAddGiftOpen] = useState(false);
   const [isReceiveStockOpen, setIsReceiveStockOpen] = useState(false);
   const [isDispatchOpen, setIsDispatchOpen] = useState(false);
   const [isAdjustOpen, setIsAdjustOpen] = useState(false);
@@ -87,6 +92,16 @@ export default function SampleInventoryPage() {
     expiryDate: "",
     manufacturingDate: "",
     initialStockQuantity: 100,
+  });
+
+  const [giftForm, setGiftForm] = useState<GiftInputFormState>({
+    name: "",
+    giftType: "Paperweight",
+    unitLabel: "1 pc",
+    sku: "",
+    batchNumber: "",
+    initialStockQuantity: 50,
+    notes: "",
   });
 
   const [receiveForm, setReceiveForm] = useState({
@@ -189,6 +204,7 @@ export default function SampleInventoryPage() {
     const nearExpiryBatches =
       now > 0
         ? batches.filter((b) => {
+            if (isPromoGiftProduct(b.product)) return false;
             const exp = new Date(b.expiryDate).getTime();
             return exp > now && exp <= ninetyDays;
           })
@@ -333,6 +349,48 @@ export default function SampleInventoryPage() {
       await loadData();
     } catch (err: any) {
       setStatusMessage({ type: "error", text: err?.message || "Failed to register sample batch." });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCreateGiftInput = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!giftForm.name.trim()) {
+      setStatusMessage({ type: "error", text: "Please enter a name for the gift or promotional input." });
+      return;
+    }
+
+    setIsSubmitting(true);
+    setStatusMessage(null);
+    try {
+      await sampleService.createGiftInput({
+        name: giftForm.name.trim(),
+        giftType: giftForm.giftType || "Promotional Gift",
+        unitLabel: giftForm.unitLabel.trim() || "1 pc",
+        sku: giftForm.sku.trim() || undefined,
+        batchNumber: giftForm.batchNumber.trim() || undefined,
+        initialStockQuantity: Number(giftForm.initialStockQuantity) || 0,
+        notes: giftForm.notes.trim() || undefined,
+      });
+
+      setStatusMessage({
+        type: "success",
+        text: `Promotional gift "${giftForm.name.trim()}" added to inventory (${Number(giftForm.initialStockQuantity) || 0} units ready to dispatch).`,
+      });
+      setIsAddGiftOpen(false);
+      setGiftForm({
+        name: "",
+        giftType: "Paperweight",
+        unitLabel: "1 pc",
+        sku: "",
+        batchNumber: "",
+        initialStockQuantity: 50,
+        notes: "",
+      });
+      await loadData();
+    } catch (err: any) {
+      setStatusMessage({ type: "error", text: err?.message || "Failed to add promotional gift / input." });
     } finally {
       setIsSubmitting(false);
     }
@@ -666,6 +724,18 @@ export default function SampleInventoryPage() {
             <Button
               variant="default"
               size="sm"
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+              onClick={() => {
+                setStatusMessage(null);
+                setIsAddGiftOpen(true);
+              }}
+            >
+              <Gift className="w-4 h-4 mr-2" />
+              Add Gift / Input
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
               className="bg-emerald-600 hover:bg-emerald-700 text-white"
               onClick={() => {
                 setStatusMessage(null);
@@ -840,6 +910,16 @@ export default function SampleInventoryPage() {
         products={products}
         batchForm={batchForm}
         setBatchForm={setBatchForm}
+        isSubmitting={isSubmitting}
+      />
+
+      {/* MODAL 1B: ADD PROMOTIONAL GIFT / FIELD INPUT */}
+      <AddGiftInputDialog
+        isOpen={isAddGiftOpen}
+        onClose={() => setIsAddGiftOpen(false)}
+        onSubmit={handleCreateGiftInput}
+        giftForm={giftForm}
+        setGiftForm={setGiftForm}
         isSubmitting={isSubmitting}
       />
 

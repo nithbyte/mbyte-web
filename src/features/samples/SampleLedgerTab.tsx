@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/table";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Search, Download, ShieldCheck, FileCheck } from "lucide-react";
-import { SampleLedgerEntry, SampleMovementType } from "@/services/sampleService";
+import { SampleLedgerEntry, SampleMovementType, isPromoGiftProduct } from "@/services/sampleService";
 
 interface SampleLedgerTabProps {
   ledgerEntries: SampleLedgerEntry[];
@@ -119,7 +119,14 @@ export const SampleLedgerTab: React.FC<SampleLedgerTabProps> = ({
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <p className="text-xs font-semibold text-foreground">{entry.product?.brandName}</p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="text-xs font-semibold text-foreground">{entry.product?.brandName}</p>
+                        {isPromoGiftProduct(entry.product) && (
+                          <span className="inline-flex items-center rounded-full bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 px-1.5 py-0.5 text-[9px] font-bold">
+                            GIFT
+                          </span>
+                        )}
+                      </div>
                       <p className="text-[11px] font-mono text-muted-foreground">Lot: {entry.batch?.batchNumber}</p>
                     </TableCell>
                     <TableCell className="text-xs">
@@ -128,6 +135,10 @@ export const SampleLedgerTab: React.FC<SampleLedgerTabProps> = ({
                           <span className="font-semibold text-foreground">Dr. {entry.doctor.name}</span>
                           <p className="text-[10px] text-muted-foreground">{entry.doctor.clinicName}</p>
                         </div>
+                      ) : entry.movementType === "DISTRIBUTED_TO_DOCTOR" && entry.notes?.startsWith("[HANDOVER") ? (
+                        <span className="font-semibold text-purple-700 dark:text-purple-300">
+                          {entry.notes.match(/\[HANDOVER\s*•\s*([^\]]+)\]/)?.[1] || "Field Recipient"}
+                        </span>
                       ) : entry.targetMr ? (
                         <span>MR: {entry.targetMr.user?.firstName} {entry.targetMr.user?.lastName}</span>
                       ) : entry.sourceMr ? (
@@ -137,7 +148,7 @@ export const SampleLedgerTab: React.FC<SampleLedgerTabProps> = ({
                       )}
                     </TableCell>
                     <TableCell className="text-right text-xs font-bold text-foreground">
-                      {entry.quantity} packs
+                      {entry.quantity} {isPromoGiftProduct(entry.product) ? "units" : "packs"}
                     </TableCell>
                     <TableCell className="text-right text-xs font-mono">
                       <span className="text-muted-foreground">{entry.balanceBefore}</span>

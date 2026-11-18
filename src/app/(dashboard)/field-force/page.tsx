@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { AtWorkBadge } from "@/components/ui/at-work-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -62,15 +63,28 @@ export default function FieldForcePage() {
   const canonicalRole = normalizeRole(currentUser?.role);
   const createUserMutation = useCreateUser();
   const updateTerritoryMutation = useUpdateMRTerritory();
-  const { data: organizations } = useOrganizations();
+  const { data: organizations } = useOrganizations(undefined, {
+    enabled: canonicalRole === "SUPER_ADMIN",
+  });
   const { data: userList, isLoading: isUsersLoading, refetch: refetchUsers } = useUserList();
 
   const [search, setSearch] = useState("");
   const [selectedOrgId, setSelectedOrgId] = useState("ALL");
+  const [lastSelectedOrgId, setLastSelectedOrgId] = useState("");
   const [territoryId, setTerritoryId] = useState("ALL");
   const [managerId, setManagerId] = useState("ALL");
   const [status, setStatus] = useState("ALL");
   const [performance, setPerformance] = useState<"ALL" | "ON_TRACK" | "BELOW_TARGET" | "AHEAD">("ALL");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const orgParam = new URLSearchParams(window.location.search).get("orgId");
+      if (orgParam) {
+        setSelectedOrgId(orgParam);
+        setLastSelectedOrgId(orgParam);
+      }
+    }
+  }, []);
 
   // Provision User Modal state
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
@@ -143,6 +157,13 @@ export default function FieldForcePage() {
   });
 
   const handleOpenAddUser = () => {
+    const preferredOrgId =
+      canonicalRole === "SUPER_ADMIN"
+        ? selectedOrgId !== "ALL"
+          ? selectedOrgId
+          : lastSelectedOrgId || ""
+        : currentUser?.organizationId || "";
+
     setUserForm({
       firstName: "",
       lastName: "",
@@ -150,9 +171,9 @@ export default function FieldForcePage() {
       password: "Password123!",
       phone: "",
       role: canonicalRole === "SUPER_ADMIN" ? "ADMIN" : "MR",
-      organizationId: canonicalRole === "SUPER_ADMIN" ? (organizations?.[0]?.id || "") : (currentUser?.organizationId || ""),
+      organizationId: preferredOrgId,
       territoryId: territories?.[0]?.id || "",
-      managerId: managers?.[0]?.id || "",
+      managerId: "",
     });
     setFormError(null);
     setFormSuccess(null);
@@ -164,19 +185,41 @@ export default function FieldForcePage() {
     setFormError(null);
     setFormSuccess(null);
 
-    if (!userForm.firstName || !userForm.lastName || !userForm.email) {
+    if (!userForm.firstName.trim() || !userForm.lastName.trim() || !userForm.email.trim()) {
       setFormError("First Name, Last Name, and Email are required.");
       return;
     }
 
+    if (canonicalRole === "SUPER_ADMIN" && !userForm.organizationId) {
+      setFormError("Please select the Target Company Organization for this user.");
+      return;
+    }
+
     try {
+      const targetOrgId =
+        canonicalRole === "SUPER_ADMIN"
+          ? userForm.organizationId
+          : currentUser?.organizationId || undefined;
+
       await createUserMutation.mutateAsync({
         ...userForm,
-        organizationId: canonicalRole === "SUPER_ADMIN" ? userForm.organizationId : currentUser?.organizationId || undefined,
+        firstName: userForm.firstName.trim(),
+        lastName: userForm.lastName.trim(),
+        email: userForm.email.trim().toLowerCase(),
+        phone: userForm.phone.trim() || undefined,
+        organizationId: targetOrgId,
         // Super Admin does NOT assign territory - territory is assigned by Company Admin
-        territoryId: canonicalRole === "SUPER_ADMIN" ? undefined : userForm.territoryId,
+        territoryId: canonicalRole === "SUPER_ADMIN" ? undefined : (userForm.territoryId || undefined),
+        managerId: canonicalRole === "SUPER_ADMIN" ? undefined : (userForm.managerId || undefined),
       });
-      setFormSuccess(`User ${userForm.firstName} ${userForm.lastName} (${userForm.role}) provisioned successfully!`);
+
+      if (canonicalRole === "SUPER_ADMIN" && targetOrgId) {
+        setLastSelectedOrgId(targetOrgId);
+      }
+
+      setFormSuccess(
+        `User ${userForm.firstName.trim()} ${userForm.lastName.trim()} (${userForm.email.trim().toLowerCase()}) provisioned successfully!`
+      );
       refetchUsers();
       refetchMRs();
       setTimeout(() => {
@@ -425,6 +468,15 @@ export default function FieldForcePage() {
                 <Plus className="h-3.5 w-3.5" />
                 <span>Add Territory</span>
               </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleOpenAddUser}
+                className="gap-1.5 h-8 text-xs cursor-pointer"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Add MR / Manager</span>
+              </Button>
             </div>
           ) : undefined
         }
@@ -521,9 +573,9 @@ export default function FieldForcePage() {
             </span>
             <div className="flex items-baseline gap-2 mt-1">
               <span suppressHydrationWarning className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                {territories?.length || 17}
+                {territories?.length ?? 0}
               </span>
-              <span className="text-xs text-sky-600 font-medium">Tamil Nadu Hubs</span>
+              <span className="text-xs text-sky-600 font-medium">Active Territories</span>
             </div>
           </div>
         </div>
@@ -830,12 +882,15 @@ export default function FieldForcePage() {
                               .join("")}
                           </div>
                           <div>
-                            <Link
-                              href={`/field-force/${mr.id}`}
-                              className="font-bold text-slate-900 hover:text-sky-600 transition-colors dark:text-slate-100 text-xs"
-                            >
-                              {mr.name}
-                            </Link>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <Link
+                                href={`/field-force/${mr.id}`}
+                                className="font-bold text-slate-900 hover:text-sky-600 transition-colors dark:text-slate-100 text-xs"
+                              >
+                                {mr.name}
+                              </Link>
+                              {mr.isAtWork && <AtWorkBadge punchInTime={mr.punchInTime} />}
+                            </div>
                             <div className="font-mono text-[11px] text-slate-500">
                               {mr.employeeId} • {mr.designation}
                             </div>
@@ -1006,6 +1061,7 @@ export default function FieldForcePage() {
                   onChange={(e) => setUserForm({ ...userForm, organizationId: e.target.value })}
                   className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 font-semibold"
                 >
+                  <option value="">-- Select Target Company --</option>
                   {organizations?.map((org) => (
                     <option key={org.id} value={org.id}>
                       {org.name} ({org.code})
@@ -1123,15 +1179,14 @@ export default function FieldForcePage() {
               <>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Assigned Territory *
+                    Assigned Territory
                   </label>
                   <select
-                    required
                     value={userForm.territoryId}
                     onChange={(e) => setUserForm({ ...userForm, territoryId: e.target.value })}
                     className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
                   >
-                    <option value="">Select Territory…</option>
+                    <option value="">Default Company Territory…</option>
                     {territories?.map((t) => (
                       <option key={t.id} value={t.id}>
                         {t.name} ({t.code})

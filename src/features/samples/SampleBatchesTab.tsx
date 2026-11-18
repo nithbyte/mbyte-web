@@ -13,8 +13,8 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { EmptyState } from "@/components/ui/empty-state";
-import { FlaskConical, Plus } from "lucide-react";
-import { SampleBatch } from "@/services/sampleService";
+import { FlaskConical, Plus, Gift } from "lucide-react";
+import { SampleBatch, isPromoGiftProduct, formatSampleExpiry } from "@/services/sampleService";
 
 interface SampleBatchesTabProps {
   batches: SampleBatch[];
@@ -75,7 +75,8 @@ export const SampleBatchesTab: React.FC<SampleBatchesTabProps> = ({
               </TableRow>
             ) : (
               batches.map((batch) => {
-                const isExpired = nowTimestamp > 0 && new Date(batch.expiryDate).getTime() < nowTimestamp;
+                const isGift = isPromoGiftProduct(batch.product);
+                const isExpired = !isGift && nowTimestamp > 0 && new Date(batch.expiryDate).getTime() < nowTimestamp;
                 return (
                   <TableRow key={batch.id} className="hover:bg-muted/30">
                     <TableCell>
@@ -84,9 +85,17 @@ export const SampleBatchesTab: React.FC<SampleBatchesTabProps> = ({
                       </span>
                     </TableCell>
                     <TableCell>
-                      <p className="text-xs font-semibold text-foreground">{batch.product?.brandName}</p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="text-xs font-semibold text-foreground">{batch.product?.brandName}</p>
+                        {isGift && (
+                          <span className="inline-flex items-center gap-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 px-1.5 py-0.5 text-[9px] font-bold">
+                            <Gift className="w-2.5 h-2.5" />
+                            GIFT / INPUT
+                          </span>
+                        )}
+                      </div>
                       <p className="text-[11px] text-muted-foreground">
-                        {batch.product?.genericName} • {batch.product?.dosageForm}
+                        {batch.product?.genericName} • {isGift ? batch.product?.packSize || "1 pc" : batch.product?.dosageForm}
                       </p>
                     </TableCell>
                     <TableCell className="text-xs font-mono text-muted-foreground">{batch.product?.sku}</TableCell>
@@ -94,7 +103,7 @@ export const SampleBatchesTab: React.FC<SampleBatchesTabProps> = ({
                       {batch.manufacturingDate ? new Date(batch.manufacturingDate).toLocaleDateString() : "—"}
                     </TableCell>
                     <TableCell className="text-xs font-semibold text-foreground">
-                      {new Date(batch.expiryDate).toLocaleDateString()}
+                      {formatSampleExpiry(batch.expiryDate, batch.product)}
                     </TableCell>
                     <TableCell className="text-center">
                       {isExpired ? (

@@ -70,6 +70,69 @@ export function useUpdateProduct() {
   });
 }
 
+export function useToggleProductStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+      productService.toggleProductStatus(id, isActive),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["products", "detail", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["visual-aids"] });
+    },
+  });
+}
+
+export function useDeleteProduct() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => productService.deleteProduct(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["product-categories"] });
+      queryClient.invalidateQueries({ queryKey: ["visual-aids"] });
+    },
+  });
+}
+
+export function useCreateProductCategory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { name: string; slug?: string; description?: string }) =>
+      productService.createProductCategory(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["product-categories"] });
+    },
+  });
+}
+
+export function useUpdateProductCategory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      input,
+    }: {
+      id: string;
+      input: { name?: string; description?: string; isActive?: boolean };
+    }) => productService.updateProductCategory(id, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["product-categories"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    },
+  });
+}
+
+export function useDeleteProductCategory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => productService.deleteProductCategory(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["product-categories"] });
+    },
+  });
+}
+
 export function useCreateVisualAid() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -81,7 +144,19 @@ export function useCreateVisualAid() {
       thumbnailUrl?: string;
       description?: string;
       version?: string;
+      fileSizeBytes?: number;
     }) => productService.createVisualAid(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["visual-aids"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    },
+  });
+}
+
+export function useDeleteVisualAid() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => productService.deleteVisualAid(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["visual-aids"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });

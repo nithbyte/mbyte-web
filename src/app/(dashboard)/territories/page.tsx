@@ -5,6 +5,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { AtWorkBadge } from "@/components/ui/at-work-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -21,11 +22,13 @@ import { Modal } from "@/components/ui/dialog";
 import {
   useTerritories,
   useCreateTerritory,
+  useUpdateTerritory,
+  useDeleteTerritory,
   useCurrentUser,
   useMRList,
   useUpdateMRTerritory,
 } from "@/hooks";
-import { normalizeRole } from "@/types";
+import { normalizeRole, type Territory } from "@/types";
 import {
   MapPin,
   Plus,
@@ -40,6 +43,8 @@ import {
   Layers,
   ArrowRight,
   UserPlus,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 
 export default function TerritoriesPage() {
@@ -50,7 +55,11 @@ export default function TerritoriesPage() {
   const { data: territories, isLoading, refetch } = useTerritories(companyOrgId);
   const { data: mrList, refetch: refetchMRs } = useMRList({ organizationId: companyOrgId });
   const createTerritoryMutation = useCreateTerritory();
+  const editTerritoryMutation = useUpdateTerritory();
+  const deleteTerritoryMutation = useDeleteTerritory();
   const updateTerritoryMutation = useUpdateMRTerritory();
+
+  const canManageTerritories = canonicalRole === "ADMIN" || canonicalRole === "SUPER_ADMIN";
 
   const [search, setSearch] = useState("");
   const [zoneFilter, setZoneFilter] = useState("ALL");
@@ -68,6 +77,27 @@ export default function TerritoriesPage() {
   });
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
+
+  // Edit Territory Modal state
+  const [editingTerritory, setEditingTerritory] = useState<Territory | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    code: "",
+    zone: "South",
+    region: "",
+    area: "",
+    description: "",
+    isActive: true,
+  });
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editSuccess, setEditSuccess] = useState<string | null>(null);
+
+  // Delete Territory Modal state
+  const [deletingTerritory, setDeletingTerritory] = useState<{
+    territory: Territory;
+    assignedCount: number;
+  } | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Quick Assign Rep Modal state
   const [isAssignOpen, setIsAssignOpen] = useState(false);
@@ -124,6 +154,75 @@ export default function TerritoriesPage() {
       }, 1200);
     } catch (err: any) {
       setFormError(err?.message || "Failed to create territory. Please check the code uniqueness.");
+    }
+  };
+
+  const handleOpenEdit = (territory: Territory) => {
+    const normalizedZone = territory.zone?.replace(/\s*Zone$/i, "").trim() || "South";
+    setEditingTerritory(territory);
+    setEditForm({
+      name: territory.name || "",
+      code: territory.code || "",
+      zone: normalizedZone,
+      region: territory.region || "",
+      area: territory.area || territory.headquarters || "",
+      description: territory.description || "",
+      isActive: territory.isActive !== false,
+    });
+    setEditError(null);
+    setEditSuccess(null);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTerritory) return;
+    setEditError(null);
+    setEditSuccess(null);
+
+    if (!editForm.name.trim() || !editForm.code.trim()) {
+      setEditError("Territory Name and Code are required.");
+      return;
+    }
+
+    try {
+      await editTerritoryMutation.mutateAsync({
+        id: editingTerritory.id,
+        data: {
+          name: editForm.name.trim(),
+          code: editForm.code.trim(),
+          zone: editForm.zone,
+          region: editForm.region.trim(),
+          area: editForm.area.trim(),
+          description: editForm.description.trim(),
+          isActive: editForm.isActive,
+        },
+      });
+      setEditSuccess(`Territory "${editForm.name.trim()}" updated successfully!`);
+      refetch();
+      refetchMRs();
+      setTimeout(() => {
+        setEditingTerritory(null);
+      }, 900);
+    } catch (err: any) {
+      setEditError(err?.message || "Failed to update territory.");
+    }
+  };
+
+  const handleOpenDelete = (territory: Territory, assignedCount: number) => {
+    setDeletingTerritory({ territory, assignedCount });
+    setDeleteError(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingTerritory) return;
+    setDeleteError(null);
+    try {
+      await deleteTerritoryMutation.mutateAsync(deletingTerritory.territory.id);
+      setDeletingTerritory(null);
+      refetch();
+      refetchMRs();
+    } catch (err: any) {
+      setDeleteError(err?.message || "Failed to delete territory.");
     }
   };
 
@@ -371,7 +470,13 @@ export default function TerritoriesPage() {
                         <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">
                           {t.region || "Tamil Nadu"}
                         </div>
-                        <div className="text-[10px] text-slate-400">{t.zone || "South"} Zone</div>
+                        <div className="text-[10px] text-slate-400">
+                          {t.zone
+                            ? t.zone.toLowerCase().includes("zone")
+                              ? t.zone
+                              : `${t.zone} Zone`
+                            : "South Zone"}
+                        </div>
                       </TableCell>
 
                       <TableCell>
@@ -391,6 +496,9 @@ export default function TerritoriesPage() {
                                 className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700 hover:bg-sky-50 hover:text-sky-700 dark:bg-slate-800 dark:text-slate-200"
                               >
                                 <span>{rep.name}</span>
+                                {rep.isAtWork && (
+                                  <AtWorkBadge punchInTime={rep.punchInTime} className="px-1.5 py-0 text-[9px]" />
+                                )}
                               </Link>
                             ))}
                             <span className="text-[10px] text-slate-400 ml-1">
@@ -405,22 +513,46 @@ export default function TerritoriesPage() {
                       </TableCell>
 
                       <TableCell>
-                        <Badge variant="success" className="text-[10px]">
-                          Active Coverage
+                        <Badge variant={t.isActive !== false ? "success" : "secondary"} className="text-[10px]">
+                          {t.isActive !== false ? "Active Coverage" : "Inactive"}
                         </Badge>
                       </TableCell>
 
                       <TableCell className="text-right">
-                        {canonicalRole === "ADMIN" && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 text-xs gap-1 hover:bg-sky-50 hover:text-sky-700 dark:hover:bg-slate-800"
-                            onClick={() => handleOpenAssign({ id: t.id, name: t.name })}
-                          >
-                            <UserPlus className="h-3 w-3" />
-                            <span>Assign MR</span>
-                          </Button>
+                        {canManageTerritories && (
+                          <div className="flex items-center justify-end gap-1.5">
+                            {canonicalRole === "ADMIN" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs gap-1 hover:bg-sky-50 hover:text-sky-700 dark:hover:bg-slate-800 cursor-pointer"
+                                onClick={() => handleOpenAssign({ id: t.id, name: t.name })}
+                              >
+                                <UserPlus className="h-3 w-3" />
+                                <span>Assign MR</span>
+                              </Button>
+                            )}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              title="Edit Territory"
+                              className="h-7 text-xs gap-1 hover:bg-amber-50 hover:text-amber-700 hover:border-amber-200 dark:hover:bg-slate-800 cursor-pointer"
+                              onClick={() => handleOpenEdit(t)}
+                            >
+                              <Pencil className="h-3 w-3" />
+                              <span>Edit</span>
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              title="Delete Territory"
+                              className="h-7 text-xs gap-1 text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 dark:border-rose-900/60 dark:text-rose-400 dark:hover:bg-rose-950/40 cursor-pointer"
+                              onClick={() => handleOpenDelete(t, assignedReps.length)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                              <span>Delete</span>
+                            </Button>
+                          </div>
                         )}
                       </TableCell>
                     </TableRow>
@@ -561,6 +693,211 @@ export default function TerritoriesPage() {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* EDIT TERRITORY MODAL */}
+      <Modal
+        isOpen={Boolean(editingTerritory)}
+        onClose={() => !editTerritoryMutation.isPending && setEditingTerritory(null)}
+        title="Edit Sales Territory"
+        description={`Update details and coverage status for ${editingTerritory?.name || "territory"}.`}
+        maxWidth="md"
+      >
+        <form onSubmit={handleEditSubmit} className="space-y-4">
+          {editError && (
+            <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-400 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{editError}</span>
+            </div>
+          )}
+
+          {editSuccess && (
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              <span>{editSuccess}</span>
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Territory Name *
+              </label>
+              <input
+                type="text"
+                required
+                value={editForm.name}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                placeholder="e.g. Salem Central"
+                className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 font-semibold"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Territory Code *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editForm.code}
+                  onChange={(e) => setEditForm({ ...editForm, code: e.target.value })}
+                  placeholder="e.g. TN-SLM-C"
+                  className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Zone
+                </label>
+                <select
+                  value={editForm.zone}
+                  onChange={(e) => setEditForm({ ...editForm, zone: e.target.value })}
+                  className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                >
+                  <option value="South">South Zone</option>
+                  <option value="West">West Zone</option>
+                  <option value="Central">Central Zone</option>
+                  <option value="North">North Zone</option>
+                  <option value="East">East Zone</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Region / District
+                </label>
+                <input
+                  type="text"
+                  value={editForm.region}
+                  onChange={(e) => setEditForm({ ...editForm, region: e.target.value })}
+                  placeholder="e.g. Chennai District"
+                  className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Headquarters / Area Cluster
+                </label>
+                <input
+                  type="text"
+                  value={editForm.area}
+                  onChange={(e) => setEditForm({ ...editForm, area: e.target.value })}
+                  placeholder="e.g. Mogappair, Chennai"
+                  className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Description
+              </label>
+              <input
+                type="text"
+                value={editForm.description}
+                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                placeholder="Optional operational coverage description"
+                className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+              />
+            </div>
+
+            <div className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5">
+              <div>
+                <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                  Territory Coverage Status
+                </div>
+                <div className="text-[11px] text-slate-500">
+                  Inactive territories are paused from active coverage
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditForm({ ...editForm, isActive: !editForm.isActive })}
+                className={`rounded-full px-3 py-1 text-[11px] font-semibold border transition-colors cursor-pointer ${
+                  editForm.isActive
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800"
+                    : "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700"
+                }`}
+              >
+                {editForm.isActive ? "Active" : "Inactive"}
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setEditingTerritory(null)}
+              disabled={editTerritoryMutation.isPending}
+              className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={editTerritoryMutation.isPending}
+              className="rounded-xl bg-sky-600 px-4 py-2 text-xs font-semibold text-white hover:bg-sky-500 disabled:opacity-50 transition-colors cursor-pointer"
+            >
+              {editTerritoryMutation.isPending ? "Saving Changes..." : "Save Changes"}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* DELETE TERRITORY CONFIRMATION MODAL */}
+      <Modal
+        isOpen={Boolean(deletingTerritory)}
+        onClose={() => !deleteTerritoryMutation.isPending && setDeletingTerritory(null)}
+        title="Delete Territory"
+        description={`Confirm removal of ${deletingTerritory?.territory.name || "territory"} (${deletingTerritory?.territory.code || ""}).`}
+        maxWidth="md"
+      >
+        <div className="space-y-4">
+          {deleteError && (
+            <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-400 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{deleteError}</span>
+            </div>
+          )}
+
+          {deletingTerritory && deletingTerritory.assignedCount > 0 ? (
+            <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200 flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>
+                This territory currently has <strong>{deletingTerritory.assignedCount}</strong> assigned medical representative(s). Reassign them to another territory first before deleting.
+              </span>
+            </div>
+          ) : (
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              Are you sure you want to delete <strong>{deletingTerritory?.territory.name}</strong>? It will be removed from active territory directories and dropdowns, and its code can be reused later.
+            </p>
+          )}
+
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setDeletingTerritory(null)}
+              disabled={deleteTerritoryMutation.isPending}
+              className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirmDelete}
+              disabled={deleteTerritoryMutation.isPending}
+              className="rounded-xl bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-500 disabled:opacity-50 transition-colors cursor-pointer"
+            >
+              {deleteTerritoryMutation.isPending ? "Deleting..." : "Delete Territory"}
+            </button>
+          </div>
+        </div>
       </Modal>
 
       {/* QUICK ASSIGN MR MODAL */}

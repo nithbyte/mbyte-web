@@ -2,11 +2,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { organizationService } from "@/services/organizationService";
 import type { CreateOrganizationInput, UpdateOrganizationInput, Organization } from "@/types";
 
-export function useOrganizations(params?: { search?: string; isActive?: boolean }) {
+export function useOrganizations(
+  params?: { search?: string; isActive?: boolean },
+  options?: { enabled?: boolean }
+) {
   return useQuery<Organization[]>({
     queryKey: ["organizations", params],
     queryFn: () => organizationService.getOrganizations(params),
     staleTime: 1000 * 60 * 5,
+    enabled: options?.enabled ?? true,
   });
 }
 

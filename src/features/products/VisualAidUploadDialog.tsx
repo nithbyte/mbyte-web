@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Modal } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,7 @@ export interface VisualAidFormData {
   thumbnailUrl?: string;
   description: string;
   version: string;
+  fileSizeBytes?: number;
 }
 
 interface VisualAidUploadDialogProps {
@@ -57,6 +58,16 @@ export const VisualAidUploadDialog: React.FC<VisualAidUploadDialogProps> = ({
   } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Reset per-product upload state whenever modal opens for a different product
+  useEffect(() => {
+    setUploadedFileMeta(null);
+    setUploadError(null);
+    setIsDragging(false);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }, [product?.id]);
 
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return `${bytes} B`;
@@ -114,6 +125,7 @@ export const VisualAidUploadDialog: React.FC<VisualAidUploadDialogProps> = ({
         ...f,
         fileUrl: uploadRes.fileUrl,
         thumbnailUrl: isImage ? uploadRes.fileUrl : f.thumbnailUrl,
+        fileSizeBytes: uploadRes.sizeBytes || file.size,
       }));
     } catch (err: any) {
       console.error("Visual aid upload error:", err);
@@ -169,6 +181,12 @@ export const VisualAidUploadDialog: React.FC<VisualAidUploadDialogProps> = ({
       description={`Add a detailing deck, clinical evidence PDF, or promotional presentation for ${product?.genericName || "this product"}.`}
     >
       <div className="space-y-4">
+        {errors.submit && (
+          <div className="p-3 bg-rose-50 text-rose-700 border border-rose-200 rounded-xl text-xs flex items-center gap-1.5">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>{errors.submit}</span>
+          </div>
+        )}
         <div className="p-3 rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30">
           <div className="flex items-center gap-2 text-xs text-amber-800 dark:text-amber-300">
             <BookOpen className="h-3.5 w-3.5 shrink-0" />
@@ -328,7 +346,7 @@ export const VisualAidUploadDialog: React.FC<VisualAidUploadDialogProps> = ({
                 onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
                 className="w-full h-9 px-3 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
               >
-                {["IMAGE", "PDF", "SLIDES", "VIDEO", "PRESENTATION", "BROCHURE"].map((t) => (
+                {["IMAGE", "PDF", "SLIDES", "VIDEO"].map((t) => (
                   <option key={t} value={t}>
                     {t}
                   </option>

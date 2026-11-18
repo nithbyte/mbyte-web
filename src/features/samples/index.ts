@@ -8,6 +8,7 @@ export * from "./SampleAdjustmentsTab";
 export * from "./SampleLedgerTab";
 export * from "./SampleReportsTab";
 export * from "./dialogs/RegisterBatchDialog";
+export * from "./dialogs/AddGiftInputDialog";
 export * from "./dialogs/ReceiveStockDialog";
 export * from "./dialogs/DispatchSampleDialog";
 export * from "./dialogs/AdjustStockDialog";

@@ -14,8 +14,8 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Search, Download, Package } from "lucide-react";
-import { SampleInventoryBalance } from "@/services/sampleService";
+import { Search, Download, Package, Gift } from "lucide-react";
+import { SampleInventoryBalance, isPromoGiftProduct, formatSampleExpiry } from "@/services/sampleService";
 
 interface SampleBalancesTabProps {
   balances: SampleInventoryBalance[];
@@ -97,7 +97,9 @@ export const SampleBalancesTab: React.FC<SampleBalancesTabProps> = ({
                 </TableRow>
               ) : (
                 balances.map((b) => {
+                  const isGift = isPromoGiftProduct(b.product);
                   const isExpiringSoon =
+                    !isGift &&
                     nowTimestamp > 0 &&
                     b.batch?.expiryDate &&
                     new Date(b.batch.expiryDate).getTime() < nowTimestamp + 90 * 86400000;
@@ -105,9 +107,17 @@ export const SampleBalancesTab: React.FC<SampleBalancesTabProps> = ({
                     <TableRow key={b.id} className="hover:bg-muted/30">
                       <TableCell>
                         <div>
-                          <p className="text-xs font-semibold text-foreground">
-                            {b.product?.brandName || "Product"}
-                          </p>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="text-xs font-semibold text-foreground">
+                              {b.product?.brandName || "Product"}
+                            </p>
+                            {isGift && (
+                              <span className="inline-flex items-center gap-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 px-1.5 py-0.5 text-[9px] font-bold">
+                                <Gift className="w-2.5 h-2.5" />
+                                GIFT
+                              </span>
+                            )}
+                          </div>
                           <p className="text-[11px] text-muted-foreground">
                             {b.product?.genericName} • {b.product?.packSize}
                           </p>
@@ -121,7 +131,7 @@ export const SampleBalancesTab: React.FC<SampleBalancesTabProps> = ({
                       <TableCell>
                         <div className="flex items-center gap-1.5">
                           <span className="text-xs text-foreground">
-                            {b.batch?.expiryDate ? new Date(b.batch.expiryDate).toLocaleDateString() : "N/A"}
+                            {formatSampleExpiry(b.batch?.expiryDate, b.product)}
                           </span>
                           {isExpiringSoon && (
                             <Badge variant="warning" className="text-[10px] py-0 px-1">
@@ -146,7 +156,7 @@ export const SampleBalancesTab: React.FC<SampleBalancesTabProps> = ({
                       </TableCell>
                       <TableCell className="text-right">
                         <span className={`text-xs font-bold ${b.quantity > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`}>
-                          {b.quantity.toLocaleString()} packs
+                          {b.quantity.toLocaleString()} {isGift ? "units" : "packs"}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">

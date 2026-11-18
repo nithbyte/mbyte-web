@@ -74,6 +74,27 @@ export interface Pharmacy {
   outstandingBalance?: number;
   latitude: number;
   longitude: number;
+  isActive?: boolean;
+  approvalStatus?: DoctorApprovalStatus;
+  createdById?: string;
+  createdBy?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+  };
+  reviewedById?: string;
+  reviewedBy?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  reviewedAt?: string;
+  rejectionReason?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface PharmacyInput {
@@ -83,6 +104,8 @@ export interface PharmacyInput {
   email?: string;
   address: string;
   drugLicenseNumber: string;
+  gstNumber?: string;
+  creditLimit?: number;
   territoryId: string;
   latitude: number;
   longitude: number;

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { AtWorkBadge } from "@/components/ui/at-work-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/dialog";
@@ -344,8 +345,13 @@ export default function AttendancePage() {
                   {filteredRecords.map((r) => (
                     <TableRow key={r.id}>
                       <TableCell>
-                        <div className="font-medium">
-                          {r.user ? `${r.user.firstName} ${r.user.lastName}` : "MR"}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-medium">
+                            {r.user ? `${r.user.firstName} ${r.user.lastName}` : "MR"}
+                          </span>
+                          {r.punchInTime && !r.punchOutTime && (
+                            <AtWorkBadge punchInTime={r.punchInTime} />
+                          )}
                         </div>
                         <div className="text-xs text-muted-foreground">
                           {r.mr?.employeeCode ? `${r.mr.employeeCode} • ` : ""}{formatTerritory(r.mr?.territory)}

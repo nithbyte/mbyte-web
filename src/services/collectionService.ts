@@ -172,8 +172,8 @@ export const collectionService = {
   async getCollectionKPIs(params?: { mrId?: string; territoryId?: string }): Promise<CollectionKPIs> {
     try {
       const list = await this.getCollections(params);
-      const todayDate = "2026-10-09";
-      const currentMonthPrefix = "2026-10";
+      const todayDate = new Date().toISOString().split("T")[0];
+      const currentMonthPrefix = todayDate.substring(0, 7);
 
       const todayCollections = list.filter((c) => c.paymentDate === todayDate || c.createdAt.startsWith(todayDate));
       const monthlyCollections = list.filter((c) => c.paymentDate.startsWith(currentMonthPrefix) || c.createdAt.startsWith(currentMonthPrefix));
@@ -206,8 +206,8 @@ export const collectionService = {
         cashTotal: Math.round(cashTotal),
         bankTransferTotal: Math.round(bankTransferTotal),
       };
-    } catch {
-      // Fallback
+    } catch (err) {
+      if (!isMockFallbackAllowed()) throw err;
     }
 
     let list = [...mockCollections];
@@ -257,24 +257,27 @@ export const collectionService = {
   async getCollectionTrend(): Promise<CollectionTrendItem[]> {
     try {
       const list = await this.getCollections({ limit: 100 });
-      if (list && list.length > 0) {
-        const days: CollectionTrendItem[] = [];
-        for (let day = 1; day <= 9; day++) {
-          const dayStr = day < 10 ? `0${day}` : `${day}`;
-          const dateStr = `2026-10-${dayStr}`;
-          const colsOnDay = list.filter((c) => c.paymentDate === dateStr || c.createdAt.startsWith(dateStr));
-          const totalVal = Math.round(colsOnDay.reduce((s, c) => s + c.amount, 0));
-          days.push({
-            date: dateStr,
-            label: `Oct ${dayStr}`,
-            amount: totalVal,
-            count: colsOnDay.length,
-          });
-        }
-        return days;
+      const days: CollectionTrendItem[] = [];
+      const now = new Date();
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(now.getDate() - i);
+        const dateStr = d.toISOString().split("T")[0];
+        const label = d.toLocaleDateString("en-IN", { month: "short", day: "2-digit" });
+        const colsOnDay = (list || []).filter(
+          (c) => c.paymentDate === dateStr || c.createdAt.startsWith(dateStr)
+        );
+        const totalVal = Math.round(colsOnDay.reduce((s, c) => s + c.amount, 0));
+        days.push({
+          date: dateStr,
+          label,
+          amount: totalVal,
+          count: colsOnDay.length,
+        });
       }
-    } catch {
-      // Fallback
+      return days;
+    } catch (err) {
+      if (!isMockFallbackAllowed()) throw err;
     }
 
     const days: CollectionTrendItem[] = [];

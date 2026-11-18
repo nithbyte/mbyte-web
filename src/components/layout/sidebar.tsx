@@ -36,7 +36,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useSidebarStore } from "@/store";
+import { useSidebarStore, useAuthStore } from "@/store";
 import { useCurrentUser, useLogout } from "@/hooks";
 import { normalizeRole, getRoleLabel, type CanonicalRole } from "@/types";
 import { APP_CONFIG } from "@/lib/constants";
@@ -460,20 +460,25 @@ export function Sidebar() {
   const logoutMutation = useLogout();
   const { isCollapsed, toggleCollapsed, isMobileOpen, setMobileOpen } =
     useSidebarStore();
-  const { data: currentUser } = useCurrentUser();
+  const storeUser = useAuthStore((s) => s.user);
+  const { data: fetchedUser } = useCurrentUser();
+  const currentUser = fetchedUser ?? storeUser;
 
   const canonicalRole = normalizeRole(currentUser?.role);
   const navSections = getNavSections(canonicalRole);
 
-  const userName = currentUser?.name || "Field User";
+  const userName = currentUser?.name || [currentUser?.firstName, currentUser?.lastName].filter(Boolean).join(" ").trim() || "Loading...";
   const userRole = getRoleLabel(canonicalRole);
-  const initials = userName
-    .split(" ")
-    .map((part) => part[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase() || "MB";
+  const initials =
+    userName === "Loading..."
+      ? "MB"
+      : userName
+          .split(" ")
+          .map((part) => part[0])
+          .filter(Boolean)
+          .slice(0, 2)
+          .join("")
+          .toUpperCase() || "MB";
 
   const handleLogout = async () => {
     try {
@@ -510,12 +515,9 @@ export function Sidebar() {
                   {canonicalRole === "SUPER_ADMIN"
                     ? "Platform Control"
                     : currentUser?.organization?.name ||
-                      (currentUser?.organizationId === "04e96f67-2c5b-4a67-af41-a4505d7bcb0c"
-                        ? "Kovel Designs"
-                        : currentUser?.organizationId === "org_apex_002" ||
-                          currentUser?.organizationId === "31524081-7b14-4925-a331-e4cd05a62e04"
-                        ? "Apex Healthcare"
-                        : "Novis Pharma")}
+                      currentUser?.organizationName ||
+                      currentUser?.companyName ||
+                      (currentUser?.organizationId ? "Corporate Operations" : "Field Operations")}
                 </span>
               </div>
             )}

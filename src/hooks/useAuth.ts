@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { authService } from "@/services/authService";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useFilterStore } from "@/store";
 import type { User } from "@/types";
 
 export function useCurrentUser() {
@@ -53,8 +54,9 @@ export function useLogin() {
     mutationFn: (credentials: { email: string; password?: string }) =>
       authService.login(credentials),
     onSuccess: ({ user }) => {
-      // Clear all cached queries from previous sessions
+      // Clear all cached queries and territory filters from previous sessions
       queryClient.clear();
+      useFilterStore.getState().setSelectedTerritoryId("ALL");
       setUser(user);
       queryClient.setQueryData(["currentUser"], user);
     },
@@ -68,8 +70,9 @@ export function useLogout() {
   return useMutation({
     mutationFn: () => authService.logout(),
     onSuccess: () => {
-      // Clear all cached data on logout
+      // Clear all cached data and territory filters on logout
       queryClient.clear();
+      useFilterStore.getState().setSelectedTerritoryId("ALL");
       logout();
     },
   });

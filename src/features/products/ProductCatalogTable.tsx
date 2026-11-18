@@ -27,6 +27,8 @@ import {
   Upload,
   Pencil,
   Plus,
+  Power,
+  Trash2,
 } from "lucide-react";
 
 interface ProductCatalogTableProps {
@@ -39,6 +41,9 @@ interface ProductCatalogTableProps {
   onOpenVisualAidsModal: (product: Product) => void;
   onOpenPresenceModal: (product: Product) => void;
   onOpenUploadVA: (product: Product) => void;
+  onToggleStatus?: (product: Product) => void;
+  onDeleteProduct?: (product: Product) => void;
+  togglingProductId?: string | null;
 }
 
 export const ProductCatalogTable: React.FC<ProductCatalogTableProps> = ({
@@ -51,6 +56,9 @@ export const ProductCatalogTable: React.FC<ProductCatalogTableProps> = ({
   onOpenVisualAidsModal,
   onOpenPresenceModal,
   onOpenUploadVA,
+  onToggleStatus,
+  onDeleteProduct,
+  togglingProductId,
 }) => {
   return (
     <Card>
@@ -170,7 +178,27 @@ export const ProductCatalogTable: React.FC<ProductCatalogTableProps> = ({
 
                     {/* Status */}
                     <TableCell>
-                      {p.isActive ? (
+                      {onToggleStatus ? (
+                        <button
+                          type="button"
+                          onClick={() => onToggleStatus(p)}
+                          disabled={togglingProductId === p.id}
+                          title={p.isActive ? "Click to mark Inactive" : "Click to mark Active"}
+                          className="cursor-pointer disabled:opacity-50"
+                        >
+                          {p.isActive ? (
+                            <Badge variant="success" className="gap-1 text-[10px] hover:opacity-80 transition-opacity">
+                              <CheckCircle2 className="h-3 w-3" />
+                              Active
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="gap-1 text-[10px] hover:opacity-80 transition-opacity">
+                              <XCircle className="h-3 w-3" />
+                              Inactive
+                            </Badge>
+                          )}
+                        </button>
+                      ) : p.isActive ? (
                         <Badge variant="success" className="gap-1 text-[10px]">
                           <CheckCircle2 className="h-3 w-3" />
                           Active
@@ -294,6 +322,34 @@ export const ProductCatalogTable: React.FC<ProductCatalogTableProps> = ({
                           <Boxes className="h-3.5 w-3.5 mr-1 text-sky-600" />
                           Presence
                         </Button>
+                        {onToggleStatus && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={togglingProductId === p.id}
+                            className={`h-8 px-2 text-xs ${
+                              p.isActive
+                                ? "text-amber-700 border-amber-200 hover:bg-amber-50 dark:border-amber-800"
+                                : "text-emerald-700 border-emerald-200 hover:bg-emerald-50 dark:border-emerald-800"
+                            }`}
+                            onClick={() => onToggleStatus(p)}
+                            title={p.isActive ? "Mark Product Inactive" : "Activate Product"}
+                          >
+                            <Power className="h-3.5 w-3.5 mr-1" />
+                            {p.isActive ? "Deactivate" : "Activate"}
+                          </Button>
+                        )}
+                        {onDeleteProduct && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 px-2 text-xs text-rose-600 hover:text-rose-700 border-rose-200 hover:bg-rose-50 dark:border-rose-900 dark:hover:bg-rose-950/40"
+                            onClick={() => onDeleteProduct(p)}
+                            title="Delete Product"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

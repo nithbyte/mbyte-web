@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/table";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Truck, Send, Download } from "lucide-react";
-import { SampleLedgerEntry, SampleAckStatus } from "@/services/sampleService";
+import { SampleLedgerEntry, SampleAckStatus, isPromoGiftProduct } from "@/services/sampleService";
 
 interface SampleDispatchesTabProps {
   dispatches: SampleLedgerEntry[];
@@ -119,11 +119,18 @@ export const SampleDispatchesTab: React.FC<SampleDispatchesTabProps> = ({
                         <p className="text-[11px] text-muted-foreground">{d.targetMr?.territory?.name || "Territory"}</p>
                       </TableCell>
                       <TableCell>
-                        <p className="text-xs font-semibold text-foreground">{d.product?.brandName}</p>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="text-xs font-semibold text-foreground">{d.product?.brandName}</p>
+                          {isPromoGiftProduct(d.product) && (
+                            <span className="inline-flex items-center rounded-full bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 px-1.5 py-0.5 text-[9px] font-bold">
+                              GIFT
+                            </span>
+                          )}
+                        </div>
                         <p className="text-[10px] font-mono text-muted-foreground">Lot: {d.batch?.batchNumber}</p>
                       </TableCell>
                       <TableCell className="text-right text-xs font-bold text-foreground">
-                        {d.quantity} packs
+                        {d.quantity} {isPromoGiftProduct(d.product) ? "units" : "packs"}
                       </TableCell>
                       <TableCell className="text-center">
                         <Badge variant={getAckBadgeVariant(d.acknowledgmentStatus)} className="text-[10px]">

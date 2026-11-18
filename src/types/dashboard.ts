@@ -90,6 +90,9 @@ export interface BelowTargetMRAlert {
   callsPlannedToday: number;
   severity: "HIGH" | "MEDIUM";
   shortfallAmount: number;
+  isAtWork?: boolean;
+  punchInTime?: string;
+  punchOutTime?: string;
 }
 
 export interface MissedVisitAlert {

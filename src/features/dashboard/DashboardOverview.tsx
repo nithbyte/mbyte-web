@@ -29,6 +29,7 @@ import { orderService, collectionService, visitService } from "@/services";
 import { MetricCard } from "@/components/ui/metric-card";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { AtWorkBadge } from "@/components/ui/at-work-badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -298,10 +299,13 @@ export function DashboardOverview() {
         <MetricCard
           title="1. Where Is My Team?"
           value={`${kpis.fieldForce.inFieldNow + kpis.fieldForce.travelingNow} / ${kpis.fieldForce.total}`}
-          description={`${kpis.fieldForce.inFieldNow} In-Call • ${kpis.fieldForce.travelingNow} Traveling`}
+          description={`${kpis.fieldForce.inFieldNow} In-Call • ${kpis.fieldForce.travelingNow} Active / On Shift`}
           icon={Users}
           iconColor="sky"
-          trend={{ value: "100% On-Duty", isPositive: true }}
+          trend={{
+            value: `${kpis.fieldForce.activeToday} At Work`,
+            isPositive: kpis.fieldForce.activeToday > 0,
+          }}
         />
 
         {/* Q2: What did they do? */}
@@ -448,16 +452,19 @@ export function DashboardOverview() {
                       key={mr.mrId}
                       className="rounded-lg border border-slate-200/90 bg-white p-3.5 space-y-2 dark:border-slate-800 dark:bg-slate-900/90 shadow-2xs"
                     >
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <div className="font-bold text-xs text-slate-900 dark:text-slate-50">
-                            {mr.mrName}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-bold text-xs text-slate-900 dark:text-slate-50">
+                              {mr.mrName}
+                            </span>
+                            {mr.isAtWork && <AtWorkBadge punchInTime={mr.punchInTime} />}
                           </div>
                           <div className="text-[11px] font-medium text-slate-600 dark:text-slate-400">{mr.territoryName}</div>
                         </div>
                         <Badge
                           variant={mr.severity === "HIGH" ? "destructive" : "warning"}
-                          className="text-[10px]"
+                          className="text-[10px] shrink-0"
                         >
                           {mr.achievementPercent}% Quota
                         </Badge>
@@ -816,10 +823,11 @@ export function DashboardOverview() {
                               .join("")}
                           </div>
                           <div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                                 {mr.name}
                               </span>
+                              {mr.isAtWork && <AtWorkBadge punchInTime={mr.punchInTime} />}
                               <Badge
                                 variant={
                                   mr.status === "IN_FIELD"

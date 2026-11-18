@@ -267,11 +267,11 @@ export const doctorService = {
     if (doc) {
       history.push({
         id: `reg_${id}`,
-        date: "2026-01-15",
+        date: doc.createdAt ? doc.createdAt.split("T")[0] : new Date().toISOString().split("T")[0],
         type: "CREATION",
         title: "Physician Master Registry Enrollment",
         subtitle: `Enrolled in ${doc.territoryName} • Tier ${doc.tier.replace("_", "+")}`,
-        status: "ACTIVE",
+        status: doc.approvalStatus || "ACTIVE",
         notes: `GPS Coordinates verified at (${doc.latitude}, ${doc.longitude})`,
       });
     }

@@ -104,34 +104,35 @@ export const authService = {
       return null;
     }
 
+    // Reject stale client mock tokens when mock mode is disabled
+    if (token.startsWith("mock_") && !isMockFallbackAllowed()) {
+      tokenStorage.clearTokens();
+      activeUserId = "";
+      cachedUsers = [];
+      return null;
+    }
+
     try {
       const res = await apiClient.get<any>("/auth/me");
       if (res && res.id) {
-        return formatUser(res);
+        const formatted = formatUser(res);
+        activeUserId = formatted.id;
+        return formatted;
       }
-    } catch (err) {
+    } catch (err: any) {
+      const status = err?.statusCode || err?.response?.status;
+      if (status === 401 || status === 403) {
+        tokenStorage.clearTokens();
+        activeUserId = "";
+        cachedUsers = [];
+        return null;
+      }
       console.warn("Backend /auth/me call failed:", err);
     }
 
-    if (activeUserId) {
+    if (activeUserId && isMockFallbackAllowed()) {
       const rawUser = mockUsers.find((u) => u.id === activeUserId);
       if (rawUser) return formatUser(rawUser);
-    }
-
-    if (token && isMockFallbackAllowed()) {
-      return {
-        id: "usr_admin_01",
-        organizationId: "org_novis_001",
-        name: "Vikas Verma",
-        firstName: "Vikas",
-        lastName: "Verma",
-        email: "admin@novispharma.com",
-        phone: "+91 98400 22222",
-        role: "ADMIN" as any,
-        designation: "Commercial Operations Head",
-        status: "ACTIVE" as any,
-        createdAt: new Date().toISOString(),
-      };
     }
 
     return null;
@@ -145,12 +146,15 @@ export const authService = {
     try {
       const res = await apiClient.get<any>("/users", { params: { limit: 100 } });
       const items = Array.isArray(res) ? res : res?.items || [];
-      if (Array.isArray(items) && items.length > 0) {
+      if (Array.isArray(items)) {
         cachedUsers = items.map(formatUser);
         return cachedUsers;
       }
-    } catch {
-      // fallback to mock users if offline
+    } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        return [];
+      }
+      console.warn("Real /users call failed, falling back to mock:", err);
     }
 
     cachedUsers = mockUsers.map(formatUser);
@@ -196,13 +200,21 @@ export const authService = {
    * Calls: POST /api/v1/auth/login
    */
   async login(credentials: { email: string; password?: string }): Promise<{ user: User; token: string }> {
+    // Clear any stale tokens or cached users from a previous session before authenticating
+    tokenStorage.clearTokens();
+    activeUserId = "";
+    cachedUsers = [];
+
+    const email = credentials.email.trim().toLowerCase();
+    const password = credentials.password || "";
+
     try {
       const res = await apiClient.post<any>("/auth/login", {
-        email: credentials.email.trim(),
-        password: credentials.password || "Password123!",
+        email,
+        password,
       });
 
-      if (res && res.accessToken) {
+      if (res && res.accessToken && res.user) {
         tokenStorage.setTokens(res.accessToken, res.refreshToken);
         const user = formatUser(res.user);
         activeUserId = user.id;
@@ -212,30 +224,18 @@ export const authService = {
         };
       }
     } catch (err: any) {
-      if (isMockFallbackAllowed()) {
-        const found = mockUsers.find(
-          (u) => u.email.toLowerCase() === credentials.email.trim().toLowerCase()
-        );
-        const fallbackUser: User = found || {
-          id: "usr_admin_01",
-          organizationId: "org_novis_001",
-          name: "Vikas Verma",
-          firstName: "Vikas",
-          lastName: "Verma",
-          email: credentials.email.trim() || "admin@novispharma.com",
-          phone: "+91 98400 22222",
-          role: "COMPANY_ADMIN" as any,
-          designation: "Commercial Operations Head",
-          status: "ACTIVE" as any,
-          createdAt: new Date().toISOString(),
-        };
-        if (!found) {
-          mockUsers.push(fallbackUser);
-        }
-        const mockToken = `mock_jwt_token_${fallbackUser.id}`;
+      const status = err?.statusCode || err?.response?.status;
+      // Never fake-login when the server explicitly rejects credentials (4xx) or when mocks are disabled
+      if ((status && status < 500) || !isMockFallbackAllowed()) {
+        throw err;
+      }
+
+      const found = mockUsers.find((u) => u.email.toLowerCase() === email);
+      if (found) {
+        const mockToken = `mock_jwt_token_${found.id}`;
         tokenStorage.setTokens(mockToken);
-        activeUserId = fallbackUser.id;
-        const user = formatUser(fallbackUser);
+        activeUserId = found.id;
+        const user = formatUser(found);
         return {
           user,
           token: mockToken,
@@ -259,6 +259,7 @@ export const authService = {
     }
     tokenStorage.clearTokens();
     activeUserId = "";
+    cachedUsers = [];
     return Promise.resolve();
   },
 };

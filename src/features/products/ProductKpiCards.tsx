@@ -14,6 +14,7 @@ interface ProductKpiCardsProps {
   totalProducts: number;
   activeProducts: number;
   categoriesCount: number;
+  categoryNames?: string[];
   totalVisualAids: number;
   avgAvailability: number;
 }
@@ -22,9 +23,14 @@ export const ProductKpiCards: React.FC<ProductKpiCardsProps> = ({
   totalProducts,
   activeProducts,
   categoriesCount,
+  categoryNames = [],
   totalVisualAids,
   avgAvailability,
 }) => {
+  const categorySubtitle =
+    categoryNames.length > 0
+      ? categoryNames.slice(0, 3).join(", ") + (categoryNames.length > 3 ? ` +${categoryNames.length - 3} more` : "")
+      : "No categories created yet";
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
       <Card className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
@@ -50,14 +56,14 @@ export const ProductKpiCards: React.FC<ProductKpiCardsProps> = ({
           <div>
             <p className="text-xs font-medium text-slate-500">Therapeutic Lines</p>
             <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
-              {categoriesCount || 4}
+              {categoriesCount}
             </h3>
           </div>
           <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600">
             <Layers className="h-5 w-5" />
           </div>
         </div>
-        <p className="text-[11px] text-slate-500 mt-2">Cardio, Diabetic, Pain & Gastro</p>
+        <p className="text-[11px] text-slate-500 mt-2 truncate">{categorySubtitle}</p>
       </Card>
 
       <Card className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">

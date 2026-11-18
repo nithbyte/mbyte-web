@@ -5,6 +5,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { AtWorkBadge } from "@/components/ui/at-work-badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -117,18 +118,21 @@ export function MRDetailsView({ id }: { id: string }) {
           title={`${mr.name} (${mr.employeeId})`}
           description={`${mr.designation} • ${mr.territoryName} Territory • Reporting to ${mr.managerName}`}
           badge={
-            <Badge
-              variant={
-                mr.status === "IN_FIELD"
-                  ? "success"
-                  : mr.status === "COMPLETED"
-                  ? "secondary"
-                  : "default"
-              }
-              className="text-xs"
-            >
-              {mr.status.replace("_", " ")}
-            </Badge>
+            <div className="flex items-center gap-1.5">
+              {mr.isAtWork && <AtWorkBadge punchInTime={mr.punchInTime} className="text-xs px-2.5 py-1" />}
+              <Badge
+                variant={
+                  mr.status === "IN_FIELD"
+                    ? "success"
+                    : mr.status === "COMPLETED"
+                    ? "secondary"
+                    : "default"
+                }
+                className="text-xs"
+              >
+                {mr.status.replace("_", " ")}
+              </Badge>
+            </div>
           }
           actions={
             <div className="flex gap-2">

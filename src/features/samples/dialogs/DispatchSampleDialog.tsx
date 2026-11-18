@@ -5,7 +5,7 @@ import { Modal } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Trash2 } from "lucide-react";
-import { SampleBatch, SampleInventoryBalance } from "@/services/sampleService";
+import { SampleBatch, SampleInventoryBalance, isPromoGiftProduct } from "@/services/sampleService";
 
 interface DispatchSampleDialogProps {
   isOpen: boolean;
@@ -116,7 +116,7 @@ export const DispatchSampleDialog: React.FC<DispatchSampleDialogProps> = ({
                     const whQty = whBal ? whBal.quantity : 0;
                     return (
                       <option key={b.id} value={b.id} disabled={whQty <= 0}>
-                        {b.product?.brandName} (Lot: {b.batchNumber}) — {whQty} available
+                        {isPromoGiftProduct(b.product) ? "[GIFT] " : ""}{b.product?.brandName} (Lot: {b.batchNumber}) — {whQty} available
                       </option>
                     );
                   })}

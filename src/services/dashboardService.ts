@@ -67,7 +67,7 @@ interface MockPresenceItem {
 
 export const dashboardService = {
   async getKPIs(territoryId?: string): Promise<DashboardKPIs> {
-    const today = "2026-10-09";
+    const today = new Date().toISOString().split("T")[0];
 
     try {
       const [dashSummary, fieldForce, visits, orders, collections, alerts] = await Promise.all([
@@ -122,19 +122,20 @@ export const dashboardService = {
         return { mode, count: modeItems.length, amount, percentage };
       });
 
-      const availableCount = Math.max(1, 20 - alerts.length);
       const lowStockCount = alerts.filter((a) => a.status === "LOW_STOCK").length;
       const outOfStockCount = alerts.filter((a) => a.status === "OUT_OF_STOCK").length;
+      const availableCount = Number(dashSummary?.presence?.availableCount ?? 0);
       const auditsToday = availableCount + lowStockCount + outOfStockCount;
-      const availabilityRate = Math.round((availableCount / auditsToday) * 100);
+      const availabilityRate =
+        auditsToday > 0 ? Math.round((availableCount / auditsToday) * 100) : 100;
 
       const topStockoutProducts = alerts.slice(0, 5).map((a) => ({
         productName: a.productName,
         stockoutCount: 1,
       }));
 
-      const monthlyTargetTotal = dashSummary?.targets?.targetAmount || 450000;
-      const monthlyAchievedTotal = dashSummary?.targets?.achievedAmount || 182500;
+      const monthlyTargetTotal = Number(dashSummary?.targets?.targetAmount ?? 0);
+      const monthlyAchievedTotal = Number(dashSummary?.targets?.achievedAmount ?? 0);
       const overallAchievementRate =
         monthlyTargetTotal > 0 ? Math.round((monthlyAchievedTotal / monthlyTargetTotal) * 100) : 0;
       const benchmarkRate = 26;
@@ -145,11 +146,15 @@ export const dashboardService = {
           ? "ON_TRACK"
           : "BEHIND";
 
+      const activeToday = fieldForce.filter(
+        (m) => m.isAtWork || m.status === "IN_FIELD" || m.status === "ACTIVE"
+      ).length;
+
       return {
         date: today,
         fieldForce: {
           total: fieldForce.length,
-          activeToday: fieldForce.length,
+          activeToday,
           inFieldNow,
           travelingNow,
           concludedToday,
@@ -407,6 +412,9 @@ export const dashboardService = {
           callsPlannedToday: mr.todayVisits?.planned || 10,
           severity: mr.achievementRate < 42 ? "HIGH" : "MEDIUM",
           shortfallAmount: Math.max(0, mr.monthlyTarget - mr.monthlyAchieved),
+          isAtWork: Boolean(mr.isAtWork),
+          punchInTime: mr.punchInTime,
+          punchOutTime: mr.punchOutTime,
         }));
 
       const missedVisits: MissedVisitAlert[] = visits
@@ -487,8 +495,10 @@ export const dashboardService = {
         pendingCommercial,
         geofenceExceptions,
       };
-    } catch {
-      // Fallback
+    } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
     }
 
     const currentUser = await authService.getCurrentUser();
@@ -660,13 +670,13 @@ export const dashboardService = {
         collectionService.getCollections({ limit: 100 }),
       ]);
 
-      if (territories && territories.length > 0) {
+      if (Array.isArray(territories)) {
         return territories.map((territory) => {
           const territoryMRs = mrList.filter((m) => m.territoryId === territory.id);
           const territoryVisits = visits.filter((v) => (v as any).territoryId === territory.id);
           const callsPlanned = territoryVisits.length;
           const callsCompleted = territoryVisits.filter((v) => v.status === "COMPLETED").length;
-          const complianceRate = callsPlanned > 0 ? Math.round((callsCompleted / callsPlanned) * 100) : 85;
+          const complianceRate = callsPlanned > 0 ? Math.round((callsCompleted / callsPlanned) * 100) : 0;
 
           const territoryOrders = orders.filter((o) => o.territoryId === territory.id);
           const orderValue = Math.round(territoryOrders.reduce((sum, o) => sum + o.totalAmount, 0));
@@ -677,18 +687,20 @@ export const dashboardService = {
           return {
             territoryId: territory.id,
             territoryName: territory.name,
-            totalMRs: territoryMRs.length || 1,
-            callsPlanned: callsPlanned || 15,
-            callsCompleted: callsCompleted || 12,
+            totalMRs: territoryMRs.length,
+            callsPlanned,
+            callsCompleted,
             complianceRate,
             orderValue,
             collectionsValue,
-            stockHealthRate: 92,
+            stockHealthRate: 100,
           };
         });
       }
-    } catch {
-      // Fallback
+    } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
     }
 
     const currentUser = await authService.getCurrentUser();

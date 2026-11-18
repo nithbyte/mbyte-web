@@ -6,6 +6,7 @@ export function useFieldForce(territoryId?: string) {
   return useQuery({
     queryKey: ["field-force", territoryId || "ALL"],
     queryFn: () => fieldForceService.getFieldForce(territoryId),
+    refetchInterval: 15_000,
   });
 }
 
@@ -13,6 +14,7 @@ export function useMRList(filters?: MRListFilterParams) {
   return useQuery({
     queryKey: ["mr-list", filters],
     queryFn: () => fieldForceService.getMRList(filters),
+    refetchInterval: 15_000,
   });
 }
 
@@ -21,6 +23,7 @@ export function useMRDetails(id: string) {
     queryKey: ["mr-details", id],
     queryFn: () => fieldForceService.getMRDetails(id),
     enabled: Boolean(id),
+    refetchInterval: 15_000,
   });
 }
 
@@ -32,6 +35,7 @@ export function useManagers(organizationId?: string) {
 }
 
 export function useCreateUser() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: {
       firstName: string;
@@ -43,7 +47,16 @@ export function useCreateUser() {
       organizationId?: string;
       territoryId?: string;
       managerId?: string;
+      headquarters?: string;
+      designation?: string;
     }) => fieldForceService.createUser(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["mr-list"] });
+      queryClient.invalidateQueries({ queryKey: ["field-force"] });
+      queryClient.invalidateQueries({ queryKey: ["managers"] });
+      queryClient.invalidateQueries({ queryKey: ["territories"] });
+    },
   });
 }
 

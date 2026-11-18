@@ -37,6 +37,8 @@ export interface Territory {
   zone?: string;
   headquarters?: string;
   area?: string;
+  description?: string;
+  isActive?: boolean;
   state: string;
   activeMRsCount?: number;
 }
@@ -50,6 +52,17 @@ export interface CreateTerritoryInput {
   area?: string;
   description?: string;
   organizationId?: string;
+}
+
+export interface UpdateTerritoryInput {
+  name?: string;
+  code?: string;
+  region?: string;
+  zone?: string;
+  headquarters?: string;
+  area?: string;
+  description?: string;
+  isActive?: boolean;
 }
 
 export interface User {
@@ -88,6 +101,10 @@ export interface MRPerformanceSummary {
   ordersBookedValue: number;
   collectionsValue: number;
   lastActiveTime?: string;
+  isAtWork?: boolean;
+  punchInTime?: string;
+  punchOutTime?: string;
+  attendanceStatus?: string;
 }
 
 
@@ -138,6 +155,10 @@ export interface MRListItem {
   ordersValue: number;
   collectionsValue: number;
   assignedTerritories?: TerritoryAssignment[];
+  isAtWork?: boolean;
+  punchInTime?: string;
+  punchOutTime?: string;
+  attendanceStatus?: string;
 }
 
 export interface MRProductActivity {

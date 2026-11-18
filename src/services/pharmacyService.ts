@@ -7,15 +7,17 @@ import {
   mockProductPresence,
 } from "../mock";
 import { authService } from "./authService";
-import type { Pharmacy, PharmacyInput, CustomerHistoryItem } from "../types";
+import type { Pharmacy, PharmacyInput, CustomerHistoryItem, DoctorApprovalStatus } from "../types";
+import { isOrgMatch } from "../lib/utils";
 
 export interface PharmacyQueryParams {
   search?: string;
   territoryId?: string;
   organizationId?: string;
+  approvalStatus?: DoctorApprovalStatus | "ALL";
+  createdById?: string;
+  myRegistrations?: boolean;
 }
-
-import { isOrgMatch } from "../lib/utils";
 
 const pharmaciesState: Pharmacy[] = [...mockPharmacies];
 
@@ -24,17 +26,28 @@ function mapApiPharmacy(p: any): Pharmacy {
     id: p.id,
     organizationId: p.organizationId || p.organization?.id || "",
     name: p.name,
-    contactPerson: p.proprietorName || p.contactPerson || "Chemist In-Charge",
-    phone: p.phone || "+91 44 2829 4455",
-    email: p.email,
-    address: p.address || "Chemist Address",
-    drugLicenseNumber: p.drugLicenseNo || p.drugLicenseNumber || "TN-DL-001",
-    territoryId: p.territoryId || p.territory?.id || "ter_001",
-    territoryName: p.territory?.name || "Central Territory",
-    creditLimit: Number(p.creditLimit) || 500000,
+    contactPerson: p.proprietorName || p.contactPerson || "Proprietor",
+    phone: p.phone || "",
+    email: p.email || undefined,
+    address: p.address || "",
+    drugLicenseNumber: p.drugLicenseNo || p.drugLicenseNumber || "",
+    gstNumber: p.gstin || p.gstNumber || undefined,
+    territoryId: p.territoryId || p.territory?.id || "",
+    territoryName: p.territory?.name || "Assigned Territory",
+    creditLimit: p.creditLimit !== undefined && p.creditLimit !== null ? Number(p.creditLimit) : 0,
     outstandingBalance: Number(p.currentOutstanding) || 0,
     latitude: Number(p.latitude) || 13.0572,
     longitude: Number(p.longitude) || 80.2524,
+    isActive: p.isActive ?? true,
+    approvalStatus: p.approvalStatus || "APPROVED",
+    createdById: p.createdById || undefined,
+    createdBy: p.createdBy || undefined,
+    reviewedById: p.reviewedById || undefined,
+    reviewedBy: p.reviewedBy || undefined,
+    reviewedAt: p.reviewedAt || undefined,
+    rejectionReason: p.rejectionReason || undefined,
+    createdAt: p.createdAt || undefined,
+    updatedAt: p.updatedAt || undefined,
   };
 }
 
@@ -45,6 +58,11 @@ export const pharmacyService = {
       if (params?.territoryId && params.territoryId !== "ALL") queryParams.territoryId = params.territoryId;
       if (params?.search) queryParams.search = params.search;
       if (params?.organizationId) queryParams.organizationId = params.organizationId;
+      if (params?.approvalStatus && params.approvalStatus !== "ALL") {
+        queryParams.approvalStatus = params.approvalStatus;
+      }
+      if (params?.createdById) queryParams.createdById = params.createdById;
+      if (params?.myRegistrations) queryParams.myRegistrations = params.myRegistrations;
 
       const res = await apiClient.get<any>("/pharmacies", { params: queryParams });
       const items = Array.isArray(res) ? res : (Array.isArray(res?.items) ? res.items : null);
@@ -60,9 +78,9 @@ export const pharmacyService = {
 
     let list = [...pharmaciesState];
 
-    // Enforce tenant scoping in mock fallback
     const currentUser = await authService.getCurrentUser();
-    const effectiveOrgId = params?.organizationId || (currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined);
+    const effectiveOrgId =
+      params?.organizationId || (currentUser?.role !== "SUPER_ADMIN" ? currentUser?.organizationId : undefined);
     if (effectiveOrgId) {
       list = list.filter((p) => isOrgMatch(p.organizationId, effectiveOrgId));
     }
@@ -86,6 +104,66 @@ export const pharmacyService = {
     return Promise.resolve(list);
   },
 
+  async getPendingPharmacies(params?: PharmacyQueryParams): Promise<Pharmacy[]> {
+    try {
+      const res = await apiClient.get<any>("/pharmacies/pending", { params });
+      const items = Array.isArray(res) ? res : (Array.isArray(res?.items) ? res.items : null);
+      if (items !== null) {
+        return items.map(mapApiPharmacy);
+      }
+    } catch (err) {
+      if (!isMockFallbackAllowed()) throw err;
+      console.warn("Real /pharmacies/pending call failed, falling back to mock:", err);
+    }
+    return this.getPharmacies({ ...params, approvalStatus: "PENDING_APPROVAL" });
+  },
+
+  async approvePharmacy(id: string): Promise<Pharmacy> {
+    try {
+      const res = await apiClient.patch<any>(`/pharmacies/${id}/approve`);
+      if (res && res.id) {
+        const approved = mapApiPharmacy(res);
+        const idx = pharmaciesState.findIndex((p) => p.id === id);
+        if (idx !== -1) pharmaciesState[idx] = approved;
+        return approved;
+      }
+    } catch (err) {
+      if (!isMockFallbackAllowed()) throw err;
+      console.warn("Real approvePharmacy call failed, updating local state:", err);
+    }
+    const idx = pharmaciesState.findIndex((p) => p.id === id);
+    if (idx !== -1) {
+      pharmaciesState[idx].approvalStatus = "APPROVED";
+      return pharmaciesState[idx];
+    }
+    throw new Error("Pharmacy not found");
+  },
+
+  async rejectPharmacy(id: string, reason: string): Promise<Pharmacy> {
+    if (!reason || !reason.trim()) {
+      throw new Error("A rejection reason is mandatory.");
+    }
+    try {
+      const res = await apiClient.patch<any>(`/pharmacies/${id}/reject`, { reason: reason.trim() });
+      if (res && res.id) {
+        const rejected = mapApiPharmacy(res);
+        const idx = pharmaciesState.findIndex((p) => p.id === id);
+        if (idx !== -1) pharmaciesState[idx] = rejected;
+        return rejected;
+      }
+    } catch (err) {
+      if (!isMockFallbackAllowed()) throw err;
+      console.warn("Real rejectPharmacy call failed, updating local state:", err);
+    }
+    const idx = pharmaciesState.findIndex((p) => p.id === id);
+    if (idx !== -1) {
+      pharmaciesState[idx].approvalStatus = "REJECTED";
+      pharmaciesState[idx].rejectionReason = reason.trim();
+      return pharmaciesState[idx];
+    }
+    throw new Error("Pharmacy not found");
+  },
+
   async getPharmacyById(id: string): Promise<Pharmacy | null> {
     try {
       const res = await apiClient.get<any>(`/pharmacies/${id}`);
@@ -96,7 +174,6 @@ export const pharmacyService = {
       if (!isMockFallbackAllowed()) {
         throw err;
       }
-      // fallback
     }
 
     const phm = pharmaciesState.find((p) => p.id === id);
@@ -114,13 +191,16 @@ export const pharmacyService = {
         phone: input.phone.trim(),
         address: input.address.trim(),
         drugLicenseNo: input.drugLicenseNumber.trim(),
-        territoryId: input.territoryId,
-        creditLimit: 500000,
-        latitude: input.latitude || 13.0572,
-        longitude: input.longitude || 80.2524,
-        organizationId: effectiveOrgId,
+        territoryId: input.territoryId || undefined,
+        creditLimit: input.creditLimit !== undefined ? Number(input.creditLimit) : undefined,
+        latitude: Number(input.latitude) || 13.0572,
+        longitude: Number(input.longitude) || 80.2524,
       };
+      if (currentUser?.role === "SUPER_ADMIN" && effectiveOrgId) {
+        payload.organizationId = effectiveOrgId;
+      }
       if (input.email) payload.email = input.email.trim();
+      if (input.gstNumber) payload.gstin = input.gstNumber.trim();
 
       const res = await apiClient.post<any>("/pharmacies", payload);
       if (res && res.id) {
@@ -145,12 +225,14 @@ export const pharmacyService = {
       email: input.email?.trim(),
       address: input.address.trim(),
       drugLicenseNumber: input.drugLicenseNumber.trim(),
+      gstNumber: input.gstNumber?.trim(),
       territoryId: input.territoryId,
-      territoryName: territory?.name || "Madurai North",
-      creditLimit: 500000,
+      territoryName: territory?.name || "Assigned Territory",
+      creditLimit: input.creditLimit ?? 500000,
       outstandingBalance: 0,
       latitude: input.latitude,
       longitude: input.longitude,
+      approvalStatus: "APPROVED",
     };
 
     pharmaciesState.unshift(newPhm);
@@ -159,7 +241,20 @@ export const pharmacyService = {
 
   async updatePharmacy(id: string, input: Partial<PharmacyInput>): Promise<Pharmacy> {
     try {
-      const res = await apiClient.put<any>(`/pharmacies/${id}`, input);
+      const payload: Record<string, any> = {};
+      if (input.name !== undefined) payload.name = input.name.trim();
+      if (input.contactPerson !== undefined) payload.proprietorName = input.contactPerson.trim();
+      if (input.phone !== undefined) payload.phone = input.phone.trim();
+      if (input.email !== undefined) payload.email = input.email.trim();
+      if (input.address !== undefined) payload.address = input.address.trim();
+      if (input.drugLicenseNumber !== undefined) payload.drugLicenseNo = input.drugLicenseNumber.trim();
+      if (input.gstNumber !== undefined) payload.gstin = input.gstNumber.trim();
+      if (input.territoryId !== undefined) payload.territoryId = input.territoryId;
+      if (input.latitude !== undefined) payload.latitude = Number(input.latitude);
+      if (input.longitude !== undefined) payload.longitude = Number(input.longitude);
+      if (input.creditLimit !== undefined) payload.creditLimit = Number(input.creditLimit);
+
+      const res = await apiClient.put<any>(`/pharmacies/${id}`, payload);
       if (res && res.id) {
         const updated = mapApiPharmacy(res);
         const idx = pharmaciesState.findIndex((p) => p.id === id);
@@ -170,7 +265,6 @@ export const pharmacyService = {
       if (!isMockFallbackAllowed()) {
         throw err;
       }
-      // fallback
     }
 
     const idx = pharmaciesState.findIndex((p) => p.id === id);
@@ -246,10 +340,10 @@ export const pharmacyService = {
         });
       }
     } catch {
-      // fallback
+      // ignore
     }
 
-    if (history.length === 0) {
+    if (history.length === 0 && isMockFallbackAllowed()) {
       const orders = mockOrders.filter((o) => o.pharmacyId === id);
       orders.forEach((o) => {
         history.push({
@@ -296,11 +390,11 @@ export const pharmacyService = {
     if (phm) {
       history.push({
         id: `reg_${id}`,
-        date: "2026-01-10",
+        date: phm.createdAt ? phm.createdAt.split("T")[0] : new Date().toISOString().split("T")[0],
         type: "CREATION",
         title: "Chemist Master Registry Enrollment",
-        subtitle: `DL No: ${phm.drugLicenseNumber} • Owner: ${phm.contactPerson}`,
-        status: "ACTIVE",
+        subtitle: `DL No: ${phm.drugLicenseNumber || "N/A"} • Owner: ${phm.contactPerson}`,
+        status: phm.approvalStatus || "ACTIVE",
         notes: `GPS Pin: (${phm.latitude}, ${phm.longitude})`,
       });
     }

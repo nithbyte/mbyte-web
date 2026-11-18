@@ -98,35 +98,48 @@ export const fieldForceService = {
           const mrCollections = collections.filter((c) => c.mrId === mr.id);
           const collectionsValue = mrCollections.reduce((acc, curr) => acc + curr.amount, 0);
 
+          const isAtWork = Boolean(mr.isAtWork);
           let status: "ACTIVE" | "IN_FIELD" | "IDLE" | "COMPLETED" = "ACTIVE";
           const inProgressVisit = mrVisits.find((v) => v.status === "IN_PROGRESS");
           if (inProgressVisit) {
             status = "IN_FIELD";
           } else if (callsCompleted === callsPlanned && callsPlanned > 0) {
             status = "COMPLETED";
-          } else if (callsCompleted > 0) {
+          } else if (callsCompleted > 0 || isAtWork) {
             status = "ACTIVE";
           } else {
             status = "IDLE";
           }
 
+          const punchInFormatted = mr.punchInTime
+            ? new Date(mr.punchInTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+            : undefined;
+
           return {
             mrId: mr.id,
             name: mrName,
-            territoryName: mr.territory?.name || mr.territoryId || "Assigned Territory",
+            territoryName: mr.territory?.name || mr.headquarters || mr.territoryId || "Assigned Territory",
             status,
             currentActivity: inProgressVisit
               ? `In-Call @ ${inProgressVisit.customerName}`
               : callsCompleted === callsPlanned && callsPlanned > 0
               ? "Daily Calls Concluded"
-              : "En Route to Next Clinic",
+              : isAtWork
+              ? punchInFormatted
+                ? `At Work • Punched in ${punchInFormatted}`
+                : "At Work • Shift Active"
+              : "Not Punched In",
             callsPlannedToday: callsPlanned,
             callsCompletedToday: callsCompleted,
             complianceRate,
             ordersBookedValue: ordersValue,
             collectionsValue,
             assignedTerritories: mr.assignedTerritories || [],
-            lastActiveTime: "14:45",
+            lastActiveTime: punchInFormatted,
+            isAtWork,
+            punchInTime: mr.punchInTime ?? undefined,
+            punchOutTime: mr.punchOutTime ?? undefined,
+            attendanceStatus: mr.attendanceStatus ?? undefined,
           };
         });
 
@@ -249,7 +262,7 @@ export const fieldForceService = {
           const complianceRate = planned > 0 ? Math.round((completed / planned) * 100) : 0;
 
           const tgt = targetsList.find((t: any) => t.mrId === mr.id);
-          const monthlyTarget = tgt?.targetAmount ? Number(tgt.targetAmount) : 450000;
+          const monthlyTarget = tgt?.targetAmount ? Number(tgt.targetAmount) : 0;
           const monthlyAchieved = tgt?.achievedAmount ? Number(tgt.achievedAmount) : 0;
           const achievementRate = monthlyTarget > 0 ? Math.round((monthlyAchieved / monthlyTarget) * 100) : 0;
 
@@ -260,12 +273,13 @@ export const fieldForceService = {
               ? "ON_TRACK"
               : "BELOW_TARGET";
 
+          const isAtWork = Boolean(mr.isAtWork);
           let status: "ACTIVE" | "IN_FIELD" | "IDLE" | "COMPLETED" = "ACTIVE";
           if (inProgress > 0) {
             status = "IN_FIELD";
           } else if (completed === planned && planned > 0) {
             status = "COMPLETED";
-          } else if (completed > 0) {
+          } else if (completed > 0 || isAtWork) {
             status = "ACTIVE";
           } else {
             status = "IDLE";
@@ -277,6 +291,10 @@ export const fieldForceService = {
           const mrCollections = collections.filter((c) => c.mrId === mr.id);
           const collectionsValue = mrCollections.reduce((sum, c) => sum + c.amount, 0);
 
+          const punchInFormatted = mr.punchInTime
+            ? new Date(mr.punchInTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+            : undefined;
+
           return {
             id: mr.id,
             employeeId: mr.employeeCode || "EMP-MR-001",
@@ -284,11 +302,12 @@ export const fieldForceService = {
             email: mr.user?.email || "",
             phone: mr.user?.phone || "",
             territoryId: mr.territoryId,
+            territoryName: mr.territory?.name || mr.headquarters || "Assigned Territory",
             managerId: mr.managerId || "",
             managerName: mr.manager?.user
               ? `${mr.manager.user.firstName || ""} ${mr.manager.user.lastName || ""}`.trim()
               : (mr.manager?.employeeCode || (mr.designation?.toLowerCase().includes("manager") ? "Area Lead" : "Direct Company Reporting")),
-            headquarters: mr.headquarters || mr.territory?.name || "Chennai",
+            headquarters: mr.headquarters || mr.territory?.name || "Headquarters",
             designation: mr.designation || "Medical Representative",
             joiningDate: mr.joiningDate ? mr.joiningDate.slice(0, 10) : "2026-02-01",
             status,
@@ -297,7 +316,11 @@ export const fieldForceService = {
                 ? "In-Call with Physician"
                 : completed === planned && planned > 0
                 ? "Completed Daily Call Plan"
-                : "En Route to Next Clinic",
+                : isAtWork
+                ? punchInFormatted
+                  ? `At Work • Punched in ${punchInFormatted}`
+                  : "At Work • Shift Active"
+                : "Not Punched In",
             todayVisits: {
               planned,
               completed,
@@ -312,6 +335,11 @@ export const fieldForceService = {
             ordersCount: mrOrders.length,
             ordersValue,
             collectionsValue,
+            assignedTerritories: mr.assignedTerritories || [],
+            isAtWork,
+            punchInTime: mr.punchInTime ?? undefined,
+            punchOutTime: mr.punchOutTime ?? undefined,
+            attendanceStatus: mr.attendanceStatus ?? undefined,
           };
         });
 
@@ -780,6 +808,8 @@ export const fieldForceService = {
     organizationId?: string;
     territoryId?: string;
     managerId?: string;
+    headquarters?: string;
+    designation?: string;
   }): Promise<any> {
     const roleMapping: Record<string, string> = {
       SUPER_ADMIN: "SUPER_ADMIN",
@@ -792,16 +822,23 @@ export const fieldForceService = {
 
     const backendRole = roleMapping[data.role] || data.role;
 
+    const payload: Record<string, any> = {
+      firstName: data.firstName.trim(),
+      lastName: data.lastName.trim(),
+      email: data.email.trim().toLowerCase(),
+      password: data.password || "Password123!",
+      role: backendRole,
+    };
+
+    if (data.phone?.trim()) payload.phone = data.phone.trim();
+    if (data.organizationId?.trim()) payload.organizationId = data.organizationId.trim();
+    if (data.territoryId?.trim()) payload.territoryId = data.territoryId.trim();
+    if (data.managerId?.trim()) payload.managerId = data.managerId.trim();
+    if (data.headquarters?.trim()) payload.headquarters = data.headquarters.trim();
+    if (data.designation?.trim()) payload.designation = data.designation.trim();
+
     try {
-      const res = await apiClient.post<any>("/users", {
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
-        password: data.password || "Password123!",
-        phone: data.phone,
-        role: backendRole,
-        organizationId: data.organizationId,
-      });
+      const res = await apiClient.post<any>("/users", payload);
       return res;
     } catch (err: any) {
       if (!isMockFallbackAllowed()) {
@@ -813,10 +850,10 @@ export const fieldForceService = {
       const newMockUser = {
         id: `usr_${Date.now()}`,
         organizationId: data.organizationId || currentUser?.organizationId || "",
-        firstName: data.firstName,
-        lastName: data.lastName,
-        name: `${data.firstName} ${data.lastName}`,
-        email: data.email,
+        firstName: data.firstName.trim(),
+        lastName: data.lastName.trim(),
+        name: `${data.firstName.trim()} ${data.lastName.trim()}`,
+        email: data.email.trim().toLowerCase(),
         phone: data.phone || "+91 98400 99999",
         role: data.role,
         status: "ACTIVE",

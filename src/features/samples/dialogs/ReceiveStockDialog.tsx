@@ -4,7 +4,7 @@ import React from "react";
 import { Modal } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SampleBatch } from "@/services/sampleService";
+import { SampleBatch, isPromoGiftProduct, formatSampleExpiry } from "@/services/sampleService";
 
 interface ReceiveStockDialogProps {
   isOpen: boolean;
@@ -56,7 +56,7 @@ export const ReceiveStockDialog: React.FC<ReceiveStockDialogProps> = ({
             <option value="">Select registered batch lot...</option>
             {batches.map((b) => (
               <option key={b.id} value={b.id}>
-                {b.product?.brandName} (Lot: {b.batchNumber}) — Exp: {new Date(b.expiryDate).toLocaleDateString()}
+                {isPromoGiftProduct(b.product) ? "[GIFT] " : ""}{b.product?.brandName} (Lot: {b.batchNumber}) — {formatSampleExpiry(b.expiryDate, b.product)}
               </option>
             ))}
           </select>

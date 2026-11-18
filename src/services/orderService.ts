@@ -176,10 +176,10 @@ export const orderService = {
   async getOrderKPIs(params?: { mrId?: string; territoryId?: string }): Promise<OrderKPIs> {
     const list = await this.getOrders(params);
 
-    const todayDate = "2026-10-09";
-    const currentMonthPrefix = "2026-10";
+    const todayDate = new Date().toISOString().split("T")[0];
+    const currentMonthPrefix = todayDate.substring(0, 7);
 
-    const todayOrders = list.filter((o) => o.orderDate === todayDate || o.orderDate === "2026-10-08");
+    const todayOrders = list.filter((o) => o.orderDate === todayDate);
     const monthlyOrders = list.filter((o) => o.orderDate.startsWith(currentMonthPrefix));
 
     const todayCount = todayOrders.length;
@@ -208,14 +208,17 @@ export const orderService = {
   async getOrderTrend(): Promise<OrderTrendItem[]> {
     const orders = await this.getOrders();
     const days: OrderTrendItem[] = [];
-    for (let day = 1; day <= 9; day++) {
-      const dayStr = day < 10 ? `0${day}` : `${day}`;
-      const dateStr = `2026-10-${dayStr}`;
+    const now = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(now.getDate() - i);
+      const dateStr = d.toISOString().split("T")[0];
+      const label = d.toLocaleDateString("en-IN", { month: "short", day: "2-digit" });
       const ordersOnDay = orders.filter((o) => o.orderDate === dateStr);
       const totalVal = Math.round(ordersOnDay.reduce((s, o) => s + o.totalAmount, 0));
       days.push({
         date: dateStr,
-        label: `Oct ${dayStr}`,
+        label,
         amount: totalVal,
         count: ordersOnDay.length,
       });

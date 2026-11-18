@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { territoryService } from "../services";
-import type { CreateTerritoryInput } from "../types";
+import type { CreateTerritoryInput, UpdateTerritoryInput } from "../types";
 
 export function useTerritories(organizationId?: string) {
   return useQuery({
@@ -16,6 +16,35 @@ export function useCreateTerritory() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["territories"] });
       queryClient.invalidateQueries({ queryKey: ["mr-list"] });
+      queryClient.invalidateQueries({ queryKey: ["field-force"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
+export function useUpdateTerritory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateTerritoryInput }) =>
+      territoryService.updateTerritory(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["territories"] });
+      queryClient.invalidateQueries({ queryKey: ["mr-list"] });
+      queryClient.invalidateQueries({ queryKey: ["field-force"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
+export function useDeleteTerritory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => territoryService.deleteTerritory(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["territories"] });
+      queryClient.invalidateQueries({ queryKey: ["mr-list"] });
+      queryClient.invalidateQueries({ queryKey: ["field-force"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 }

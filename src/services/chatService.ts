@@ -536,6 +536,7 @@ export const chatService = {
    */
   async getContacts(search?: string): Promise<ColleagueContact[]> {
     let rawContacts: ColleagueContact[] = [];
+    let resolvedFromBackend = false;
 
     // 1. Dedicated chat contacts endpoint
     try {
@@ -543,15 +544,16 @@ export const chatService = {
         params: search ? { search } : undefined,
       });
       const data = Array.isArray(res) ? res : (res?.data || res?.items);
-      if (Array.isArray(data) && data.length > 0) {
+      if (Array.isArray(data)) {
         rawContacts = data;
+        resolvedFromBackend = true;
       }
     } catch {
       // Fallback to enterprise personnel directory
     }
 
-    // 2. Fetch live organization personnel directory (Users and MRs)
-    if (rawContacts.length === 0) {
+    // 2. Fetch live organization personnel directory (Users and MRs) if /chat/contacts is unavailable
+    if (!resolvedFromBackend) {
       const contactsMap = new Map<string, ColleagueContact>();
 
       // Fetch users (available to Company Admin, Managers)
@@ -561,6 +563,7 @@ export const chatService = {
         });
         const usersList = Array.isArray(usersRes) ? usersRes : (usersRes?.data || usersRes?.items || []);
         if (Array.isArray(usersList)) {
+          resolvedFromBackend = true;
           for (const u of usersList) {
             if (u && (u.id || u.email)) {
               const contact = mapUserToContact(u);
@@ -579,6 +582,7 @@ export const chatService = {
         });
         const mrsList = Array.isArray(mrsRes) ? mrsRes : (mrsRes?.data || mrsRes?.items || []);
         if (Array.isArray(mrsList)) {
+          resolvedFromBackend = true;
           for (const m of mrsList) {
             if (m && (m.userId || m.user?.id || m.id)) {
               const contact = mapMrToContact(m);
@@ -590,13 +594,13 @@ export const chatService = {
         // Fallback
       }
 
-      if (contactsMap.size > 0) {
+      if (resolvedFromBackend) {
         rawContacts = Array.from(contactsMap.values());
       }
     }
 
-    // 3. Fallback: Mock contacts if offline/unreachable
-    if (rawContacts.length === 0) {
+    // 3. Fallback: Mock contacts ONLY if offline/unreachable and backend could not be reached
+    if (!resolvedFromBackend && rawContacts.length === 0) {
       rawContacts = [...mockContacts];
     }
 

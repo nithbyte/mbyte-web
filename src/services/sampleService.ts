@@ -89,7 +89,7 @@ export interface SampleLedgerEntry {
   acknowledgedById?: string | null;
   notes?: string | null;
   createdAt: string;
-  product?: { id: string; brandName: string; genericName: string; sku: string };
+  product?: { id: string; brandName: string; genericName: string; dosageForm?: string; packSize?: string; sku: string };
   batch?: { id: string; batchNumber: string; expiryDate: string };
   sourceMr?: { user?: { firstName: string; lastName: string; email: string }; territory?: { id: string; name: string; code: string } };
   targetMr?: { user?: { firstName: string; lastName: string; email: string }; territory?: { id: string; name: string; code: string } };
@@ -125,6 +125,31 @@ export interface CreateBatchParams {
   expiryDate: string;
   manufacturingDate?: string;
   initialStockQuantity?: number;
+}
+
+export interface CreateGiftInputParams {
+  name: string;
+  giftType?: string;
+  unitLabel?: string;
+  sku?: string;
+  batchNumber?: string;
+  initialStockQuantity?: number;
+  notes?: string;
+}
+
+export function isPromoGiftProduct(product?: { dosageForm?: string | null } | null): boolean {
+  return product?.dosageForm === "PROMO_GIFT";
+}
+
+export function formatSampleExpiry(
+  expiryDate?: string | null,
+  product?: { dosageForm?: string | null } | null
+): string {
+  if (isPromoGiftProduct(product)) return "No Expiry";
+  if (!expiryDate) return "N/A";
+  const d = new Date(expiryDate);
+  if (Number.isNaN(d.getTime()) || d.getUTCFullYear() >= 2090) return "No Expiry";
+  return d.toLocaleDateString();
 }
 
 export interface ReceiveStockParams {
@@ -199,6 +224,10 @@ export const sampleService = {
 
   async createBatch(params: CreateBatchParams): Promise<any> {
     return apiClient.post("/samples/batches", params);
+  },
+
+  async createGiftInput(params: CreateGiftInputParams): Promise<any> {
+    return apiClient.post("/samples/gifts", params);
   },
 
   async receiveStock(params: ReceiveStockParams): Promise<any> {

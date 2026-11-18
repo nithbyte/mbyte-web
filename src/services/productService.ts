@@ -27,9 +27,12 @@ export interface ProductQueryParams {
 const productsState: Product[] = [...mockProducts];
 
 function calculatePresenceSummary(productId: string, realAudits?: any[]): ProductPresenceSummary {
-  const audits = (realAudits && realAudits.length > 0)
-    ? realAudits.filter((a) => a.productId === productId || a.product?.id === productId)
-    : mockProductPresence.filter((a) => a.productId === productId);
+  const audits =
+    realAudits !== undefined
+      ? realAudits.filter((a) => a.productId === productId || a.product?.id === productId)
+      : isMockFallbackAllowed()
+      ? mockProductPresence.filter((a) => a.productId === productId)
+      : [];
 
   const totalAudits = audits.length;
   let availableCount = 0;
@@ -74,7 +77,35 @@ function calculatePresenceSummary(productId: string, realAudits?: any[]): Produc
   };
 }
 
+function mapApiVisualAid(v: any): VisualAid {
+  const fileUrl = v.signedUrl || v.fileUrl || "";
+  return {
+    id: v.id,
+    productId: v.productId,
+    productName: v.product?.brandName || v.productName || "Product",
+    title: v.title,
+    type: v.type,
+    fileUrl,
+    thumbnailUrl: v.thumbnailUrl || (v.type === "IMAGE" ? fileUrl : undefined),
+    fileSizeBytes: Number(v.fileSizeBytes) || 0,
+    version: v.version || 1,
+    isPublished: v.isPublished ?? true,
+    publishedAt: v.publishedAt || v.createdAt || undefined,
+    description: v.description || undefined,
+  };
+}
+
 function mapApiProduct(p: any): Product {
+  const embeddedVisualAids: VisualAid[] = Array.isArray(p.visualAids)
+    ? p.visualAids.map((v: any) =>
+        mapApiVisualAid({
+          ...v,
+          productId: v.productId || p.id,
+          productName: p.brandName || p.name,
+        })
+      )
+    : [];
+  const firstImageAid = embeddedVisualAids.find((v) => v.type === "IMAGE" && (v.thumbnailUrl || v.fileUrl));
   return {
     id: p.id,
     organizationId: p.organizationId || p.organization?.id || "",
@@ -82,21 +113,21 @@ function mapApiProduct(p: any): Product {
     genericName: p.genericName || "",
     sku: p.sku || "",
     strength: p.strength || "",
-    categoryId: p.categoryId || p.category?.id || "cat_001",
+    categoryId: p.categoryId || p.category?.id || "",
     categoryName: p.category?.name || p.categoryName || "Therapeutics",
     dosageForm: p.dosageForm || "Tablet",
     packSize: p.packSize || "10x10",
-    ptr: Number(p.ptr) || 140,
-    pts: Number(p.pts) || 126,
-    mrp: Number(p.mrp) || 200,
+    ptr: Number(p.ptr) || 0,
+    pts: Number(p.pts) || 0,
+    mrp: Number(p.mrp) || 0,
     gstPercent: Number(p.gstPercent) || Number(p.gstRate) || 12,
     gstRate: Number(p.gstRate) || 12,
     description: p.description,
     isActive: p.isActive ?? true,
-    imageUrl: p.imageUrl || undefined,
-    visualAids: [],
-    visualAidsCount: 0,
-    presenceSummary: calculatePresenceSummary(p.id),
+    imageUrl: p.imageUrl || firstImageAid?.thumbnailUrl || firstImageAid?.fileUrl || undefined,
+    visualAids: embeddedVisualAids,
+    visualAidsCount: embeddedVisualAids.length,
+    presenceSummary: calculatePresenceSummary(p.id, []),
   };
 }
 
@@ -107,10 +138,12 @@ export const productService = {
       if (params?.categoryId && params.categoryId !== "ALL") queryParams.categoryId = params.categoryId;
       if (params?.search) queryParams.search = params.search;
       if (params?.organizationId) queryParams.organizationId = params.organizationId;
+      if (params?.status === "ACTIVE") queryParams.isActive = true;
+      else if (params?.status === "INACTIVE") queryParams.isActive = false;
 
       const [prodsRes, vasRes, auditsRes] = await Promise.allSettled([
         apiClient.get<any>("/products", { params: queryParams }),
-        apiClient.get<any>("/visual-aids", { params: { limit: 1000 } }),
+        apiClient.get<any>("/visual-aids", { params: { limit: 100 } }),
         apiClient.get<any>("/product-presence", { params: { limit: 100 } }),
       ]);
 
@@ -149,9 +182,14 @@ export const productService = {
 
         return prodsList.map((p: any) => {
           const item = mapApiProduct(p);
-          const va = vasList.filter((v: any) => v.productId === p.id && Boolean(v.productId));
+          const fetchedForProduct: VisualAid[] = vasList
+            .filter((v: any) => v.productId === p.id && Boolean(v.productId))
+            .map(mapApiVisualAid);
+          const va: VisualAid[] = fetchedForProduct.length > 0 ? fetchedForProduct : item.visualAids || [];
+          const firstImage = va.find((a: VisualAid) => a.type === "IMAGE" && (a.thumbnailUrl || a.fileUrl));
           return {
             ...item,
+            imageUrl: item.imageUrl || firstImage?.thumbnailUrl || firstImage?.fileUrl || undefined,
             visualAids: va,
             visualAidsCount: va.length,
             presenceSummary: calculatePresenceSummary(p.id, auditsList),
@@ -249,20 +287,68 @@ export const productService = {
         : Array.isArray(res?.items)
         ? res.items
         : null;
-      if (items !== null && items.length > 0) {
+      if (items !== null) {
         return items.map((c: any) => ({
           id: c.id,
           name: c.name,
           slug: c.slug || c.name.toLowerCase().replace(/\s+/g, "-"),
           description: c.description,
-          productCount: c.products?.length || c._count?.products || 0,
+          productCount: c.productCount ?? c.products?.length ?? c._count?.products ?? 0,
         }));
       }
-    } catch {
-      // fallback
+    } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
     }
 
     return Promise.resolve([...mockProductCategories]);
+  },
+
+  async createProductCategory(input: {
+    name: string;
+    slug?: string;
+    description?: string;
+  }): Promise<ProductCategory> {
+    const cleanName = input.name.trim();
+    const slug =
+      (input.slug?.trim() || cleanName)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "") || `cat-${Date.now()}`;
+
+    const res = await apiClient.post<any>("/product-categories", {
+      name: cleanName,
+      slug,
+      description: input.description?.trim() || undefined,
+    });
+    const c = res?.data || res;
+    return {
+      id: c.id,
+      name: c.name,
+      slug: c.slug || slug,
+      description: c.description,
+      productCount: c.productCount ?? 0,
+    };
+  },
+
+  async updateProductCategory(
+    id: string,
+    input: { name?: string; description?: string; isActive?: boolean }
+  ): Promise<ProductCategory> {
+    const res = await apiClient.put<any>(`/product-categories/${id}`, input);
+    const c = res?.data || res;
+    return {
+      id: c.id,
+      name: c.name,
+      slug: c.slug,
+      description: c.description,
+      productCount: c.productCount ?? 0,
+    };
+  },
+
+  async deleteProductCategory(id: string): Promise<{ message: string }> {
+    return apiClient.delete<{ message: string }>(`/product-categories/${id}`);
   },
 
   async getVisualAidAnalytics(visualAidId?: string): Promise<{
@@ -311,7 +397,7 @@ export const productService = {
 
   async getVisualAids(params?: { productId?: string; search?: string }): Promise<VisualAid[]> {
     try {
-      const queryParams: Record<string, any> = { limit: 1000 };
+      const queryParams: Record<string, any> = { limit: 100 };
       if (params?.productId) queryParams.productId = params.productId;
       if (params?.search) queryParams.search = params.search;
 
@@ -326,27 +412,16 @@ export const productService = {
         ? res.items
         : null;
       if (list !== null) {
-        let mapped = list.map((v: any) => ({
-          id: v.id,
-          productId: v.productId,
-          productName: v.product?.brandName || v.productName || "Product",
-          title: v.title,
-          type: v.type,
-          fileUrl: v.signedUrl || v.fileUrl,
-          thumbnailUrl: v.thumbnailUrl || (v.type === 'IMAGE' ? (v.signedUrl || v.fileUrl) : undefined),
-          fileSizeBytes: Number(v.fileSizeBytes) || 1024000,
-          totalPages: v.totalPages || 12,
-          version: v.version || 1,
-          isApproved: v.isPublished ?? true,
-          approvedDate: v.publishedAt || "2026-01-01",
-        }));
+        let mapped = list.map(mapApiVisualAid);
         if (params?.productId) {
-          mapped = mapped.filter((v: any) => v.productId === params.productId);
+          mapped = mapped.filter((v: VisualAid) => v.productId === params.productId);
         }
         return mapped;
       }
-    } catch {
-      // fallback
+    } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
     }
 
     let list = [...mockVisualAids];
@@ -460,6 +535,9 @@ export const productService = {
         return newProduct;
       }
     } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       console.warn('Real POST /products failed, using mock:', err);
     }
     // Mock fallback: add to in-memory state
@@ -506,8 +584,9 @@ export const productService = {
       if (input.imageUrl !== undefined) payload.imageUrl = input.imageUrl;
 
       const res = await apiClient.put<any>(`/products/${id}`, payload);
-      if (res && res.id) {
-        const updated = mapApiProduct(res);
+      const data = res?.data || res;
+      if (data && data.id) {
+        const updated = mapApiProduct(data);
         const idx = productsState.findIndex((p) => p.id === id);
         if (idx !== -1) {
           productsState[idx] = updated;
@@ -515,6 +594,9 @@ export const productService = {
         return updated;
       }
     } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       console.warn('Real PUT /products/:id failed, using mock:', err);
     }
 
@@ -606,44 +688,37 @@ export const productService = {
     thumbnailUrl?: string;
     description?: string;
     version?: string;
+    fileSizeBytes?: number;
   }): Promise<import('../types').VisualAid> {
+    const allowedTypes = ['PDF', 'SLIDES', 'IMAGE', 'VIDEO'];
+    const normalizedType = allowedTypes.includes((input.type || '').toUpperCase())
+      ? input.type.toUpperCase()
+      : 'PDF';
     try {
       const payload: Record<string, any> = {
         productId: input.productId,
-        title: input.title,
-        fileUrl: input.fileUrl,
-        type: input.type || 'PDF',
-        fileSizeBytes: 2 * 1024 * 1024, // 2MB default
+        title: input.title.trim(),
+        fileUrl: input.fileUrl.trim(),
+        type: normalizedType,
+        fileSizeBytes: Number(input.fileSizeBytes) > 0 ? Number(input.fileSizeBytes) : 1024 * 1024,
         version: parseInt(input.version || '1', 10) || 1,
         isPublished: true,
       };
-      if (input.thumbnailUrl || input.type === 'IMAGE') {
-        payload.thumbnailUrl = input.thumbnailUrl || input.fileUrl;
+      if (input.thumbnailUrl || normalizedType === 'IMAGE') {
+        payload.thumbnailUrl = input.thumbnailUrl || input.fileUrl.trim();
       }
       const res = await apiClient.post<any>('/visual-aids', payload);
       const data = res?.data || res;
       if (data && data.id) {
-        const createdVA: import('../types').VisualAid = {
-          id: data.id,
-          productId: data.productId,
-          title: data.title,
-          type: data.type,
-          fileUrl: data.signedUrl || data.fileUrl,
-          thumbnailUrl: data.thumbnailUrl || (input.type === 'IMAGE' ? (data.signedUrl || data.fileUrl) : undefined),
-          fileSizeBytes: data.fileSizeBytes,
-          version: data.version || '1.0',
-          isPublished: data.isPublished ?? true,
-          description: data.description,
-        };
-        const existingIdx = mockVisualAids.findIndex((v) => v.id === data.id);
-        if (existingIdx >= 0) {
-          mockVisualAids[existingIdx] = createdVA as any;
-        } else {
-          mockVisualAids.push(createdVA as any);
-        }
-        return createdVA;
+        return mapApiVisualAid({
+          ...data,
+          description: input.description,
+        });
       }
     } catch (err) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
       console.warn('Real POST /visual-aids failed, using mock:', err);
     }
     // Mock fallback
@@ -651,16 +726,33 @@ export const productService = {
       id: `va_${Date.now()}`,
       productId: input.productId,
       title: input.title,
-      type: input.type,
+      type: normalizedType as any,
       fileUrl: input.fileUrl || 'https://example.com/deck.pdf',
-      thumbnailUrl: input.thumbnailUrl || (input.type === 'IMAGE' ? input.fileUrl : undefined),
+      thumbnailUrl: input.thumbnailUrl || (normalizedType === 'IMAGE' ? input.fileUrl : undefined),
       version: input.version || '1.0',
       isPublished: true,
       publishedAt: new Date().toISOString(),
       description: input.description,
-      fileSizeBytes: 2048000,
+      fileSizeBytes: input.fileSizeBytes || 1024000,
     };
     mockVisualAids.push(newVA as any);
     return Promise.resolve(newVA);
+  },
+
+  async toggleProductStatus(id: string, isActive: boolean): Promise<Product> {
+    return this.updateProduct(id, { isActive });
+  },
+
+  async deleteProduct(id: string): Promise<{ message: string }> {
+    const res = await apiClient.delete<{ message: string }>(`/products/${id}`);
+    const idx = productsState.findIndex((p) => p.id === id);
+    if (idx !== -1) {
+      productsState.splice(idx, 1);
+    }
+    return res;
+  },
+
+  async deleteVisualAid(id: string): Promise<{ message: string }> {
+    return apiClient.delete<{ message: string }>(`/visual-aids/${id}`);
   },
 };

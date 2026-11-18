@@ -6,3 +6,4 @@ export * from "./ProductVisualAidsDialog";
 export * from "./ProductPresenceDialog";
 export * from "./ProductFormDialog";
 export * from "./VisualAidUploadDialog";
+export * from "./CategoryManagerDialog";

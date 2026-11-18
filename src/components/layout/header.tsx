@@ -16,7 +16,7 @@ import {
   Calendar,
   MessageSquare,
 } from "lucide-react";
-import { useSidebarStore, useFilterStore } from "@/store";
+import { useSidebarStore, useFilterStore, useAuthStore } from "@/store";
 import {
   useTerritories,
   useCurrentUser,
@@ -40,7 +40,9 @@ export function Header() {
   const { toggleMobileOpen } = useSidebarStore();
   const { selectedTerritoryId, setSelectedTerritoryId, operatingDate, setOperatingDate } = useFilterStore();
   const { data: territories } = useTerritories();
-  const { data: currentUser } = useCurrentUser();
+  const storeUser = useAuthStore((s) => s.user);
+  const { data: fetchedUser } = useCurrentUser();
+  const currentUser = fetchedUser ?? storeUser;
   const { data: unreadNotificationsCount = 0 } = useUnreadNotificationsCount();
   const logoutMutation = useLogout();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -75,16 +77,18 @@ export function Header() {
   };
 
   const canonicalRole = normalizeRole(currentUser?.role);
-  const userName = currentUser?.name || "Field User";
+  const userName = currentUser?.name || [currentUser?.firstName, currentUser?.lastName].filter(Boolean).join(" ").trim() || "Loading...";
   const userRole = getRoleLabel(canonicalRole);
   const initials =
-    userName
-      .split(" ")
-      .map((part) => part[0])
-      .filter(Boolean)
-      .slice(0, 2)
-      .join("")
-      .toUpperCase() || "MB";
+    userName === "Loading..."
+      ? "MB"
+      : userName
+          .split(" ")
+          .map((part) => part[0])
+          .filter(Boolean)
+          .slice(0, 2)
+          .join("")
+          .toUpperCase() || "MB";
 
   const tenantCompanyName =
     canonicalRole === "SUPER_ADMIN"
