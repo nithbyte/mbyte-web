@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fieldForceService } from "../services";
-import type { MRListFilterParams } from "../types";
+import type { MRListFilterParams, ChangeRoleParams } from "../types";
 
 export function useFieldForce(territoryId?: string) {
   return useQuery({
@@ -127,6 +127,23 @@ export function useRevokeTerritory() {
       queryClient.invalidateQueries({ queryKey: ["mr-territories", vars.mrId] });
       queryClient.invalidateQueries({ queryKey: ["mr-list"] });
       queryClient.invalidateQueries({ queryKey: ["field-force"] });
+    },
+  });
+}
+
+export function useChangeRole() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: ChangeRoleParams) => fieldForceService.changeRole(params),
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["mr-list"] });
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["field-force"] });
+      queryClient.invalidateQueries({ queryKey: ["managers"] });
+      queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+      if (vars.mrId) {
+        queryClient.invalidateQueries({ queryKey: ["mr-details", vars.mrId] });
+      }
     },
   });
 }

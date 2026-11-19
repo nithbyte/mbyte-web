@@ -17,11 +17,12 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
-import { useMRDetails, useCurrentUser } from "@/hooks";
+import { useMRDetails, useCurrentUser, useChangeRole } from "@/hooks";
 import { useFilterStore } from "@/store";
 import { analysisService, MrAnalysisData } from "@/services/analysisService";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { normalizeRole } from "@/types";
+import { Modal } from "@/components/ui/dialog";
 import {
   ArrowLeft,
   CalendarCheck,
@@ -34,11 +35,15 @@ import {
   MapPin,
   Building,
   CheckCircle,
+  CheckCircle2,
+  AlertCircle,
   AlertTriangle,
   UserCheck,
   TrendingUp,
   TrendingDown,
   ShieldAlert,
+  ShieldCheck,
+  UserMinus,
   Search,
   RefreshCw,
   RotateCcw,
@@ -99,7 +104,53 @@ export function MRDetailsView({ id }: { id: string }) {
   const { data: currentUser } = useCurrentUser();
   const { operatingDate, dateSelectionVersion } = useFilterStore();
   const canonicalRole = normalizeRole(currentUser?.role);
-  const { data, isLoading } = useMRDetails(id);
+  const { data, isLoading, refetch: refetchMRDetails } = useMRDetails(id);
+  const changeRoleMutation = useChangeRole();
+
+  // Role Modal State
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+  const [targetRole, setTargetRole] = useState<"MANAGER" | "MR">("MANAGER");
+  const [roleModalDesignation, setRoleModalDesignation] = useState("");
+  const [roleModalError, setRoleModalError] = useState<string | null>(null);
+  const [roleModalSuccess, setRoleModalSuccess] = useState<string | null>(null);
+
+  const isCurrentManager = Boolean(
+    data?.mr?.role === "MANAGER" ||
+    data?.mr?.designation?.toLowerCase().includes("manager") ||
+    data?.mr?.employeeId?.includes("MGR")
+  );
+
+  const handleOpenRoleModal = (role: "MANAGER" | "MR") => {
+    setTargetRole(role);
+    setRoleModalDesignation(role === "MANAGER" ? "Area Sales Manager" : "Medical Representative");
+    setRoleModalError(null);
+    setRoleModalSuccess(null);
+    setIsRoleModalOpen(true);
+  };
+
+  const handleConfirmRoleChange = async () => {
+    if (!data?.mr) return;
+    setRoleModalError(null);
+    try {
+      await changeRoleMutation.mutateAsync({
+        mrId: data.mr.id,
+        userId: data.mr.userId,
+        role: targetRole,
+        designation: roleModalDesignation.trim() || undefined,
+      });
+      setRoleModalSuccess(
+        `Successfully ${targetRole === "MANAGER" ? "promoted" : "demoted"} ${data.mr.name} to ${targetRole === "MANAGER" ? "Area Sales Manager" : "Medical Representative"}.`
+      );
+      refetchMRDetails();
+      fetchAnalysis();
+      setTimeout(() => {
+        setIsRoleModalOpen(false);
+        setRoleModalSuccess(null);
+      }, 1200);
+    } catch (err: any) {
+      setRoleModalError(err?.message || "Failed to update role. Please verify credentials or network.");
+    }
+  };
 
   // Analysis & Multi-Facet Filter State
   const [datePreset, setDatePreset] = useState<DatePreset>(() =>
@@ -316,6 +367,29 @@ export function MRDetailsView({ id }: { id: string }) {
           }
           actions={
             <div className="flex gap-2">
+              {canonicalRole === "ADMIN" && (
+                isCurrentManager ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs gap-1.5 border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                    onClick={() => handleOpenRoleModal("MR")}
+                  >
+                    <UserMinus className="h-3.5 w-3.5 text-amber-600" />
+                    <span>Demote to MR</span>
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs gap-1.5 border-amber-300 bg-amber-50/60 text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
+                    onClick={() => handleOpenRoleModal("MANAGER")}
+                  >
+                    <ShieldCheck className="h-3.5 w-3.5 text-amber-600" />
+                    <span>Promote to Manager</span>
+                  </Button>
+                )
+              )}
               <Button
                 variant="outline"
                 size="sm"
@@ -1457,6 +1531,121 @@ export function MRDetailsView({ id }: { id: string }) {
           </Card>
         </div>
       )}
+
+      {/* Role Transition Modal */}
+      <Modal
+        isOpen={isRoleModalOpen}
+        onClose={() => setIsRoleModalOpen(false)}
+        title={
+          targetRole === "MANAGER"
+            ? "Promote Representative to Area Sales Manager"
+            : "Demote Manager to Medical Representative"
+        }
+        description={
+          targetRole === "MANAGER"
+            ? `Promoting ${mr.name} grants supervisory authority to oversee regional MRs, review doctor detailing metrics, and guide territory performance.`
+            : `Demoting ${mr.name} reassigns them to direct field doctor and chemist visit duties.`
+        }
+        maxWidth="md"
+      >
+        <div className="space-y-4">
+          {roleModalError && (
+            <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-400 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{roleModalError}</span>
+            </div>
+          )}
+
+          {roleModalSuccess && (
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              <span>{roleModalSuccess}</span>
+            </div>
+          )}
+
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/60 space-y-2.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-500">Employee:</span>
+              <span className="font-bold text-slate-800 dark:text-slate-200">
+                {mr.name} ({mr.employeeId})
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-500">Current Role:</span>
+              <span className="font-semibold text-slate-700 dark:text-slate-300">
+                {isCurrentManager ? "Area Sales Manager" : "Medical Representative"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-500">New Role Assignment:</span>
+              <Badge
+                className={
+                  targetRole === "MANAGER"
+                    ? "bg-amber-100 text-amber-800 border-amber-300"
+                    : "bg-sky-100 text-sky-800 border-sky-300"
+                }
+              >
+                {targetRole === "MANAGER" ? "Area Sales Manager" : "Medical Representative"}
+              </Badge>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Official Designation
+            </label>
+            <input
+              type="text"
+              value={roleModalDesignation}
+              onChange={(e) => setRoleModalDesignation(e.target.value)}
+              placeholder={targetRole === "MANAGER" ? "Area Sales Manager" : "Medical Representative"}
+              className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+            />
+            <p className="text-[11px] text-slate-400 mt-1">
+              Appears on official attendance logs, performance records, and company directories.
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
+            {targetRole === "MANAGER" ? (
+              <p>
+                <strong>Supervisory Notice:</strong> This promotion enables this individual to be selected as a Reporting Manager for field representatives in your company. Daily visit targets will adjust to manager standard (5 calls/day).
+              </p>
+            ) : (
+              <p>
+                <strong>Field Reassignment Notice:</strong> Any representatives currently reporting to this manager will be safely detached from their hierarchy to maintain reporting integrity. Daily call goals return to 10 calls/day.
+              </p>
+            )}
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setIsRoleModalOpen(false)}
+              disabled={changeRoleMutation.isPending}
+              className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirmRoleChange}
+              disabled={changeRoleMutation.isPending}
+              className={`rounded-xl px-4 py-2 text-xs font-semibold text-white transition-colors cursor-pointer ${
+                targetRole === "MANAGER"
+                  ? "bg-amber-600 hover:bg-amber-500"
+                  : "bg-sky-600 hover:bg-sky-500"
+              } disabled:opacity-50`}
+            >
+              {changeRoleMutation.isPending
+                ? "Updating Role..."
+                : targetRole === "MANAGER"
+                ? "Confirm Promotion to Manager"
+                : "Confirm Demotion to MR"}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

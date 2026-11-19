@@ -33,6 +33,7 @@ import {
   useSetPrimaryTerritory,
   useRevokeTerritory,
   useCreateTerritory,
+  useChangeRole,
 } from "@/hooks";
 import { formatCurrency } from "@/lib/utils";
 import { normalizeRole, getRoleLabel } from "@/types";
@@ -52,6 +53,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Shield,
+  ShieldCheck,
+  UserMinus,
   Layers,
   Edit3,
   Star,
@@ -149,6 +152,65 @@ export default function FieldForcePage() {
   });
   const [territoryFormError, setTerritoryFormError] = useState<string | null>(null);
   const [territoryFormSuccess, setTerritoryFormSuccess] = useState<string | null>(null);
+
+  // Role Transition Modal state (Company Admin only)
+  const changeRoleMutation = useChangeRole();
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+  const [selectedRepForRole, setSelectedRepForRole] = useState<{
+    id: string;
+    userId?: string;
+    name: string;
+    employeeId: string;
+    currentRole: string;
+    targetRole: "MANAGER" | "MR";
+    designation: string;
+  } | null>(null);
+  const [roleModalDesignation, setRoleModalDesignation] = useState("");
+  const [roleModalError, setRoleModalError] = useState<string | null>(null);
+  const [roleModalSuccess, setRoleModalSuccess] = useState<string | null>(null);
+
+  const handleOpenRoleModal = (mr: any, targetRole: "MANAGER" | "MR") => {
+    const currentRole = mr.role === "MANAGER" || mr.designation?.toLowerCase().includes("manager") ? "MANAGER" : "MR";
+    const defaultDesignation = targetRole === "MANAGER" ? "Area Sales Manager" : "Medical Representative";
+    setSelectedRepForRole({
+      id: mr.id,
+      userId: mr.userId,
+      name: mr.name,
+      employeeId: mr.employeeId,
+      currentRole,
+      targetRole,
+      designation: defaultDesignation,
+    });
+    setRoleModalDesignation(defaultDesignation);
+    setRoleModalError(null);
+    setRoleModalSuccess(null);
+    setIsRoleModalOpen(true);
+  };
+
+  const handleConfirmRoleChange = async () => {
+    if (!selectedRepForRole) return;
+    setRoleModalError(null);
+    try {
+      await changeRoleMutation.mutateAsync({
+        mrId: selectedRepForRole.id,
+        userId: selectedRepForRole.userId,
+        role: selectedRepForRole.targetRole,
+        designation: roleModalDesignation.trim() || undefined,
+      });
+      setRoleModalSuccess(
+        `Successfully ${selectedRepForRole.targetRole === "MANAGER" ? "promoted" : "demoted"} ${selectedRepForRole.name} to ${selectedRepForRole.targetRole === "MANAGER" ? "Manager" : "Medical Representative"}.`
+      );
+      refetchMRs();
+      refetchUsers();
+      setTimeout(() => {
+        setIsRoleModalOpen(false);
+        setSelectedRepForRole(null);
+        setRoleModalSuccess(null);
+      }, 1200);
+    } catch (err: any) {
+      setRoleModalError(err?.message || "Failed to update role. Please verify network or credentials.");
+    }
+  };
 
   const companyOrgId = canonicalRole === "SUPER_ADMIN" ? undefined : currentUser?.organizationId || undefined;
   const { data: territories, refetch: refetchTerritories } = useTerritories(companyOrgId);
@@ -895,6 +957,15 @@ export default function FieldForcePage() {
                               >
                                 {mr.name}
                               </Link>
+                              {mr.role === "MANAGER" || mr.designation?.toLowerCase().includes("manager") ? (
+                                <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-1.5 py-0.2 text-[9px] font-semibold text-amber-800 dark:border-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                                  Manager
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-1.5 py-0.2 text-[9px] font-semibold text-sky-700 dark:border-sky-800 dark:bg-sky-950/60 dark:text-sky-300">
+                                  MR
+                                </span>
+                              )}
                               {mr.isAtWork && <AtWorkBadge punchInTime={mr.punchInTime} />}
                             </div>
                             <div className="font-mono text-[11px] text-slate-500">
@@ -996,15 +1067,40 @@ export default function FieldForcePage() {
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           {canonicalRole === "ADMIN" && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 text-xs gap-1 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
-                              onClick={() => handleOpenAssignTerritory(mr)}
-                            >
-                              <MapPin className="h-3 w-3 text-sky-600" />
-                              <span>Manage Territories</span>
-                            </Button>
+                            <>
+                              {mr.role === "MANAGER" || mr.designation?.toLowerCase().includes("manager") ? (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-xs gap-1 text-slate-700 border-slate-300 hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 cursor-pointer"
+                                  onClick={() => handleOpenRoleModal(mr, "MR")}
+                                  title="Demote to Medical Representative"
+                                >
+                                  <UserMinus className="h-3 w-3 text-amber-600" />
+                                  <span>Demote to MR</span>
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-xs gap-1 text-amber-800 border-amber-300 bg-amber-50/50 hover:bg-amber-100 dark:bg-amber-950/30 dark:border-amber-800 dark:text-amber-300 dark:hover:bg-amber-950/60 cursor-pointer"
+                                  onClick={() => handleOpenRoleModal(mr, "MANAGER")}
+                                  title="Promote to Area Sales Manager"
+                                >
+                                  <ShieldCheck className="h-3 w-3 text-amber-600" />
+                                  <span>Promote to Manager</span>
+                                </Button>
+                              )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs gap-1 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+                                onClick={() => handleOpenAssignTerritory(mr)}
+                              >
+                                <MapPin className="h-3 w-3 text-sky-600" />
+                                <span>Territories</span>
+                              </Button>
+                            </>
                           )}
                           <Link href={`/field-force/${mr.id}`}>
                             <Button
@@ -1645,6 +1741,129 @@ export default function FieldForcePage() {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* CHANGE ROLE / PROMOTE / DEMOTE MODAL (Company Admin) */}
+      <Modal
+        isOpen={isRoleModalOpen}
+        onClose={() => setIsRoleModalOpen(false)}
+        title={
+          selectedRepForRole?.targetRole === "MANAGER"
+            ? "Promote Representative to Area Sales Manager"
+            : "Demote Manager to Medical Representative"
+        }
+        description={
+          selectedRepForRole?.targetRole === "MANAGER"
+            ? `Promoting ${selectedRepForRole?.name} grants supervisory authority to oversee regional MRs, review doctor detailing metrics, and guide territory performance.`
+            : `Demoting ${selectedRepForRole?.name} reassigns them to direct field doctor and chemist visit duties.`
+        }
+        maxWidth="md"
+      >
+        <div className="space-y-4">
+          {roleModalError && (
+            <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-400 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{roleModalError}</span>
+            </div>
+          )}
+
+          {roleModalSuccess && (
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              <span>{roleModalSuccess}</span>
+            </div>
+          )}
+
+          {selectedRepForRole && (
+            <>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/60 space-y-2.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-500">Employee:</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">
+                    {selectedRepForRole.name} ({selectedRepForRole.employeeId})
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-500">Current Role:</span>
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">
+                    {selectedRepForRole.currentRole === "MANAGER" ? "Area Sales Manager" : "Medical Representative"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-500">New Role Assignment:</span>
+                  <Badge
+                    className={
+                      selectedRepForRole.targetRole === "MANAGER"
+                        ? "bg-amber-100 text-amber-800 border-amber-300"
+                        : "bg-sky-100 text-sky-800 border-sky-300"
+                    }
+                  >
+                    {selectedRepForRole.targetRole === "MANAGER" ? "Area Sales Manager" : "Medical Representative"}
+                  </Badge>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Official Designation
+                </label>
+                <input
+                  type="text"
+                  value={roleModalDesignation}
+                  onChange={(e) => setRoleModalDesignation(e.target.value)}
+                  placeholder={
+                    selectedRepForRole.targetRole === "MANAGER"
+                      ? "Area Sales Manager"
+                      : "Medical Representative"
+                  }
+                  className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Appears on official attendance logs, performance records, and company directories.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
+                {selectedRepForRole.targetRole === "MANAGER" ? (
+                  <p>
+                    <strong>Supervisory Notice:</strong> This promotion enables this individual to be selected as a Reporting Manager for field representatives in your company. Daily visit targets will adjust to manager standard (5 calls/day).
+                  </p>
+                ) : (
+                  <p>
+                    <strong>Field Reassignment Notice:</strong> Any representatives currently reporting to this manager will be safely detached from their hierarchy to maintain reporting integrity. Daily call goals return to 10 calls/day.
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsRoleModalOpen(false)}
+                  disabled={changeRoleMutation.isPending}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmRoleChange}
+                  disabled={changeRoleMutation.isPending}
+                  className={`rounded-xl px-4 py-2 text-xs font-semibold text-white transition-colors cursor-pointer ${
+                    selectedRepForRole.targetRole === "MANAGER"
+                      ? "bg-amber-600 hover:bg-amber-500"
+                      : "bg-sky-600 hover:bg-sky-500"
+                  } disabled:opacity-50`}
+                >
+                  {changeRoleMutation.isPending
+                    ? "Updating Role..."
+                    : selectedRepForRole.targetRole === "MANAGER"
+                    ? "Confirm Promotion to Manager"
+                    : "Confirm Demotion to MR"}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </Modal>
     </div>
   );

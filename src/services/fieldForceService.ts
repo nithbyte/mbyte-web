@@ -16,6 +16,7 @@ import type {
   MRListItem,
   MRDetailsData,
   MRListFilterParams,
+  ChangeRoleParams,
   User,
   Visit,
   Order,
@@ -295,8 +296,16 @@ export const fieldForceService = {
             ? new Date(mr.punchInTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
             : undefined;
 
+          const rawRole =
+            mr.user?.role ||
+            (Array.isArray(mr.user?.roles) ? mr.user.roles[0] : null) ||
+            (mr.designation?.toLowerCase().includes("manager") || mr.employeeCode?.startsWith("EMP-MGR") ? "MANAGER" : "MR");
+          const canonicalUserRole = rawRole === "MANAGER" || rawRole === "TERRITORY_MANAGER" ? "MANAGER" : "MR";
+
           return {
             id: mr.id,
+            userId: mr.userId || mr.user?.id,
+            role: canonicalUserRole,
             employeeId: mr.employeeCode || "EMP-MR-001",
             name: mrName,
             email: mr.user?.email || "",
@@ -953,6 +962,42 @@ export const fieldForceService = {
     } catch (err: any) {
       console.error("revokeTerritory failed:", err);
       throw err;
+    }
+  },
+
+  async changeRole(params: ChangeRoleParams): Promise<any> {
+    const payload = {
+      role: params.role,
+      designation: params.designation,
+    };
+    const targetId = params.mrId || params.userId;
+    try {
+      if (params.mrId) {
+        return await apiClient.patch<any>(`/mrs/${params.mrId}/role`, payload);
+      } else if (params.userId) {
+        return await apiClient.patch<any>(`/users/${params.userId}/role`, payload);
+      } else {
+        throw new Error("Target MR ID or User ID is required");
+      }
+    } catch (err: any) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
+      console.warn("Backend changeRole failed, updating mock data:", err);
+      const isMgr = params.role === "MANAGER";
+      const desig = params.designation || (isMgr ? "Area Sales Manager" : "Medical Representative");
+      const targetMockMR = mockMRs.find((m) => m.id === targetId || m.userId === targetId);
+      if (targetMockMR) {
+        targetMockMR.designation = desig;
+        if (targetMockMR.user) {
+          (targetMockMR.user as any).role = params.role;
+        }
+      }
+      const targetMockUser = mockUsers.find((u) => u.id === targetId || (targetMockMR && u.id === targetMockMR.userId));
+      if (targetMockUser) {
+        targetMockUser.role = isMgr ? "MANAGER" : "MR";
+      }
+      return { success: true };
     }
   },
 };

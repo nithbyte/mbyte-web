@@ -125,8 +125,17 @@ export interface TerritoryAssignment {
   revokedByUser?: { id: string; firstName: string; lastName: string } | null;
 }
 
+export interface ChangeRoleParams {
+  mrId?: string;
+  userId?: string;
+  role: "MANAGER" | "MR";
+  designation?: string;
+}
+
 export interface MRListItem {
   id: string;
+  userId?: string;
+  role?: string;
   employeeId: string;
   name: string;
   email: string;
