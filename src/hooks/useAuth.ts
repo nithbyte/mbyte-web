@@ -51,7 +51,7 @@ export function useLogin() {
   const { setUser } = useAuthStore();
 
   return useMutation({
-    mutationFn: (credentials: { email: string; password?: string }) =>
+    mutationFn: (credentials: { email: string; password?: string; tenantSlug?: string }) =>
       authService.login(credentials),
     onSuccess: ({ user }) => {
       // Clear all cached queries and territory filters from previous sessions

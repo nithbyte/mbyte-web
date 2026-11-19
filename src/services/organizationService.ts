@@ -3,6 +3,17 @@ import type { Organization, CreateOrganizationInput, UpdateOrganizationInput } f
 
 export const organizationService = {
   /**
+   * Get public organization branding and details by subdomain slug (unauthenticated).
+   */
+  async getPublicBySlug(slug: string): Promise<Organization> {
+    const res = await apiClient.get<any>(`/organizations/public/by-slug/${slug.trim().toLowerCase()}`);
+    if (res && (res.id || res.data?.id)) {
+      return res.data || res;
+    }
+    throw new Error(`Organization with slug '${slug}' not found.`);
+  },
+
+  /**
    * List all tenant organizations (SUPER_ADMIN only).
    */
   async getOrganizations(params?: { search?: string; isActive?: boolean }): Promise<Organization[]> {

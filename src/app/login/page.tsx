@@ -1,28 +1,30 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Shield,
   Building,
   MapPin,
-  Stethoscope,
   Lock,
   Mail,
   Eye,
   EyeOff,
-  Sparkles,
   CheckCircle2,
   AlertCircle,
   ArrowRight,
   Database,
   Smartphone,
   BarChart3,
+  ExternalLink,
+  Clock,
+  Coins,
 } from "lucide-react";
-import { useLogin } from "@/hooks";
+import { useLogin, usePublicOrganizationBySlug } from "@/hooks";
 import { normalizeRole } from "@/types";
 import { MByteLogo } from "@/components/ui/mbyte-logo";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { getTenantSubdomain, getRootDomain } from "@/lib/subdomain";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -33,6 +35,26 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Subdomain detection
+  const [mounted, setMounted] = useState(false);
+  const [tenantSlug, setTenantSlug] = useState<string | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+    const detected = getTenantSubdomain();
+    if (detected) {
+      setTenantSlug(detected);
+    }
+  }, []);
+
+  const {
+    data: tenantOrg,
+    isLoading: isOrgLoading,
+    isError: isOrgError,
+  } = usePublicOrganizationBySlug(tenantSlug);
+
+  const rootDomain = mounted ? getRootDomain() : "localhost:3000";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +73,7 @@ export default function LoginPage() {
       const { user } = await loginMutation.mutateAsync({
         email: email.trim(),
         password,
+        ...(tenantSlug ? { tenantSlug } : {}),
       });
 
       const canonicalRole = normalizeRole(user.role);
@@ -69,6 +92,34 @@ export default function LoginPage() {
       );
     }
   };
+
+  // If a tenant subdomain is requested but does not exist in backend
+  if (tenantSlug && isOrgError) {
+    return (
+      <div className="relative min-h-screen flex items-center justify-center bg-slate-950 text-slate-100 overflow-hidden px-4 py-8">
+        <div className="relative w-full max-w-md rounded-2xl border border-rose-500/30 bg-[#242424]/95 p-8 backdrop-blur-xl shadow-2xl text-center space-y-5">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400">
+            <Building className="h-7 w-7" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-white">Company Workspace Not Found</h1>
+            <p className="mt-2 text-xs text-slate-400 leading-relaxed">
+              The tenant organization subdomain <code className="font-mono text-rose-400 font-semibold">{tenantSlug}</code> does not exist or has been deactivated.
+            </p>
+          </div>
+          <div className="pt-2">
+            <a
+              href={`http://${rootDomain}/login`}
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-800 px-4 py-2.5 text-xs font-semibold text-white hover:bg-slate-700 transition-colors"
+            >
+              <span>Return to MByte Main Platform</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-slate-950 text-slate-100 overflow-hidden px-4 py-8 sm:px-6 lg:px-8">
@@ -92,84 +143,136 @@ export default function LoginPage() {
       />
 
       <div className="relative w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-center z-10">
-        {/* Left Side: Enterprise Platform Overview */}
+        {/* Left Side: Enterprise Platform or Tenant Overview */}
         <div className="lg:col-span-5 space-y-6">
-          <div className="space-y-4">
-            <div className="inline-block py-1">
-              <MByteLogo variant="full" theme="dark" width={260} height={60} priority />
-            </div>
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
-              Pharma Field-Force Access & Management
-            </h1>
-            <p className="text-sm text-slate-400 leading-relaxed">
-              Enterprise role-based management platform for pharmaceutical field forces, territory managers, and executive administrators.
-            </p>
-          </div>
+          {tenantSlug && tenantOrg ? (
+            /* Tenant Subdomain Branded View */
+            <div className="space-y-4">
+              <div className="inline-flex items-center gap-2 rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-1 text-[11px] font-semibold text-sky-400">
+                <Building className="h-3.5 w-3.5" />
+                <span>Dedicated Enterprise Subdomain Portal</span>
+              </div>
 
-          {/* Enterprise Capabilities Showcase */}
-          <div className="space-y-3 pt-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Enterprise Security & Architecture
-            </span>
-
-            <div className="space-y-2.5">
-              <div className="flex items-start gap-3 p-3 rounded-xl border border-slate-800 bg-slate-900/60">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-purple-500/20 bg-purple-500/10 text-purple-400">
-                  <Database className="h-4 w-4" />
+              <div className="flex items-center gap-3 pt-1">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 text-white font-black text-base shadow-lg shadow-sky-500/20">
+                  {tenantOrg.code ? tenantOrg.code.slice(0, 3) : "ORG"}
                 </div>
                 <div>
-                  <h2 className="text-xs font-semibold text-white">Multi-Tenant Isolation</h2>
-                  <p className="text-[11px] text-slate-400">Independent company business data, catalogs, and quotas.</p>
+                  <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white capitalize">
+                    {tenantOrg.name}
+                  </h1>
+                  <span className="font-mono text-xs text-sky-400 font-semibold tracking-wide">
+                    {tenantOrg.code} • Subdomain: {tenantOrg.slug}.{rootDomain}
+                  </span>
                 </div>
               </div>
 
-              <div className="flex items-start gap-3 p-3 rounded-xl border border-slate-800 bg-slate-900/60">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-400">
-                  <MapPin className="h-4 w-4" />
+              <p className="text-xs text-slate-400 leading-relaxed pt-1">
+                Welcome to the official {tenantOrg.name} sales force automation workspace. All operations, visits, orders, and telemetry in this portal are isolated to your organization.
+              </p>
+
+              {/* Tenant Configuration Highlights */}
+              <div className="space-y-2.5 pt-2">
+                <div className="flex items-start gap-3 p-3 rounded-xl border border-slate-800 bg-slate-900/60">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-400">
+                    <MapPin className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-xs font-semibold text-white">Geofenced GPS Check-In</h2>
+                    <p className="text-[11px] text-slate-400">Enforced radius: {tenantOrg.geofenceRadius || 200} meters for doctor and chemist visits.</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-xs font-semibold text-white">200m PostGIS GPS Geo-Fencing</h2>
-                  <p className="text-[11px] text-slate-400">Verified doctor and chemist field visits with tamper detection.</p>
+
+                <div className="flex items-start gap-3 p-3 rounded-xl border border-slate-800 bg-slate-900/60">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-purple-500/20 bg-purple-500/10 text-purple-400">
+                    <Clock className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-xs font-semibold text-white">Company Timezone & Ledger</h2>
+                    <p className="text-[11px] text-slate-400">{tenantOrg.timezone || "Asia/Kolkata"} • Currency: {tenantOrg.currency || "INR"}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 rounded-xl border border-slate-800 bg-slate-900/60">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-sky-500/20 bg-sky-500/10 text-sky-400">
+                    <Shield className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-xs font-semibold text-white">Strict Tenant Boundary</h2>
+                    <p className="text-[11px] text-slate-400">Authentication restricted to authorized {tenantOrg.name} personnel.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Root Domain Platform Overview */
+            <div className="space-y-4">
+              <div className="inline-block py-1">
+                <MByteLogo variant="full" theme="dark" width={260} height={60} priority />
+              </div>
+              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
+                Pharma Field-Force Access & Management
+              </h1>
+              <p className="text-sm text-slate-400 leading-relaxed">
+                Enterprise role-based management platform for pharmaceutical field forces, territory managers, and executive administrators.
+              </p>
+
+              {/* Enterprise Capabilities Showcase */}
+              <div className="space-y-2.5 pt-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Enterprise Security & Architecture
+                </span>
+
+                <div className="space-y-2.5">
+                  <div className="flex items-start gap-3 p-3 rounded-xl border border-slate-800 bg-slate-900/60">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-purple-500/20 bg-purple-500/10 text-purple-400">
+                      <Database className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <h2 className="text-xs font-semibold text-white">Multi-Tenant Subdomain Routing</h2>
+                      <p className="text-[11px] text-slate-400">Each organization operates on its own dedicated subdomain.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-3 rounded-xl border border-slate-800 bg-slate-900/60">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-400">
+                      <MapPin className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <h2 className="text-xs font-semibold text-white">200m PostGIS GPS Geo-Fencing</h2>
+                      <p className="text-[11px] text-slate-400">Verified doctor and chemist field visits with tamper detection.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-3 rounded-xl border border-slate-800 bg-slate-900/60">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-sky-500/20 bg-sky-500/10 text-sky-400">
+                      <Smartphone className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <h2 className="text-xs font-semibold text-white">Offline-First Mobile Sync</h2>
+                      <p className="text-[11px] text-slate-400">Field orders and e-Detailing visual aids with automatic conflict resolution.</p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-start gap-3 p-3 rounded-xl border border-slate-800 bg-slate-900/60">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-sky-500/20 bg-sky-500/10 text-sky-400">
-                  <Smartphone className="h-4 w-4" />
+              {/* Compliance features badge list */}
+              <div className="hidden sm:flex items-center gap-4 pt-3 border-t border-slate-800/80 text-[11px] text-slate-500">
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                  <span>Multi-Tenant Isolated</span>
                 </div>
-                <div>
-                  <h2 className="text-xs font-semibold text-white">Offline-First Mobile Sync</h2>
-                  <p className="text-[11px] text-slate-400">Field orders and e-Detailing visual aids with automatic conflict resolution.</p>
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                  <span>200m PostGIS GPS</span>
                 </div>
-              </div>
-
-              <div className="flex items-start gap-3 p-3 rounded-xl border border-slate-800 bg-slate-900/60">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-amber-500/20 bg-amber-500/10 text-amber-400">
-                  <BarChart3 className="h-4 w-4" />
-                </div>
-                <div>
-                  <h2 className="text-xs font-semibold text-white">Commercial Sales Telemetry</h2>
-                  <p className="text-[11px] text-slate-400">Real-time secondary orders, stockist collections, and pacing alerts.</p>
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                  <span>RBAC Verified</span>
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* Compliance features badge list */}
-          <div className="hidden sm:flex items-center gap-4 pt-3 border-t border-slate-800/80 text-[11px] text-slate-500">
-            <div className="flex items-center gap-1.5">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-              <span>Multi-Tenant Isolated</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-              <span>200m PostGIS GPS</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-              <span>RBAC Verified</span>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Right Side: Login Card */}
@@ -182,14 +285,18 @@ export default function LoginPage() {
                     <MByteLogo variant="icon" width={44} height={44} />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-white">Sign In to MByte</h2>
+                    <h2 className="text-lg font-bold text-white">
+                      {tenantSlug && tenantOrg ? `Sign In to ${tenantOrg.name}` : "Sign In to MByte"}
+                    </h2>
                     <p className="text-xs text-slate-400">
-                      Enter your corporate credentials to continue
+                      {tenantSlug && tenantOrg
+                        ? `Authorized ${tenantOrg.name} personnel credentials required`
+                        : "Enter your corporate credentials to continue"}
                     </p>
                   </div>
                 </div>
                 <span className="hidden sm:inline-flex items-center rounded-full bg-slate-800 px-2.5 py-1 text-[11px] font-medium text-slate-300">
-                  Secure Enterprise SSO
+                  {tenantSlug ? "Tenant SSO" : "Platform SSO"}
                 </span>
               </div>
             </div>
@@ -207,7 +314,7 @@ export default function LoginPage() {
                   htmlFor="login-email"
                   className="block text-xs font-semibold text-slate-300 mb-1.5"
                 >
-                  Corporate Email
+                  {tenantSlug && tenantOrg ? `${tenantOrg.name} Corporate Email` : "Corporate Email"}
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-3.5 top-3 h-4 w-4 text-slate-500" />
@@ -218,7 +325,7 @@ export default function LoginPage() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@company.com"
+                    placeholder={tenantSlug && tenantOrg ? `username@${tenantOrg.slug}.com` : "name@company.com"}
                     className="w-full rounded-xl border border-slate-700 bg-slate-900/90 px-3.5 py-2.5 pl-10 text-xs text-white placeholder-slate-500 focus:border-[#FF6B00] focus:outline-none focus:ring-1 focus:ring-[#FF6B00] transition-colors"
                   />
                 </div>
@@ -236,7 +343,11 @@ export default function LoginPage() {
                     href="#forgot-password"
                     onClick={(e) => {
                       e.preventDefault();
-                      alert("Please contact your Company Administrator or IT support to reset your credentials.");
+                      alert(
+                        tenantSlug && tenantOrg
+                          ? `Please contact your ${tenantOrg.name} Company Administrator to reset your credentials.`
+                          : "Please contact your Company Administrator or IT support to reset your credentials."
+                      );
                     }}
                     className="text-[11px] text-orange-400 hover:text-orange-300 transition-colors"
                   >
@@ -294,7 +405,7 @@ export default function LoginPage() {
                   </>
                 ) : (
                   <>
-                    <span>Sign In to FieldOps Portal</span>
+                    <span>{tenantSlug && tenantOrg ? `Sign In to ${tenantOrg.name}` : "Sign In to FieldOps Portal"}</span>
                     <ArrowRight className="h-4 w-4" />
                   </>
                 )}

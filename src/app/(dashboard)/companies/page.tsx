@@ -19,15 +19,18 @@ import {
   Layers,
   ArrowUpRight,
   Filter,
+  ExternalLink,
 } from "lucide-react";
 import { useOrganizations, useCreateOrganization, useUpdateOrganization, useCurrentUser } from "@/hooks";
 import { normalizeRole, type Organization, type CreateOrganizationInput, type UpdateOrganizationInput } from "@/types";
 import { Modal } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { buildTenantSubdomainUrl, getRootDomain } from "@/lib/subdomain";
 
 export default function CompaniesPage() {
   const { data: currentUser } = useCurrentUser();
   const canonicalRole = normalizeRole(currentUser?.role);
+  const rootDomain = typeof window !== "undefined" ? getRootDomain() : "localhost:3000";
 
   const { data: organizations, isLoading, refetch } = useOrganizations();
   const createMutation = useCreateOrganization();
@@ -374,9 +377,16 @@ export default function CompaniesPage() {
                             <span className="font-mono text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
                               {org.code}
                             </span>
-                            <span className="text-[11px] text-slate-400">
-                              /{org.slug}
-                            </span>
+                            <a
+                              href={buildTenantSubdomainUrl(org.slug, "/login")}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-[11px] font-medium text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300 hover:underline transition-colors"
+                              title={`Open ${org.name} Portal (${org.slug}.${rootDomain})`}
+                            >
+                              <span>{org.slug}.{rootDomain}</span>
+                              <ExternalLink className="h-2.5 w-2.5" />
+                            </a>
                           </div>
                         </div>
                       </div>
@@ -527,6 +537,18 @@ export default function CompaniesPage() {
                 placeholder="e.g. apex-healthcare"
                 className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
               />
+            </div>
+
+            <div className="sm:col-span-2 rounded-xl border border-sky-500/20 bg-sky-500/5 p-3 text-xs">
+              <span className="font-semibold text-sky-700 dark:text-sky-300 block mb-0.5">
+                Dedicated Tenant Subdomain Preview:
+              </span>
+              <span className="font-mono text-xs text-sky-600 dark:text-sky-400">
+                http://{createForm.slug || "tenant"}.{rootDomain}
+              </span>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                Upon creation, this organization’s administrators and field force will access their isolated workspace via this subdomain.
+              </p>
             </div>
 
             <div>

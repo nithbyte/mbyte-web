@@ -199,7 +199,11 @@ export const authService = {
    * Authenticates user with credentials via backend API.
    * Calls: POST /api/v1/auth/login
    */
-  async login(credentials: { email: string; password?: string }): Promise<{ user: User; token: string }> {
+  async login(credentials: {
+    email: string;
+    password?: string;
+    tenantSlug?: string;
+  }): Promise<{ user: User; token: string }> {
     // Clear any stale tokens or cached users from a previous session before authenticating
     tokenStorage.clearTokens();
     activeUserId = "";
@@ -212,6 +216,7 @@ export const authService = {
       const res = await apiClient.post<any>("/auth/login", {
         email,
         password,
+        ...(credentials.tenantSlug ? { tenantSlug: credentials.tenantSlug } : {}),
       });
 
       if (res && res.accessToken && res.user) {
@@ -267,5 +272,5 @@ export const authService = {
 export const getCurrentUser = () => authService.getCurrentUser();
 export const getAllUsers = () => authService.getAllUsers();
 export const switchUser = (userId: string) => authService.switchUser(userId);
-export const login = (credentials: { email: string; password?: string }) => authService.login(credentials);
+export const login = (credentials: { email: string; password?: string; tenantSlug?: string }) => authService.login(credentials);
 export const logout = () => authService.logout();
