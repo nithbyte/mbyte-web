@@ -44,14 +44,23 @@ export interface RouteSession {
 
 export interface LiveMrVisitPin {
   id: string;
+  sequence?: number;
   customerType: "DOCTOR" | "PHARMACY" | "DISTRIBUTOR" | string;
   customerName: string;
   clinicName?: string | null;
+  address?: string | null;
+  phone?: string | null;
   status: string;
   checkInTime?: string | null;
   checkOutTime?: string | null;
+  durationMinutes?: number | null;
+  distanceMeters?: number | null;
+  verificationStatus?: string;
+  feedbackNotes?: string | null;
   latitude: number;
   longitude: number;
+  clinicLatitude?: number;
+  clinicLongitude?: number;
 }
 
 export type LiveConnectionState = "LIVE" | "RECENT" | "STALE" | "OFFLINE" | "DISABLED";

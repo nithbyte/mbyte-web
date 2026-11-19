@@ -40,6 +40,10 @@ import {
   WifiOff,
   Compass,
   Stethoscope,
+  Pill,
+  LocateFixed,
+  ShieldCheck,
+  X,
 } from "lucide-react";
 
 const LiveTrackingMap = dynamic(
@@ -84,6 +88,7 @@ export default function LiveTrackingPage() {
   const [followSelected, setFollowSelected] = useState(true);
   const [showTrail, setShowTrail] = useState(true);
   const [showVisits, setShowVisits] = useState(true);
+  const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null);
   const [fitAllSignal, setFitAllSignal] = useState(0);
 
   // Toggle busy states
@@ -292,11 +297,12 @@ export default function LiveTrackingPage() {
     return () => clearInterval(timer);
   }, [isPlaybackMode, isPlaying, playbackSpeed, selectedMr]);
 
-  // Reset playback when switching MR
+  // Reset playback and selected visit when switching MR
   useEffect(() => {
     setIsPlaybackMode(false);
     setIsPlaying(false);
     setPlaybackIdx(0);
+    setSelectedVisitId(null);
   }, [selectedMrId, operatingDate]);
 
   const playbackPoint =
@@ -670,7 +676,15 @@ export default function LiveTrackingPage() {
             <LiveTrackingMap
               mrs={filteredMrs}
               selectedMrId={selectedMrId}
-              onSelectMr={(id) => setSelectedMrId(id)}
+              onSelectMr={(id) => {
+                setSelectedMrId(id);
+                setSelectedVisitId(null);
+              }}
+              selectedVisitId={selectedVisitId}
+              onSelectVisit={(id) => {
+                setSelectedVisitId(id);
+                setShowVisits(true);
+              }}
               followSelected={followSelected && !isPlaybackMode}
               showTrail={showTrail}
               showVisits={showVisits}
@@ -860,6 +874,168 @@ export default function LiveTrackingPage() {
                         )}
                       </>
                     )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Today's Customer Field Visits & Stops for Selected MR */}
+          {selectedMr && (
+            <Card className="shadow-xs">
+              <CardContent className="p-3.5 space-y-3">
+                <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2.5 dark:border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-100 text-[#FF6B00] dark:bg-orange-950/40">
+                      <Stethoscope className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                        Today&apos;s Customer Visits &amp; Stops ({selectedMr.visitPins.length})
+                      </h4>
+                      <p className="text-[11px] text-slate-500">
+                        {selectedMr.name}&apos;s customer itinerary. Click any stop to spotlight location &amp; 200m geofence on the live map.
+                      </p>
+                    </div>
+                  </div>
+                  {selectedVisitId && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedVisitId(null)}
+                      className="h-7 gap-1 text-[11px] text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                    >
+                      <X className="h-3 w-3" />
+                      Clear Spotlight
+                    </Button>
+                  )}
+                </div>
+
+                {selectedMr.visitPins.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-slate-200 p-6 text-center text-xs text-slate-500 dark:border-slate-800">
+                    <Stethoscope className="mx-auto h-6 w-6 text-slate-400 opacity-60 mb-1" />
+                    No customer visits recorded for {selectedMr.name} today.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                    {selectedMr.visitPins.map((pin, idx) => {
+                      const isSelected = selectedVisitId === pin.id;
+                      const sequence = pin.sequence || idx + 1;
+                      const isCompleted = pin.status === "COMPLETED";
+                      const isInProgress = pin.status === "IN_PROGRESS";
+
+                      return (
+                        <div
+                          key={pin.id}
+                          onClick={() => {
+                            setSelectedVisitId(pin.id);
+                            setShowVisits(true);
+                          }}
+                          className={cn(
+                            "group relative flex flex-col justify-between rounded-lg border p-3 text-xs transition-all cursor-pointer",
+                            isSelected
+                              ? "border-[#FF6B00] bg-orange-50/70 shadow-xs ring-2 ring-[#FF6B00]/20 dark:bg-orange-950/20"
+                              : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-xs dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700",
+                          )}
+                        >
+                          <div className="space-y-1.5">
+                            <div className="flex items-center justify-between gap-1.5">
+                              <span
+                                className={cn(
+                                  "inline-flex items-center justify-center rounded-full px-2 py-0.5 text-[10px] font-black",
+                                  isSelected
+                                    ? "bg-[#FF6B00] text-white"
+                                    : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+                                )}
+                              >
+                                Stop #{sequence}
+                              </span>
+                              <Badge
+                                variant={
+                                  isCompleted
+                                    ? "success"
+                                    : isInProgress
+                                      ? "default"
+                                      : "warning"
+                                }
+                                className="text-[9px] px-1.5 py-0 capitalize"
+                              >
+                                {pin.status.toLowerCase().replace("_", " ")}
+                              </Badge>
+                            </div>
+
+                            <div className="pt-0.5">
+                              <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white">
+                                {pin.customerType === "DOCTOR" ? (
+                                  <Stethoscope className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                                ) : (
+                                  <Pill className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                                )}
+                                <span className="truncate">{pin.customerName}</span>
+                              </div>
+                              {pin.clinicName && (
+                                <p className="truncate text-[11px] font-medium text-slate-500">
+                                  {pin.clinicName}
+                                </p>
+                              )}
+                              {pin.address && (
+                                <p className="line-clamp-1 text-[11px] text-slate-400">
+                                  {pin.address}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 space-y-1 text-[11px]">
+                            {pin.checkInTime && (
+                              <div className="flex items-center justify-between text-slate-600 dark:text-slate-400">
+                                <span className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3 text-slate-400" />
+                                  Check-in: {new Date(pin.checkInTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                </span>
+                                {pin.durationMinutes !== null && pin.durationMinutes !== undefined && (
+                                  <span className="font-semibold text-slate-700 dark:text-slate-300">
+                                    {pin.durationMinutes} min
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            {pin.distanceMeters !== null && pin.distanceMeters !== undefined && (
+                              <div className="flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                                <ShieldCheck className="h-3 w-3 text-emerald-500 shrink-0" />
+                                <span>
+                                  ±{Math.round(pin.distanceMeters)}m ({pin.verificationStatus || "VERIFIED"})
+                                </span>
+                              </div>
+                            )}
+
+                            <div className="pt-1 flex items-center justify-between">
+                              <span
+                                className={cn(
+                                  "text-[10px] font-semibold flex items-center gap-1",
+                                  isSelected
+                                    ? "text-[#FF6B00]"
+                                    : "text-slate-500 group-hover:text-slate-800 dark:group-hover:text-slate-200",
+                                )}
+                              >
+                                <LocateFixed className="h-3 w-3" />
+                                {isSelected ? "Spotlight Active" : "Click to Spotlight"}
+                              </span>
+                              <a
+                                href={`https://www.google.com/maps/search/?api=1&query=${pin.latitude},${pin.longitude}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-[10px] text-sky-600 hover:underline flex items-center gap-0.5"
+                              >
+                                Maps ↗
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>

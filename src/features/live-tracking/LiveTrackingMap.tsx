@@ -3,19 +3,34 @@
 import React, { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import type { LiveMrRecord, RouteBreadcrumb } from "@/services/routeTrackingService";
+import type { LiveMrRecord, RouteBreadcrumb, LiveMrVisitPin } from "@/services/routeTrackingService";
 import { Layers, Maximize2, Compass } from "lucide-react";
 
-type MapLayerKey = "STREET" | "SATELLITE" | "CLEAN";
+type MapLayerKey = "STREET" | "DETAILED" | "SATELLITE";
 
 const TILE_LAYERS: Record<
   MapLayerKey,
-  { label: string; url: string; attribution: string; maxZoom: number }
+  {
+    label: string;
+    url: string;
+    attribution: string;
+    maxZoom: number;
+    maxNativeZoom?: number;
+    subdomains?: string[];
+  }
 > = {
   STREET: {
     label: "Street",
     url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
     attribution: "&copy; OpenStreetMap contributors",
+    subdomains: ["a", "b", "c"],
+    maxZoom: 19,
+  },
+  DETAILED: {
+    label: "Detailed",
+    url: "https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
+    attribution: "&copy; OpenStreetMap contributors, Humanitarian map style",
+    subdomains: ["a", "b", "c"],
     maxZoom: 19,
   },
   SATELLITE: {
@@ -23,12 +38,7 @@ const TILE_LAYERS: Record<
     url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     attribution: "Tiles &copy; Esri",
     maxZoom: 19,
-  },
-  CLEAN: {
-    label: "Clean",
-    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-    attribution: "&copy; OpenStreetMap &copy; CARTO",
-    maxZoom: 19,
+    maxNativeZoom: 17,
   },
 };
 
@@ -39,6 +49,8 @@ export interface LiveTrackingMapProps {
   followSelected: boolean;
   showTrail: boolean;
   showVisits: boolean;
+  selectedVisitId?: string | null;
+  onSelectVisit?: (visitId: string) => void;
   playbackPoint?: RouteBreadcrumb | null;
   fitAllSignal: number;
 }
@@ -110,17 +122,29 @@ function buildMrMarkerHtml(mr: LiveMrRecord, isSelected: boolean): string {
   `;
 }
 
-function buildVisitPinHtml(status: string, customerType: string): string {
-  const isDone = status === "COMPLETED";
-  const isInProgress = status === "IN_PROGRESS";
+function buildVisitPinHtml(pin: LiveMrVisitPin, isSelected: boolean, sequence: number): string {
+  const isDone = pin.status === "COMPLETED";
+  const isInProgress = pin.status === "IN_PROGRESS";
   const color = isDone ? "#059669" : isInProgress ? "#0284c7" : "#d97706";
-  const symbol = customerType === "PHARMACY" ? "Rx" : "Dr";
+  const typeBadge = pin.customerType === "PHARMACY" ? "Rx" : "Dr";
+
+  const halo = isSelected
+    ? `<div style="position:absolute;inset:-7px;border-radius:9999px;border:3px solid #FF6B00;animation:mbyte-ping 1.5s infinite;opacity:0.85;"></div>`
+    : isInProgress
+      ? `<div style="position:absolute;inset:-5px;border-radius:9999px;border:2px solid ${color};animation:mbyte-ping 2s infinite;opacity:0.6;"></div>`
+      : "";
+
   return `
-    <div style="transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;">
-      <div style="width:24px;height:24px;border-radius:9999px;background:${color};border:2px solid #ffffff;color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.3);">
-        ${symbol}
+    <div style="position:relative;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;cursor:pointer;">
+      ${halo}
+      <div style="display:flex;align-items:center;justify-content:center;min-width:30px;height:30px;padding:0 6px;border-radius:9999px;background:${color};border:${isSelected ? "3px solid #FF6B00" : "2px solid #ffffff"};color:#ffffff;font-size:11px;font-weight:800;box-shadow:0 3px 10px rgba(0,0,0,0.35);gap:3px;${isSelected ? "transform:scale(1.15);" : ""}">
+        <span>#${sequence}</span>
+        <span style="font-size:9px;opacity:0.9;">${typeBadge}</span>
       </div>
-      <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid ${color};margin-top:-1px;"></div>
+      <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid ${isSelected ? "#FF6B00" : color};margin-top:-1px;"></div>
+      <div style="margin-top:2px;padding:1px 6px;border-radius:4px;background:rgba(15,23,42,0.88);color:#ffffff;font-size:10px;font-weight:600;white-space:nowrap;box-shadow:0 2px 4px rgba(0,0,0,0.25);border:1px solid ${isSelected ? "#FF6B00" : "rgba(255,255,255,0.15)"};">
+        ${pin.customerName}
+      </div>
     </div>
   `;
 }
@@ -132,6 +156,8 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
   followSelected,
   showTrail,
   showVisits,
+  selectedVisitId,
+  onSelectVisit,
   playbackPoint,
   fitAllSignal,
 }) => {
@@ -141,17 +167,20 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
   const markersRef = useRef<Map<string, AnimatedMarkerEntry>>(new Map());
   const trailLayerRef = useRef<L.LayerGroup | null>(null);
   const visitsLayerRef = useRef<L.LayerGroup | null>(null);
+  const visitMarkersMapRef = useRef<Map<string, L.Marker>>(new Map());
+  const geofenceCircleRef = useRef<L.Circle | null>(null);
   const playbackMarkerRef = useRef<L.Marker | null>(null);
   const hasInitialFitRef = useRef(false);
 
-  const [layerKey, setLayerKey] = useState<MapLayerKey>("CLEAN");
+  // Default to STREET (OpenStreetMap) so it loads immediately without watermarks or payment gates
+  const [layerKey, setLayerKey] = useState<MapLayerKey>("STREET");
 
   // Initialize Leaflet map once
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
     const map = L.map(containerRef.current, {
-      center: [13.0827, 80.2707], // Default India/Tamil Nadu center until fixes arrive
+      center: [13.0827, 80.2707], // Default Tamil Nadu center until fixes arrive
       zoom: 12,
       zoomControl: false,
       preferCanvas: false,
@@ -159,10 +188,11 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
 
     L.control.zoom({ position: "bottomright" }).addTo(map);
 
-    const cfg = TILE_LAYERS.CLEAN;
+    const cfg = TILE_LAYERS.STREET;
     tileLayerRef.current = L.tileLayer(cfg.url, {
       attribution: cfg.attribution,
       maxZoom: cfg.maxZoom,
+      subdomains: cfg.subdomains || ["a", "b", "c"],
     }).addTo(map);
 
     trailLayerRef.current = L.layerGroup().addTo(map);
@@ -175,6 +205,11 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
         if (entry.rafId) cancelAnimationFrame(entry.rafId);
       });
       markersRef.current.clear();
+      visitMarkersMapRef.current.clear();
+      if (geofenceCircleRef.current) {
+        geofenceCircleRef.current.remove();
+        geofenceCircleRef.current = null;
+      }
       map.remove();
       mapRef.current = null;
     };
@@ -191,6 +226,8 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
     tileLayerRef.current = L.tileLayer(cfg.url, {
       attribution: cfg.attribution,
       maxZoom: cfg.maxZoom,
+      maxNativeZoom: cfg.maxNativeZoom,
+      subdomains: cfg.subdomains || ["a", "b", "c"],
     }).addTo(map);
   }, [layerKey]);
 
@@ -264,7 +301,6 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
 
           const animate = (nowTs: number) => {
             const t = Math.min(1, (nowTs - startTs) / durationMs);
-            // Smooth cubic ease-out
             const eased = 1 - Math.pow(1 - t, 3);
             const nextLat = startLat + (targetLat - startLat) * eased;
             const nextLng = startLng + (targetLng - startLng) * eased;
@@ -399,33 +435,100 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
       .addTo(layer);
   }, [showTrail, selectedMr?.mrId, selectedMr?.trail]);
 
-  // Render doctor / pharmacy visit pins for selected MR
+  // Render doctor / pharmacy visit pins & sequence trail for selected MR
   useEffect(() => {
     const layer = visitsLayerRef.current;
-    if (!layer) return;
+    const map = mapRef.current;
+    if (!layer || !map) return;
     layer.clearLayers();
+    visitMarkersMapRef.current.clear();
+
+    if (geofenceCircleRef.current) {
+      geofenceCircleRef.current.remove();
+      geofenceCircleRef.current = null;
+    }
 
     if (!showVisits || !selectedMr || !selectedMr.visitPins || selectedMr.visitPins.length === 0) {
       return;
     }
 
-    for (const pin of selectedMr.visitPins) {
+    // Connect visits with a dashed sequence route line
+    const visitCoords: L.LatLngTuple[] = selectedMr.visitPins.map((p) => [p.latitude, p.longitude]);
+    if (visitCoords.length > 1) {
+      L.polyline(visitCoords, {
+        color: "#0284c7",
+        weight: 2.5,
+        dashArray: "6, 6",
+        opacity: 0.65,
+      }).addTo(layer);
+    }
+
+    // Render individual visit pins
+    selectedMr.visitPins.forEach((pin, idx) => {
+      const isSelected = selectedVisitId === pin.id;
+      const sequence = pin.sequence || idx + 1;
+
       const icon = L.divIcon({
         className: "mbyte-visit-pin",
-        html: buildVisitPinHtml(pin.status, pin.customerType),
+        html: buildVisitPinHtml(pin, isSelected, sequence),
         iconSize: [0, 0],
       });
-      L.marker([pin.latitude, pin.longitude], { icon, zIndexOffset: 300 })
-        .bindPopup(
-          `<div style="font-size:12px;line-height:1.4;">
-            <strong>${pin.customerName}</strong>${pin.clinicName ? `<br/><span style="color:#64748b;">${pin.clinicName}</span>` : ""}
-            <br/><span style="font-weight:600;color:${pin.status === "COMPLETED" ? "#059669" : "#d97706"};">${pin.status}</span>
-            ${pin.checkInTime ? `<br/>Check-in: ${new Date(pin.checkInTime).toLocaleTimeString()}` : ""}
-          </div>`,
-        )
-        .addTo(layer);
+
+      const marker = L.marker([pin.latitude, pin.longitude], {
+        icon,
+        zIndexOffset: isSelected ? 800 : 350,
+      }).addTo(layer);
+
+      const statusColor = pin.status === "COMPLETED" ? "#059669" : pin.status === "IN_PROGRESS" ? "#0284c7" : "#d97706";
+
+      marker.bindPopup(
+        `<div style="font-size:12px;min-width:210px;line-height:1.45;padding:2px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;">
+            <span style="font-weight:800;color:${statusColor};font-size:13px;">Stop #${sequence}: ${pin.customerName}</span>
+            <span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;background:${statusColor}20;color:${statusColor};">${pin.status}</span>
+          </div>
+          ${pin.clinicName ? `<div style="font-size:11px;color:#64748b;font-weight:600;">Clinic: ${pin.clinicName}</div>` : ""}
+          ${pin.address ? `<div style="font-size:11px;color:#64748b;margin-top:2px;">${pin.address}</div>` : ""}
+          ${pin.checkInTime ? `<div style="font-size:11px;margin-top:4px;color:#0f172a;"><strong>Check-in:</strong> ${new Date(pin.checkInTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} ${pin.durationMinutes ? `(${pin.durationMinutes}m)` : ""}</div>` : ""}
+          ${pin.distanceMeters !== null && pin.distanceMeters !== undefined ? `<div style="font-size:11px;color:#059669;margin-top:2px;"><strong>Geofence Check:</strong> ${pin.distanceMeters}m from target (${pin.verificationStatus || "VERIFIED"})</div>` : ""}
+          <div style="margin-top:8px;padding-top:6px;border-top:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;">
+            <a href="https://www.google.com/maps/search/?api=1&query=${pin.latitude},${pin.longitude}" target="_blank" rel="noopener noreferrer" style="color:#0284c7;font-weight:600;font-size:11px;text-decoration:none;">Open in Google Maps ↗</a>
+          </div>
+        </div>`,
+      );
+
+      marker.on("click", () => {
+        onSelectVisit?.(pin.id);
+      });
+
+      visitMarkersMapRef.current.set(pin.id, marker);
+    });
+
+    // If a visit is currently selected, center map on it and draw a 200m PostGIS geofence circle
+    if (selectedVisitId) {
+      const activePin = selectedMr.visitPins.find((p) => p.id === selectedVisitId);
+      if (activePin) {
+        const marker = visitMarkersMapRef.current.get(activePin.id);
+        if (marker) {
+          marker.openPopup();
+        }
+
+        const clinicLat = activePin.clinicLatitude ?? activePin.latitude;
+        const clinicLng = activePin.clinicLongitude ?? activePin.longitude;
+
+        geofenceCircleRef.current = L.circle([clinicLat, clinicLng], {
+          radius: 200,
+          color: "#10b981",
+          fillColor: "#10b981",
+          fillOpacity: 0.16,
+          weight: 2,
+          dashArray: "4, 4",
+        }).addTo(layer);
+
+        map.flyTo([activePin.latitude, activePin.longitude], 16, { animate: true, duration: 0.7 });
+      }
     }
-  }, [showVisits, selectedMr?.mrId, selectedMr?.visitPins]);
+  }, [showVisits, selectedMr?.mrId, selectedMr?.visitPins, selectedVisitId, onSelectVisit]);
 
   // Render animated route playback scrubber marker
   useEffect(() => {
@@ -473,10 +576,10 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
 
       <div ref={containerRef} className="h-full w-full min-h-[460px]" />
 
-      {/* Top-Left Map Layer Switcher */}
+      {/* Top-Left Map Layer Switcher (Street, Detailed, Satellite) */}
       <div className="absolute top-3 left-3 z-[400] flex items-center gap-1 rounded-lg border border-slate-200/90 bg-white/95 p-1 shadow-md backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">
         <Layers className="h-3.5 w-3.5 text-slate-500 ml-1.5 mr-0.5" />
-        {(["CLEAN", "STREET", "SATELLITE"] as MapLayerKey[]).map((key) => (
+        {(["STREET", "DETAILED", "SATELLITE"] as MapLayerKey[]).map((key) => (
           <button
             key={key}
             type="button"
