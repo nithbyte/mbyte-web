@@ -56,8 +56,11 @@ import {
   XCircle,
   FileText,
   Navigation,
+  Crosshair,
+  Sparkles,
 } from "lucide-react";
 import type { DoctorCategory } from "@/types";
+import { mapsService } from "@/services/mapsService";
 
 export function DoctorsRegistryPage({
   doctorCategory = "DOCTOR",
@@ -174,6 +177,72 @@ export function DoctorsRegistryPage({
     longitude: 80.252,
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [isGeocoding, setIsGeocoding] = useState(false);
+  const [geotagStatus, setGeotagStatus] = useState<{ provider: string; address?: string } | null>(null);
+
+  const handleGeocodeAddress = async () => {
+    const addressToQuery = [formState.clinicName, formState.address].filter(Boolean).join(", ");
+    if (!addressToQuery.trim()) {
+      alert("Please enter a clinic address or clinic name to geotag.");
+      return;
+    }
+    setIsGeocoding(true);
+    try {
+      const geo = await mapsService.geocode(addressToQuery);
+      if (geo && typeof geo.latitude === "number" && typeof geo.longitude === "number") {
+        setFormState((prev) => ({
+          ...prev,
+          latitude: Number(geo.latitude.toFixed(6)),
+          longitude: Number(geo.longitude.toFixed(6)),
+          address: geo.formattedAddress || prev.address,
+        }));
+        setGeotagStatus({
+          provider: geo.provider === "GOOGLE" ? "Google Maps Platform" : "OpenStreetMap GIS",
+          address: geo.formattedAddress,
+        });
+      } else {
+        alert("Could not geocode this address. Please ensure street name and city are included.");
+      }
+    } catch (e: any) {
+      alert("Geocoding lookup failed: " + (e?.message || "Please try again."));
+    } finally {
+      setIsGeocoding(false);
+    }
+  };
+
+  const handleDetectCurrentLocation = async () => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      alert("Geolocation is not supported by your browser.");
+      return;
+    }
+    setIsGeocoding(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = Number(pos.coords.latitude.toFixed(6));
+        const lng = Number(pos.coords.longitude.toFixed(6));
+        setFormState((prev) => ({ ...prev, latitude: lat, longitude: lng }));
+        try {
+          const rev = await mapsService.reverseGeocode(lat, lng);
+          if (rev && rev.formattedAddress) {
+            setFormState((prev) => ({ ...prev, address: rev.formattedAddress }));
+            setGeotagStatus({
+              provider: rev.provider === "GOOGLE" ? "Google Maps Platform" : "OpenStreetMap GIS",
+              address: rev.formattedAddress,
+            });
+          }
+        } catch {
+          // ignore reverse geocode error
+        } finally {
+          setIsGeocoding(false);
+        }
+      },
+      (err) => {
+        alert("Failed to get browser location: " + err.message);
+        setIsGeocoding(false);
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  };
 
   const handleResetFilters = () => {
     setSearch("");
@@ -208,11 +277,13 @@ export function DoctorsRegistryPage({
       longitude: 80.252,
     });
     setFormErrors({});
+    setGeotagStatus(null);
     setIsCreateOpen(true);
   };
 
   const handleOpenEdit = (doc: Doctor) => {
     setEditingDoctor(doc);
+    setGeotagStatus(null);
     setFormState({
       name: doc.name,
       specialty: doc.specialty,
@@ -1151,8 +1222,32 @@ export function DoctorsRegistryPage({
               )}
             </div>
 
-            <div className="sm:col-span-2">
-              <label className="font-semibold text-slate-700 dark:text-slate-300">Clinic Street Address *</label>
+            <div className="sm:col-span-2 space-y-1">
+              <div className="flex items-center justify-between">
+                <label className="font-semibold text-slate-700 dark:text-slate-300">Clinic Street Address *</label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleGeocodeAddress}
+                    disabled={isGeocoding || !formState.address.trim()}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#FF6B00] hover:underline disabled:opacity-50 cursor-pointer"
+                    title="Auto-detect latitude & longitude from address via Google Maps Platform / Verified Geocoding"
+                  >
+                    <Navigation className="h-3 w-3" />
+                    {isGeocoding ? "Geocoding..." : "Auto-Geotag GPS"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDetectCurrentLocation}
+                    disabled={isGeocoding}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-sky-600 hover:underline disabled:opacity-50 cursor-pointer"
+                    title="Capture current browser GPS coordinates"
+                  >
+                    <Crosshair className="h-3 w-3" />
+                    My Location
+                  </button>
+                </div>
+              </div>
               <Input
                 placeholder="e.g. 14 Gandhi Road, Anna Nagar"
                 value={formState.address}
@@ -1165,6 +1260,12 @@ export function DoctorsRegistryPage({
               />
               {formErrors.address && (
                 <p className="mt-1 text-[11px] font-medium text-rose-600">{formErrors.address}</p>
+              )}
+              {geotagStatus && (
+                <p className="mt-1 text-[10px] text-emerald-600 flex items-center gap-1 font-medium">
+                  <ShieldCheck className="h-3 w-3 text-emerald-500" />
+                  Verified &amp; Geotagged via {geotagStatus.provider}
+                </p>
               )}
             </div>
 
@@ -1305,14 +1406,44 @@ export function DoctorsRegistryPage({
               />
             </div>
 
-            <div className="sm:col-span-2">
-              <label className="font-semibold text-slate-700 dark:text-slate-300">Clinic Street Address *</label>
+            <div className="sm:col-span-2 space-y-1">
+              <div className="flex items-center justify-between">
+                <label className="font-semibold text-slate-700 dark:text-slate-300">Clinic Street Address *</label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleGeocodeAddress}
+                    disabled={isGeocoding || !formState.address.trim()}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#FF6B00] hover:underline disabled:opacity-50 cursor-pointer"
+                    title="Auto-detect latitude & longitude from address via Google Maps Platform / Verified Geocoding"
+                  >
+                    <Navigation className="h-3 w-3" />
+                    {isGeocoding ? "Geocoding..." : "Auto-Geotag GPS"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDetectCurrentLocation}
+                    disabled={isGeocoding}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-sky-600 hover:underline disabled:opacity-50 cursor-pointer"
+                    title="Capture current browser GPS coordinates"
+                  >
+                    <Crosshair className="h-3 w-3" />
+                    My Location
+                  </button>
+                </div>
+              </div>
               <Input
                 value={formState.address}
                 onChange={(e) => setFormState({ ...formState, address: e.target.value })}
                 required
                 className="mt-1"
               />
+              {geotagStatus && (
+                <p className="mt-1 text-[10px] text-emerald-600 flex items-center gap-1 font-medium">
+                  <ShieldCheck className="h-3 w-3 text-emerald-500" />
+                  Verified &amp; Geotagged via {geotagStatus.provider}
+                </p>
+              )}
             </div>
 
             <div>

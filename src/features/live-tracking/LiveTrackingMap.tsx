@@ -6,7 +6,7 @@ import "leaflet/dist/leaflet.css";
 import type { LiveMrRecord, RouteBreadcrumb, LiveMrVisitPin } from "@/services/routeTrackingService";
 import { Layers, Maximize2, Compass } from "lucide-react";
 
-type MapLayerKey = "STREET" | "DETAILED" | "SATELLITE";
+type MapLayerKey = "STREET" | "GOOGLE" | "SATELLITE";
 
 const TILE_LAYERS: Record<
   MapLayerKey,
@@ -26,19 +26,19 @@ const TILE_LAYERS: Record<
     subdomains: ["a", "b", "c"],
     maxZoom: 19,
   },
-  DETAILED: {
-    label: "Detailed",
-    url: "https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
-    attribution: "&copy; OpenStreetMap contributors, Humanitarian map style",
-    subdomains: ["a", "b", "c"],
-    maxZoom: 19,
+  GOOGLE: {
+    label: "Google Road",
+    url: "https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
+    attribution: "&copy; Google Maps",
+    subdomains: ["mt0", "mt1", "mt2", "mt3"],
+    maxZoom: 20,
   },
   SATELLITE: {
     label: "Satellite",
-    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-    attribution: "Tiles &copy; Esri",
-    maxZoom: 19,
-    maxNativeZoom: 17,
+    url: "https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+    attribution: "&copy; Google Maps",
+    subdomains: ["mt0", "mt1", "mt2", "mt3"],
+    maxZoom: 20,
   },
 };
 
@@ -222,7 +222,7 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
     if (tileLayerRef.current) {
       map.removeLayer(tileLayerRef.current);
     }
-    const cfg = TILE_LAYERS[layerKey];
+    const cfg = TILE_LAYERS[layerKey] || TILE_LAYERS.STREET;
     tileLayerRef.current = L.tileLayer(cfg.url, {
       attribution: cfg.attribution,
       maxZoom: cfg.maxZoom,
@@ -579,7 +579,7 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
       {/* Top-Left Map Layer Switcher (Street, Detailed, Satellite) */}
       <div className="absolute top-3 left-3 z-[400] flex items-center gap-1 rounded-lg border border-slate-200/90 bg-white/95 p-1 shadow-md backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">
         <Layers className="h-3.5 w-3.5 text-slate-500 ml-1.5 mr-0.5" />
-        {(["STREET", "DETAILED", "SATELLITE"] as MapLayerKey[]).map((key) => (
+        {(["STREET", "GOOGLE", "SATELLITE"] as MapLayerKey[]).map((key) => (
           <button
             key={key}
             type="button"
