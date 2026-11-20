@@ -6,12 +6,13 @@ import { useFilterStore } from "@/store";
 import type { User } from "@/types";
 
 export function useCurrentUser() {
-  const { setUser } = useAuthStore();
+  const { user: storeUser, setUser } = useAuthStore();
 
   const query = useQuery<User | null>({
     queryKey: ["currentUser"],
     queryFn: () => authService.getCurrentUser(),
     staleTime: 1000 * 60 * 10,
+    initialData: storeUser || undefined,
   });
 
   useEffect(() => {
@@ -51,10 +52,53 @@ export function useLogin() {
   const { setUser } = useAuthStore();
 
   return useMutation({
-    mutationFn: (credentials: { email: string; password?: string; tenantSlug?: string }) =>
-      authService.login(credentials),
+    mutationFn: (credentials: {
+      email: string;
+      password?: string;
+      tenantSlug?: string;
+      companyCode?: string;
+      organizationId?: string;
+    }) => authService.login(credentials),
+    onSuccess: (data) => {
+      if (data?.user) {
+        // Clear all cached queries and territory filters from previous sessions
+        queryClient.clear();
+        useFilterStore.getState().setSelectedTerritoryId("ALL");
+        setUser(data.user);
+        queryClient.setQueryData(["currentUser"], data.user);
+      }
+    },
+  });
+}
+
+export function useSelectCompany() {
+  const queryClient = useQueryClient();
+  const { setUser } = useAuthStore();
+
+  return useMutation({
+    mutationFn: ({
+      organizationId,
+      selectionToken,
+    }: {
+      organizationId: string;
+      selectionToken: string;
+    }) => authService.selectCompany(organizationId, selectionToken),
     onSuccess: ({ user }) => {
-      // Clear all cached queries and territory filters from previous sessions
+      queryClient.clear();
+      useFilterStore.getState().setSelectedTerritoryId("ALL");
+      setUser(user);
+      queryClient.setQueryData(["currentUser"], user);
+    },
+  });
+}
+
+export function useSwitchTenant() {
+  const queryClient = useQueryClient();
+  const { setUser } = useAuthStore();
+
+  return useMutation({
+    mutationFn: (organizationId: string) => authService.switchTenant(organizationId),
+    onSuccess: ({ user }) => {
       queryClient.clear();
       useFilterStore.getState().setSelectedTerritoryId("ALL");
       setUser(user);

@@ -20,7 +20,7 @@ import {
   Clock,
   Coins,
 } from "lucide-react";
-import { useLogin, usePublicOrganizationBySlug } from "@/hooks";
+import { useLogin, useSelectCompany, usePublicOrganizationBySlug } from "@/hooks";
 import { normalizeRole } from "@/types";
 import { MByteLogo } from "@/components/ui/mbyte-logo";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -29,6 +29,7 @@ import { getTenantSubdomain, getRootDomain } from "@/lib/subdomain";
 export default function LoginPage() {
   const router = useRouter();
   const loginMutation = useLogin();
+  const selectCompanyMutation = useSelectCompany();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -39,6 +40,21 @@ export default function LoginPage() {
   // Subdomain detection
   const [mounted, setMounted] = useState(false);
   const [tenantSlug, setTenantSlug] = useState<string | null>(null);
+  const [manualTenantSlug, setManualTenantSlug] = useState("");
+  const [isSuperAdminLogin, setIsSuperAdminLogin] = useState(false);
+
+  // Multi-Company Selection State
+  const [multiCompanyData, setMultiCompanyData] = useState<{
+    selectionToken: string;
+    availableCompanies: Array<{
+      id: string;
+      name: string;
+      slug: string;
+      code: string;
+      logoUrl?: string;
+      role?: string;
+    }>;
+  } | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -69,11 +85,54 @@ export default function LoginPage() {
       return;
     }
 
+    const effectiveSlug = isSuperAdminLogin
+      ? undefined
+      : (tenantSlug || manualTenantSlug).trim().toLowerCase() || undefined;
+
     try {
-      const { user } = await loginMutation.mutateAsync({
+      const result = await loginMutation.mutateAsync({
         email: email.trim(),
         password,
-        ...(tenantSlug ? { tenantSlug } : {}),
+        tenantSlug: effectiveSlug,
+      });
+
+      if (result.requiresCompanySelection && result.selectionToken && result.availableCompanies) {
+        setMultiCompanyData({
+          selectionToken: result.selectionToken,
+          availableCompanies: result.availableCompanies,
+        });
+        return;
+      }
+
+      if (result.user) {
+        const canonicalRole = normalizeRole(result.user.role);
+        let targetPath = "/";
+        if (canonicalRole === "SUPER_ADMIN") {
+          targetPath = "/companies";
+        } else if (canonicalRole === "MR") {
+          targetPath = "/visits";
+        } else if (canonicalRole === "ADMIN" || canonicalRole === "TERRITORY_MANAGER") {
+          targetPath = "/field-force";
+        }
+
+        router.push(targetPath);
+      }
+    } catch (err: any) {
+      setErrorMsg(
+        err?.message ||
+          "Authentication failed. Please verify your email and password."
+      );
+    }
+  };
+
+  const handleSelectCompany = async (companyId: string) => {
+    if (!multiCompanyData) return;
+    setErrorMsg(null);
+
+    try {
+      const { user } = await selectCompanyMutation.mutateAsync({
+        organizationId: companyId,
+        selectionToken: multiCompanyData.selectionToken,
       });
 
       const canonicalRole = normalizeRole(user.role);
@@ -82,14 +141,13 @@ export default function LoginPage() {
         targetPath = "/companies";
       } else if (canonicalRole === "MR") {
         targetPath = "/visits";
+      } else if (canonicalRole === "ADMIN" || canonicalRole === "TERRITORY_MANAGER") {
+        targetPath = "/field-force";
       }
 
       router.push(targetPath);
     } catch (err: any) {
-      setErrorMsg(
-        err?.message ||
-          "Authentication failed. Please verify your email and password."
-      );
+      setErrorMsg(err?.message || "Failed to establish tenant session.");
     }
   };
 
@@ -308,7 +366,100 @@ export default function LoginPage() {
               </div>
             )}
 
+            {multiCompanyData ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-500/10 border border-orange-500/30 text-orange-400">
+                    <Building className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white">Select Pharmaceutical Company</h3>
+                    <p className="text-xs text-slate-400">Your account is authorized across multiple companies</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1">
+                  {multiCompanyData.availableCompanies.map((comp) => (
+                    <button
+                      key={comp.id}
+                      type="button"
+                      onClick={() => handleSelectCompany(comp.id)}
+                      disabled={selectCompanyMutation.isPending}
+                      className="w-full flex items-center justify-between p-3.5 rounded-xl border border-slate-700/80 bg-slate-900/80 hover:bg-slate-800/90 hover:border-orange-500/50 transition-all text-left group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-800 text-orange-400 border border-slate-700 font-bold text-xs uppercase">
+                          {comp.code?.slice(0, 3) || "ORG"}
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-white group-hover:text-orange-400 transition-colors">
+                            {comp.name}
+                          </div>
+                          <div className="text-[11px] text-slate-400 font-mono">
+                            {comp.code} • {comp.slug}
+                          </div>
+                        </div>
+                      </div>
+                      <span className="text-[11px] font-semibold text-slate-300 bg-slate-800/80 px-2.5 py-1 rounded-full border border-slate-700">
+                        {comp.role || "Member"}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="pt-2 text-center">
+                  <button
+                    type="button"
+                    onClick={() => setMultiCompanyData(null)}
+                    className="text-xs text-slate-400 hover:text-white transition-colors"
+                  >
+                    ← Sign in with a different account
+                  </button>
+                </div>
+              </div>
+            ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
+              {!tenantSlug && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label
+                      htmlFor="login-company-slug"
+                      className="block text-xs font-semibold text-slate-300"
+                    >
+                      Company Identifier / Subdomain
+                    </label>
+                    <label className="flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isSuperAdminLogin}
+                        onChange={(e) => setIsSuperAdminLogin(e.target.checked)}
+                        className="rounded border-slate-700 bg-slate-900 text-orange-500 focus:ring-orange-500 h-3 w-3"
+                      />
+                      <span className="text-[11px] text-orange-400 font-medium">Platform Super Admin</span>
+                    </label>
+                  </div>
+                  {!isSuperAdminLogin && (
+                    <>
+                      <div className="relative">
+                        <Building className="absolute left-3.5 top-3 h-4 w-4 text-slate-500" />
+                        <input
+                          id="login-company-slug"
+                          type="text"
+                          autoCapitalize="none"
+                          value={manualTenantSlug}
+                          onChange={(e) => setManualTenantSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ""))}
+                          placeholder="e.g. novis-pharma, cipla, or company code"
+                          className="w-full rounded-xl border border-slate-700 bg-slate-900/90 px-3.5 py-2.5 pl-10 text-xs text-white placeholder-slate-500 focus:border-[#FF6B00] focus:outline-none focus:ring-1 focus:ring-[#FF6B00] transition-colors"
+                        />
+                      </div>
+                      <p className="mt-1 text-[11px] text-slate-500">
+                        Enter your company code or slug, or leave blank to select from authorized companies.
+                      </p>
+                    </>
+                  )}
+                </div>
+              )}
+
               <div>
                 <label
                   htmlFor="login-email"
@@ -411,6 +562,7 @@ export default function LoginPage() {
                 )}
               </button>
             </form>
+            )}
 
             <div className="mt-6 pt-5 border-t border-slate-800 text-center">
               <p className="text-[11px] text-slate-400">

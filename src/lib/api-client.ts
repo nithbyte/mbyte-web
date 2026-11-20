@@ -178,6 +178,28 @@ axiosInstance.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
+    // Attach active tenant context header for Super Admin or client-selected company
+    if (typeof window !== "undefined" && config.headers && !config.headers["x-tenant-id"]) {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const orgFromUrl = urlParams.get("orgId") || urlParams.get("organizationId");
+        const storedUserRaw = window.localStorage.getItem("mbyte_auth_user");
+        let isSuperAdmin = false;
+        if (storedUserRaw) {
+          try {
+            const parsed = JSON.parse(storedUserRaw);
+            if (parsed?.state?.user?.role === "SUPER_ADMIN") isSuperAdmin = true;
+          } catch {}
+        }
+        const storedOrg = isSuperAdmin ? null : window.localStorage.getItem("mbyte_selected_org_id");
+        const activeOrg = orgFromUrl || storedOrg;
+        if (activeOrg && activeOrg !== "ALL") {
+          config.headers["x-tenant-id"] = activeOrg;
+          config.headers["x-organization-id"] = activeOrg;
+        }
+      } catch {}
+    }
+
     // When transmitting FormData, remove static Content-Type so browser can attach boundary parameter
     if (typeof FormData !== "undefined" && config.data instanceof FormData && config.headers) {
       delete config.headers["Content-Type"];

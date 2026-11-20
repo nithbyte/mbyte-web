@@ -203,7 +203,22 @@ export const authService = {
     email: string;
     password?: string;
     tenantSlug?: string;
-  }): Promise<{ user: User; token: string }> {
+    companyCode?: string;
+    organizationId?: string;
+  }): Promise<{
+    user?: User;
+    token?: string;
+    requiresCompanySelection?: boolean;
+    selectionToken?: string;
+    availableCompanies?: Array<{
+      id: string;
+      name: string;
+      slug: string;
+      code: string;
+      logoUrl?: string;
+      role?: string;
+    }>;
+  }> {
     // Clear any stale tokens or cached users from a previous session before authenticating
     tokenStorage.clearTokens();
     activeUserId = "";
@@ -217,12 +232,32 @@ export const authService = {
         email,
         password,
         ...(credentials.tenantSlug ? { tenantSlug: credentials.tenantSlug } : {}),
+        ...(credentials.companyCode ? { companyCode: credentials.companyCode } : {}),
+        ...(credentials.organizationId ? { organizationId: credentials.organizationId } : {}),
       });
+
+      if (res && res.requiresCompanySelection) {
+        return {
+          requiresCompanySelection: true,
+          selectionToken: res.selectionToken,
+          availableCompanies: res.availableCompanies || [],
+        };
+      }
 
       if (res && res.accessToken && res.user) {
         tokenStorage.setTokens(res.accessToken, res.refreshToken);
         const user = formatUser(res.user);
         activeUserId = user.id;
+        // Persist tenant org for API client header injection (all roles except super admin)
+        if (typeof window !== "undefined") {
+          try {
+            if (user.role === "SUPER_ADMIN") {
+              window.localStorage.removeItem("mbyte_selected_org_id");
+            } else if (user.organizationId) {
+              window.localStorage.setItem("mbyte_selected_org_id", user.organizationId);
+            }
+          } catch {}
+        }
         return {
           user,
           token: res.accessToken,
@@ -253,6 +288,75 @@ export const authService = {
   },
 
   /**
+   * Completes login by selecting an authorized tenant company.
+   */
+  async selectCompany(
+    organizationId: string,
+    selectionToken: string,
+  ): Promise<{ user: User; token: string }> {
+    const res = await apiClient.post<any>("/auth/select-company", {
+      organizationId,
+      selectionToken,
+    });
+    if (res && res.accessToken && res.user) {
+      tokenStorage.setTokens(res.accessToken, res.refreshToken);
+      const user = formatUser(res.user);
+      activeUserId = user.id;
+      if (typeof window !== "undefined" && user.organizationId) {
+        try { window.localStorage.setItem("mbyte_selected_org_id", user.organizationId); } catch {}
+      }
+      return { user, token: res.accessToken };
+    }
+    throw new Error("Failed to establish tenant session for selected company.");
+  },
+
+  /**
+   * Switches tenant session to another authorized company.
+   */
+  async switchTenant(organizationId: string): Promise<{ user: User; token: string }> {
+    const res = await apiClient.post<any>("/auth/switch-tenant", {
+      organizationId,
+    });
+    if (res && res.accessToken && res.user) {
+      tokenStorage.setTokens(res.accessToken, res.refreshToken);
+      const user = formatUser(res.user);
+      activeUserId = user.id;
+      return { user, token: res.accessToken };
+    }
+    throw new Error("Failed to switch tenant organization.");
+  },
+
+  /**
+   * Retrieves all authorized company memberships for the current user.
+   */
+  async getUserCompanies(): Promise<
+    Array<{
+      id: string;
+      name: string;
+      slug: string;
+      code: string;
+      logoUrl?: string;
+      role?: string;
+    }>
+  > {
+    try {
+      const res = await apiClient.get<any>("/auth/companies");
+      return Array.isArray(res) ? res : [];
+    } catch {
+      return [];
+    }
+  },
+
+  /**
+   * Pre-login Tenant Discovery.
+   */
+  async discoverTenant(identifier: string): Promise<any> {
+    return apiClient.get<any>("/auth/tenant-discovery", {
+      params: { identifier },
+    });
+  },
+
+  /**
    * Ends current authenticated session.
    * Calls: POST /api/v1/auth/logout
    */
@@ -265,6 +369,9 @@ export const authService = {
     tokenStorage.clearTokens();
     activeUserId = "";
     cachedUsers = [];
+    if (typeof window !== "undefined") {
+      try { window.localStorage.removeItem("mbyte_selected_org_id"); } catch {}
+    }
     return Promise.resolve();
   },
 };
@@ -272,5 +379,16 @@ export const authService = {
 export const getCurrentUser = () => authService.getCurrentUser();
 export const getAllUsers = () => authService.getAllUsers();
 export const switchUser = (userId: string) => authService.switchUser(userId);
-export const login = (credentials: { email: string; password?: string; tenantSlug?: string }) => authService.login(credentials);
+export const login = (credentials: {
+  email: string;
+  password?: string;
+  tenantSlug?: string;
+  companyCode?: string;
+  organizationId?: string;
+}) => authService.login(credentials);
+export const selectCompany = (organizationId: string, selectionToken: string) =>
+  authService.selectCompany(organizationId, selectionToken);
+export const switchTenant = (organizationId: string) => authService.switchTenant(organizationId);
+export const getUserCompanies = () => authService.getUserCompanies();
+export const discoverTenant = (identifier: string) => authService.discoverTenant(identifier);
 export const logout = () => authService.logout();

@@ -90,6 +90,17 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     canonicalRole === "MR" &&
     MR_RESTRICTED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 
+  if (!authChecked || (isLoading && !currentUser)) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#F5F3EE] dark:bg-[#171717]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-sky-600 border-t-transparent" />
+          <span className="text-xs font-medium text-slate-500">Restoring platform session...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#F5F3EE] dark:bg-[#171717]">
       <Suspense fallback={<div className="w-16 lg:w-64" />}>

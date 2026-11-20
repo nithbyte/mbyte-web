@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import type { User } from "@/types";
 
 interface AuthState {
@@ -8,9 +9,16 @@ interface AuthState {
   logout: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  isAuthenticated: false,
-  setUser: (user) => set({ user, isAuthenticated: Boolean(user) }),
-  logout: () => set({ user: null, isAuthenticated: false }),
-}));
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      user: null,
+      isAuthenticated: false,
+      setUser: (user) => set({ user, isAuthenticated: Boolean(user) }),
+      logout: () => set({ user: null, isAuthenticated: false }),
+    }),
+    {
+      name: "mbyte_auth_user",
+    }
+  )
+);
