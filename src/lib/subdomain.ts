@@ -24,18 +24,18 @@ export function getRootDomain(): string {
     if (parts.length > 1 && parts[parts.length - 1].startsWith("localhost")) {
       return parts.slice(1).join(".");
     }
-    // If 3+ parts e.g. "kovel.mbyte.app:3000" or "kovel.pharma.com"
+    // If 3+ parts e.g. "kovel.mediqbyte.com" or "kovel.localhost:3000"
     if (parts.length >= 3) {
       return parts.slice(parts.length - 2).join(".");
     }
     return host;
   }
-  return "localhost:3000";
+  return process.env.NODE_ENV === "production" ? "mediqbyte.com" : "localhost:3000";
 }
 
 /**
  * Extracts the tenant subdomain slug from the active browser window or cookie.
- * Returns null when on the platform root domain (e.g. localhost:3000, mbyte.app).
+ * Returns null when on the platform root domain (e.g. localhost:3000, mediqbyte.com).
  */
 export function getTenantSubdomain(): string | null {
   if (typeof window === "undefined") return null;
@@ -70,11 +70,12 @@ export function getTenantSubdomain(): string | null {
 
 /**
  * Builds the full URL for a specific tenant organization subdomain portal.
- * e.g. "kovel" -> "http://kovel.localhost:3000/login"
+ * e.g. "kovel" -> "https://kovel.mediqbyte.com/login" or "http://kovel.localhost:3000/login"
  */
 export function buildTenantSubdomainUrl(slug: string, path: string = ""): string {
   const rootDomain = getRootDomain();
-  const protocol = typeof window !== "undefined" ? window.location.protocol : "http:";
+  const defaultProtocol = rootDomain.includes("localhost") || rootDomain.startsWith("127.") ? "http:" : "https:";
+  const protocol = typeof window !== "undefined" && window.location.protocol ? window.location.protocol : defaultProtocol;
   const cleanSlug = slug.trim().toLowerCase();
   const cleanPath = path.startsWith("/") ? path : path ? `/${path}` : "";
 

@@ -10,6 +10,7 @@ function formatUser(rawUser: any): User {
   let lastName = rawUser.lastName;
 
   if (
+    rawUser.email?.toLowerCase() === "superadmin@mediqbyte.com" ||
     rawUser.email?.toLowerCase() === "superadmin@mbyte.app" ||
     firstName === "Antigravity" ||
     firstName === "Platform" && lastName === "Admin" ||
@@ -41,7 +42,7 @@ function formatUser(rawUser: any): User {
   }
   if (!extractedRole && rawUser.email) {
     const emailLower = rawUser.email.toLowerCase();
-    if (emailLower.includes("superadmin") || emailLower === "superadmin@mbyte.app") {
+    if (emailLower.includes("superadmin") || emailLower === "superadmin@mediqbyte.com" || emailLower === "superadmin@mbyte.app") {
       extractedRole = "SUPER_ADMIN";
     } else if (emailLower.startsWith("admin@") || emailLower === "admin@novispharma.com") {
       extractedRole = "COMPANY_ADMIN";

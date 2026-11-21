@@ -394,7 +394,7 @@ export default function AdminLoginPage() {
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder={
                         adminType === "SUPER_ADMIN"
-                          ? "superadmin@mbyte.app"
+                          ? "superadmin@mediqbyte.com"
                           : "admin@company.com"
                       }
                       className="w-full rounded-xl border border-slate-700 bg-slate-900/90 px-3.5 py-2.5 pl-10 text-xs text-white placeholder-slate-500 focus:border-[#FF6B00] focus:outline-none focus:ring-1 focus:ring-[#FF6B00] transition-colors"

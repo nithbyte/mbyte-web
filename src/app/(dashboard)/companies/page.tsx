@@ -30,7 +30,7 @@ import { buildTenantSubdomainUrl, getRootDomain } from "@/lib/subdomain";
 export default function CompaniesPage() {
   const { data: currentUser } = useCurrentUser();
   const canonicalRole = normalizeRole(currentUser?.role);
-  const rootDomain = typeof window !== "undefined" ? getRootDomain() : "localhost:3000";
+  const rootDomain = typeof window !== "undefined" ? getRootDomain() : (process.env.NEXT_PUBLIC_ROOT_DOMAIN || (process.env.NODE_ENV === "production" ? "mediqbyte.com" : "localhost:3000"));
 
   const { data: organizations, isLoading, refetch } = useOrganizations();
   const createMutation = useCreateOrganization();
@@ -544,7 +544,7 @@ export default function CompaniesPage() {
                 Dedicated Tenant Subdomain Preview:
               </span>
               <span className="font-mono text-xs text-sky-600 dark:text-sky-400">
-                http://{createForm.slug || "tenant"}.{rootDomain}
+                {rootDomain.includes("localhost") || rootDomain.startsWith("127.") ? "http" : "https"}://{createForm.slug || "tenant"}.{rootDomain}
               </span>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
                 Upon creation, this organization’s administrators and field force will access their isolated workspace via this subdomain.
