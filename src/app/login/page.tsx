@@ -67,8 +67,10 @@ export default function LoginPage() {
     e.preventDefault();
     setErrorMsg(null);
 
-    if (!tenantSlug && !manualTenantSlug.trim()) {
-      setErrorMsg("Please enter your Company Code to continue.");
+    const effectiveSlug = (tenantSlug || manualTenantSlug).trim().toLowerCase() || undefined;
+
+    if (!effectiveSlug && !email.trim().toLowerCase().includes("admin")) {
+      setErrorMsg("Please enter your Company Code to continue (or sign in as Platform Super Administrator).");
       return;
     }
 
@@ -80,8 +82,6 @@ export default function LoginPage() {
       setErrorMsg("Please enter your password.");
       return;
     }
-
-    const effectiveSlug = (tenantSlug || manualTenantSlug).trim().toLowerCase() || undefined;
 
     try {
       const result = await loginMutation.mutateAsync({
@@ -268,24 +268,31 @@ export default function LoginPage() {
             ) : (
               /* Standard Credentials Form */
               <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Mandatory Company Code (or Subdomain Indicator) */}
+                {/* Company Code (or Subdomain Indicator) */}
                 {!tenantSlug ? (
                   <div className="space-y-1.5">
-                    <label
-                      htmlFor="tenant-slug"
-                      className="block text-xs font-medium text-slate-700 dark:text-slate-300"
-                    >
-                      Company Code <span className="text-rose-500 font-bold">*</span>
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label
+                        htmlFor="tenant-slug"
+                        className="block text-xs font-medium text-slate-700 dark:text-slate-300"
+                      >
+                        Company Code
+                      </label>
+                      <a
+                        href="/admin/login"
+                        className="text-[11px] text-[#FF6B00] hover:underline font-medium"
+                      >
+                        Super Admin Portal &rarr;
+                      </a>
+                    </div>
                     <div className="relative">
                       <Building className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
                       <input
                         id="tenant-slug"
                         type="text"
-                        required
                         value={manualTenantSlug}
                         onChange={(e) => setManualTenantSlug(e.target.value)}
-                        placeholder="e.g. KOV-01 or kovel"
+                        placeholder="e.g. KOV-01 (leave blank for Super Admin)"
                         className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3.5 py-2.5 pl-10 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-[#FF6B00] focus:outline-none focus:ring-4 focus:ring-orange-500/10 transition-all font-mono uppercase placeholder:normal-case placeholder:font-sans"
                       />
                     </div>
