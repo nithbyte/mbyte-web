@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Shield,
   Building,
@@ -564,10 +565,17 @@ export default function LoginPage() {
             </form>
             )}
 
-            <div className="mt-6 pt-5 border-t border-slate-800 text-center">
+            <div className="mt-6 pt-5 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
               <p className="text-[11px] text-slate-400">
                 Unauthorized access to MByte FieldOps is strictly prohibited. Activity is logged under pharmaceutical audit compliance policies.
               </p>
+              <Link
+                href="/admin/login"
+                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-orange-500/30 bg-orange-500/10 text-xs font-semibold text-orange-400 hover:bg-orange-500/20 transition-colors"
+              >
+                <Shield className="h-3.5 w-3.5" />
+                <span>Admin Portal Login →</span>
+              </Link>
             </div>
           </div>
         </div>
