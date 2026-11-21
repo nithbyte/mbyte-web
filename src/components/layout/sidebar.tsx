@@ -515,31 +515,24 @@ export function Sidebar() {
         <Link
           href={canonicalRole === "SUPER_ADMIN" ? "/companies" : canonicalRole === "MR" ? "/visits" : "/"}
           className={cn(
-            "flex items-center transition-opacity hover:opacity-90",
-            isCollapsed ? "justify-center" : "gap-2.5 min-w-0 flex-1"
+            "flex items-center transition-opacity hover:opacity-90 min-w-0 flex-1",
+            isCollapsed ? "justify-center" : "gap-2"
           )}
           title={isCollapsed ? "MByte FieldOps" : undefined}
         >
-          <div
-            className={cn(
-              "flex shrink-0 items-center justify-center rounded-xl",
-              isCollapsed ? "h-9 w-9" : "h-9 w-9"
-            )}
-          >
-            <MByteLogo variant="icon" width={34} height={34} />
-          </div>
-
-          {!isCollapsed && (
+          {isCollapsed ? (
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl">
+              <MByteLogo variant="icon" width={32} height={32} priority />
+            </div>
+          ) : (
             <div className="flex flex-col min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
-                <span className="text-sm font-extrabold tracking-tight text-slate-900 dark:text-white">
-                  M<span className="text-[#FF6B00]">Byte</span>
-                </span>
-                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-50 text-[#FF6B00] dark:bg-[#FF6B00]/10 dark:text-[#FF6B00] border border-orange-200 dark:border-orange-900/60">
+                <MByteLogo variant="compact" width={118} height={26} priority />
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-50 text-[#FF6B00] dark:bg-[#FF6B00]/10 dark:text-[#FF6B00] border border-orange-200 dark:border-orange-900/60 shrink-0">
                   FieldOps
                 </span>
               </div>
-              <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">
+              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 truncate mt-0.5">
                 {canonicalRole === "SUPER_ADMIN"
                   ? "Platform Control"
                   : currentUser?.organization?.name ||

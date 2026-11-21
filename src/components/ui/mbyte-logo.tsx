@@ -85,7 +85,7 @@ export function MByteLogo({
           width={dims.width}
           height={dims.height}
           priority={priority}
-          style={{ width: "auto", height: "auto" }}
+          style={{ width: "auto", height: dims.height ? `${dims.height}px` : "auto" }}
           className="h-auto max-w-full object-contain"
         />
       </div>
@@ -101,7 +101,7 @@ export function MByteLogo({
           width={dims.width}
           height={dims.height}
           priority={priority}
-          style={{ width: "auto", height: "auto" }}
+          style={{ width: "auto", height: dims.height ? `${dims.height}px` : "auto" }}
           className="h-auto max-w-full object-contain"
         />
       </div>
@@ -117,7 +117,7 @@ export function MByteLogo({
         width={dims.width}
         height={dims.height}
         priority={priority}
-        style={{ width: "auto", height: "auto" }}
+        style={{ width: "auto", height: dims.height ? `${dims.height}px` : "auto" }}
         className="block dark:hidden h-auto max-w-full object-contain"
       />
       <Image
@@ -126,7 +126,7 @@ export function MByteLogo({
         width={dims.width}
         height={dims.height}
         priority={priority}
-        style={{ width: "auto", height: "auto" }}
+        style={{ width: "auto", height: dims.height ? `${dims.height}px` : "auto" }}
         className="hidden dark:block h-auto max-w-full object-contain"
       />
     </div>
