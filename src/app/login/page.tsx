@@ -16,7 +16,7 @@ import { useLogin, useSelectCompany, usePublicOrganizationBySlug } from "@/hooks
 import { normalizeRole } from "@/types";
 import { MByteLogo } from "@/components/ui/mbyte-logo";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { getTenantSubdomain, getRootDomain } from "@/lib/subdomain";
+import { getTenantSubdomain, getRootDomain, buildTenantSubdomainUrl } from "@/lib/subdomain";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -109,6 +109,16 @@ export default function LoginPage() {
           targetPath = "/field-force";
         }
 
+        const orgSlug = result.user.organization?.slug;
+        const currentSubdomain = getTenantSubdomain();
+
+        // Automatically redirect tenant users to their dedicated tenant subdomain portal
+        if (orgSlug && canonicalRole !== "SUPER_ADMIN" && currentSubdomain !== orgSlug) {
+          const destinationUrl = buildTenantSubdomainUrl(orgSlug, targetPath);
+          window.location.href = destinationUrl;
+          return;
+        }
+
         router.push(targetPath);
       }
     } catch (err: any) {
@@ -137,6 +147,15 @@ export default function LoginPage() {
         targetPath = "/visits";
       } else if (canonicalRole === "ADMIN" || canonicalRole === "TERRITORY_MANAGER") {
         targetPath = "/field-force";
+      }
+
+      const orgSlug = user.organization?.slug;
+      const currentSubdomain = getTenantSubdomain();
+
+      if (orgSlug && canonicalRole !== "SUPER_ADMIN" && currentSubdomain !== orgSlug) {
+        const destinationUrl = buildTenantSubdomainUrl(orgSlug, targetPath);
+        window.location.href = destinationUrl;
+        return;
       }
 
       router.push(targetPath);
