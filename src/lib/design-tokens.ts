@@ -9,7 +9,7 @@ export const colors = {
   brand: {
     primaryOrange: '#FF6B00',   // Primary accent & action color
     deepOrange: '#F45100',      // Deep orange hover / active
-    warmOffWhite: '#F5F3EE',    // Primary light workspace background
+    warmOffWhite: '#FCF7F2',    // Primary light workspace background
     white: '#FFFFFF',           // Card and surface background
     primaryText: '#171717',     // Dark charcoal text
     secondaryText: '#525252',   // Secondary readable text

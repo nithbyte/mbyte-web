@@ -3,7 +3,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #F5F3EE;
+  --background: #FCF7F2;
   --foreground: #171717;
   --card: #FFFFFF;
   --card-foreground: #171717;
@@ -11,7 +11,7 @@
   --popover-foreground: #171717;
   --primary: #FF6B00;
   --primary-foreground: #FFFFFF;
-  --secondary: #F5F3EE;
+  --secondary: #FCF7F2;
   --secondary-foreground: #171717;
   --muted: #E5E1D9;
   --muted-foreground: #525252;
@@ -37,7 +37,7 @@
   /* Official NITHBYTE Brand Tokens */
   --nithbyte-orange: #FF6B00;
   --nithbyte-deep-orange: #F45100;
-  --nithbyte-warm-offwhite: #F5F3EE;
+  --nithbyte-warm-offwhite: #FCF7F2;
   --nithbyte-charcoal: #171717;
   --nithbyte-secondary-text: #525252;
   --nithbyte-border: #E5E1D9;
@@ -68,7 +68,7 @@
 
   --color-nithbyte-orange: #FF6B00;
   --color-nithbyte-deep-orange: #F45100;
-  --color-nithbyte-warm-offwhite: #F5F3EE;
+  --color-nithbyte-warm-offwhite: #FCF7F2;
   --color-nithbyte-charcoal: #171717;
   --color-nithbyte-secondary-text: #525252;
   --color-nithbyte-border: #E5E1D9;
