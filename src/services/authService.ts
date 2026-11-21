@@ -1,6 +1,7 @@
 import { apiClient, tokenStorage, isMockFallbackAllowed } from "../lib/api-client";
 import { mockUsers } from "../mock";
 import { normalizeRole, getRoleLabel, type User } from "../types";
+import { useAuthStore } from "@/store/useAuthStore";
 
 // Maintain active user state in memory
 let activeUserId = "";
@@ -125,6 +126,20 @@ export const authService = {
     } catch (err: any) {
       const status = err?.statusCode || err?.response?.status;
       if (status === 401 || status === 403) {
+        // If we have an active valid session in store, don't destroy session on a transient query error
+        const storeUser = useAuthStore.getState().user;
+        if (storeUser && token) {
+          try {
+            const parts = token.split(".");
+            if (parts.length === 3) {
+              const payload = JSON.parse(atob(parts[1]));
+              if (payload.exp && payload.exp * 1000 > Date.now()) {
+                activeUserId = storeUser.id;
+                return storeUser;
+              }
+            }
+          } catch {}
+        }
         tokenStorage.clearTokens();
         activeUserId = "";
         cachedUsers = [];

@@ -20,8 +20,10 @@ import {
   ArrowUpRight,
   Filter,
   ExternalLink,
+  UserPlus,
+  AlertCircle,
 } from "lucide-react";
-import { useOrganizations, useCreateOrganization, useUpdateOrganization, useCurrentUser } from "@/hooks";
+import { useOrganizations, useCreateOrganization, useUpdateOrganization, useCurrentUser, useCreateUser } from "@/hooks";
 import { normalizeRole, type Organization, type CreateOrganizationInput, type UpdateOrganizationInput } from "@/types";
 import { Modal } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -58,6 +60,65 @@ export default function CompaniesPage() {
   const [editingOrg, setEditingOrg] = useState<Organization | null>(null);
   const [editForm, setEditForm] = useState<UpdateOrganizationInput>({});
   const [editError, setEditError] = useState<string | null>(null);
+
+  // Provision Admin Modal state
+  const createUserMutation = useCreateUser();
+  const [adminOrg, setAdminOrg] = useState<Organization | null>(null);
+  const [adminForm, setAdminForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "Password123!",
+    phone: "",
+  });
+  const [adminError, setAdminError] = useState<string | null>(null);
+  const [adminSuccess, setAdminSuccess] = useState<string | null>(null);
+
+  const handleOpenAddAdmin = (org: Organization) => {
+    setAdminOrg(org);
+    setAdminForm({
+      firstName: "",
+      lastName: "",
+      email: "",
+      password: "Password123!",
+      phone: org.contactPhone || "",
+    });
+    setAdminError(null);
+    setAdminSuccess(null);
+  };
+
+  const handleCreateAdminSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminOrg) return;
+    setAdminError(null);
+    setAdminSuccess(null);
+
+    if (!adminForm.firstName.trim() || !adminForm.lastName.trim() || !adminForm.email.trim()) {
+      setAdminError("First Name, Last Name, and Email are required.");
+      return;
+    }
+
+    try {
+      await createUserMutation.mutateAsync({
+        firstName: adminForm.firstName.trim(),
+        lastName: adminForm.lastName.trim(),
+        email: adminForm.email.trim().toLowerCase(),
+        password: adminForm.password || "Password123!",
+        phone: adminForm.phone.trim() || undefined,
+        role: "ADMIN",
+        organizationId: adminOrg.id,
+      });
+
+      setAdminSuccess(
+        `Administrator ${adminForm.email.trim().toLowerCase()} provisioned successfully for ${adminOrg.name}!`
+      );
+      setTimeout(() => {
+        setAdminOrg(null);
+      }, 1500);
+    } catch (err: any) {
+      setAdminError(err?.message || "Failed to provision Company Administrator. Please try again.");
+    }
+  };
 
   // Filter organizations
   const filteredOrgs = (organizations || []).filter((org) => {
@@ -440,6 +501,15 @@ export default function CompaniesPage() {
 
                     <td className="px-5 py-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => handleOpenAddAdmin(org)}
+                          title={`Add Administrator for ${org.name}`}
+                          className="inline-flex items-center gap-1 rounded-lg bg-sky-50 px-2 py-1 text-xs font-semibold text-sky-700 hover:bg-sky-100 dark:bg-sky-950/40 dark:text-sky-300 dark:hover:bg-sky-900/60 cursor-pointer transition-colors mr-1"
+                        >
+                          <UserPlus className="h-3.5 w-3.5" />
+                          <span>Add Admin</span>
+                        </button>
+
                         <Link
                           href={`/field-force?orgId=${org.id}`}
                           title="Manage company users"
@@ -773,6 +843,125 @@ export default function CompaniesPage() {
               className="rounded-xl bg-sky-600 px-4 py-2 text-xs font-semibold text-white hover:bg-sky-500 disabled:opacity-50 transition-colors cursor-pointer"
             >
               {updateMutation.isPending ? "Saving Changes..." : "Save Changes"}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Add Company Administrator Modal */}
+      <Modal
+        isOpen={Boolean(adminOrg)}
+        onClose={() => setAdminOrg(null)}
+        title={`Add Administrator: ${adminOrg?.name || ""}`}
+        description={`Provision a Company Administrator with full administrative access to ${adminOrg?.name || ""}.`}
+        maxWidth="md"
+      >
+        <form onSubmit={handleCreateAdminSubmit} className="space-y-4">
+          {adminError && (
+            <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-400 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{adminError}</span>
+            </div>
+          )}
+
+          {adminSuccess && (
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              <span>{adminSuccess}</span>
+            </div>
+          )}
+
+          <div className="rounded-xl bg-slate-50 dark:bg-slate-900 p-3 border border-slate-200/80 dark:border-slate-800 text-xs">
+            <span className="font-semibold text-slate-700 dark:text-slate-300">Target Tenant:</span>{" "}
+            <span className="font-bold text-sky-600 dark:text-sky-400">{adminOrg?.name} ({adminOrg?.code})</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                First Name *
+              </label>
+              <input
+                type="text"
+                required
+                value={adminForm.firstName}
+                onChange={(e) => setAdminForm({ ...adminForm, firstName: e.target.value })}
+                placeholder="e.g. Ramesh"
+                className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Last Name *
+              </label>
+              <input
+                type="text"
+                required
+                value={adminForm.lastName}
+                onChange={(e) => setAdminForm({ ...adminForm, lastName: e.target.value })}
+                placeholder="e.g. Sharma"
+                className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Administrator Email *
+            </label>
+            <input
+              type="email"
+              required
+              value={adminForm.email}
+              onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })}
+              placeholder="admin@kovelbyte.com"
+              className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Initial Password *
+              </label>
+              <input
+                type="password"
+                required
+                value={adminForm.password}
+                onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })}
+                className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Contact Phone
+              </label>
+              <input
+                type="tel"
+                value={adminForm.phone}
+                onChange={(e) => setAdminForm({ ...adminForm, phone: e.target.value })}
+                placeholder="+91 9876543210"
+                className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setAdminOrg(null)}
+              className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={createUserMutation.isPending}
+              className="rounded-xl bg-sky-600 px-4 py-2 text-xs font-semibold text-white hover:bg-sky-500 disabled:opacity-50 transition-colors cursor-pointer"
+            >
+              {createUserMutation.isPending ? "Provisioning Admin..." : "Provision Administrator"}
             </button>
           </div>
         </form>

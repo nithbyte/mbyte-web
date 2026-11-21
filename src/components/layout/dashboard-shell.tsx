@@ -67,13 +67,17 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const token = tokenStorage.getAccessToken();
-    // If no token exists, redirect to login
+    // If no token exists, redirect to appropriate portal login
     if (!token && !isLoading) {
-      router.push("/login");
+      if (canonicalRole === "SUPER_ADMIN") {
+        router.push("/admin/login");
+      } else {
+        router.push("/login");
+      }
     } else {
       setAuthChecked(true);
     }
-  }, [isLoading, router]);
+  }, [isLoading, router, canonicalRole]);
 
   useEffect(() => {
     if (canonicalRole === "SUPER_ADMIN" && pathname === "/") {
