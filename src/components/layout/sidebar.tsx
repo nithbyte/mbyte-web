@@ -683,7 +683,7 @@ export function Sidebar() {
       {/* Desktop Sidebar */}
       <aside
         className={cn(
-          "hidden lg:block fixed inset-y-0 left-0 z-30 border-r border-[#E5E1D9] bg-white transition-all duration-300 ease-in-out dark:border-[#333333] dark:bg-[#242424]",
+          "hidden lg:block fixed inset-y-0 left-0 z-30 border-r border-white/60 bg-white/80 backdrop-blur-2xl transition-all duration-300 ease-in-out dark:border-white/10 dark:bg-[#1a1a1a]/80 shadow-[0_4px_24px_0_rgba(0,0,0,0.03)] dark:shadow-[0_4px_24px_0_rgba(0,0,0,0.3)]",
           isCollapsed ? "w-16" : "w-64"
         )}
       >
@@ -694,10 +694,10 @@ export function Sidebar() {
       {isMobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-2xl dark:bg-[#242424] dark:border-r dark:border-[#333333]">
+          <aside className="fixed inset-y-0 left-0 z-50 w-72 bg-white/90 backdrop-blur-2xl shadow-2xl dark:bg-[#1a1a1a]/95 dark:border-r dark:border-white/10">
             {sidebarContent}
           </aside>
         </div>

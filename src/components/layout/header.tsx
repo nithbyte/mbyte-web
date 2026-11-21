@@ -186,7 +186,7 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-20 flex h-16 w-full items-center justify-between border-b border-[#E5E1D9] bg-white/95 px-3 sm:px-4 backdrop-blur-md dark:border-[#333333] dark:bg-[#242424]/95 lg:px-6 2xl:px-8 gap-2 sm:gap-4">
+      <header className="sticky top-0 z-20 flex h-16 w-full items-center justify-between border-b border-white/60 bg-white/80 px-3 sm:px-4 backdrop-blur-2xl dark:border-white/10 dark:bg-[#1a1a1a]/80 lg:px-6 2xl:px-8 gap-2 sm:gap-4 transition-all">
         {/* Left: Mobile Toggle, Territory Filter & Date Badge */}
         <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
           <button

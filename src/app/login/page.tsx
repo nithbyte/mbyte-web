@@ -232,19 +232,26 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative min-h-screen flex flex-col justify-between bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200">
+    <div className="relative min-h-screen flex flex-col justify-between bg-slate-50 dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 transition-colors duration-200 overflow-hidden">
+      {/* Ambient Animated Liquid Mesh Glows */}
+      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-70 dark:opacity-40">
+        <div className="absolute -top-[10%] -left-[10%] h-[500px] w-[500px] rounded-full bg-gradient-to-br from-orange-400/30 via-amber-300/20 to-transparent blur-[100px] animate-liquid-pulse" />
+        <div className="absolute top-[40%] -right-[15%] h-[550px] w-[550px] rounded-full bg-gradient-to-bl from-sky-400/25 via-indigo-300/20 to-transparent blur-[110px] animate-liquid-float" />
+        <div className="absolute -bottom-[15%] left-[20%] h-[500px] w-[500px] rounded-full bg-gradient-to-tr from-rose-400/20 via-orange-300/20 to-transparent blur-[100px] animate-liquid-pulse" />
+      </div>
+
       {/* Top Bar */}
-      <header className="w-full px-6 py-4 flex items-center justify-between z-10">
+      <header className="relative w-full px-6 py-4 flex items-center justify-between z-10">
         <div />
-        <ThemeToggle className="border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 shadow-xs backdrop-blur-xs" />
+        <ThemeToggle className="border border-white/60 dark:border-white/10 bg-white/70 dark:bg-slate-900/70 shadow-sm backdrop-blur-xl" />
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex items-center justify-center px-4 py-8 sm:px-6">
+      <main className="relative z-10 flex-1 flex items-center justify-center px-4 py-8 sm:px-6">
         <div className="w-full max-w-md">
           {/* Brand Logo & Header */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center mb-5">
+            <div className="inline-flex items-center justify-center mb-5 filter drop-shadow-[0_8px_20px_rgba(255,107,0,0.15)]">
               <MByteLogo variant="full" width={220} height={60} priority />
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
@@ -257,8 +264,8 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* Form Card */}
-          <div className="rounded-2xl border border-slate-200/90 dark:border-slate-800/90 bg-white dark:bg-slate-900 p-7 sm:p-8 shadow-xl shadow-slate-200/50 dark:shadow-none transition-all">
+          {/* Liquid Glass Form Card */}
+          <div className="rounded-3xl border border-white/70 dark:border-white/10 bg-white/75 dark:bg-slate-900/75 backdrop-blur-2xl p-7 sm:p-8 shadow-[0_16px_40px_rgba(0,0,0,0.08)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.4)] transition-all">
             {/* Error Message */}
             {errorMsg && (
               <div className="mb-5 flex items-start gap-2.5 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/30 p-3 text-xs text-rose-700 dark:text-rose-300 animate-fadeIn">
