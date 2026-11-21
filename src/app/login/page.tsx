@@ -81,7 +81,7 @@ export default function LoginPage() {
     if (!publicOrganizations || publicOrganizations.length === 0) return;
     if (selectedOrg) return;
 
-    // Check query param e.g. /login?tenant=kovelbyte or /login?org=kovelbyte
+    // Only pre-select if explicitly passed in URL query param e.g. /login?tenant=kovelbyte
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const targetParam = (params.get("tenant") || params.get("org") || params.get("company") || "").trim().toLowerCase();
@@ -94,26 +94,8 @@ export default function LoginPage() {
         );
         if (match) {
           setSelectedOrg(match);
-          return;
         }
       }
-    }
-
-    // Check subdomain if on a tenant subdomain
-    const sub = getTenantSubdomain();
-    if (sub) {
-      const match = publicOrganizations.find(
-        (o) => o.slug.toLowerCase() === sub.toLowerCase() || o.code.toLowerCase() === sub.toLowerCase()
-      );
-      if (match) {
-        setSelectedOrg(match);
-        return;
-      }
-    }
-
-    // If only 1 tenant organization exists in the system, pre-select it for convenience
-    if (publicOrganizations.length === 1) {
-      setSelectedOrg(publicOrganizations[0]);
     }
   }, [publicOrganizations, selectedOrg]);
 
@@ -327,7 +309,7 @@ export default function LoginPage() {
               </div>
             ) : (
               /* Standard Credentials Form */
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} autoComplete="off" className="space-y-4">
                 {/* 1. First Field: Select Tenant Company (Searchable Dropdown) */}
                 <div className="space-y-1.5" ref={dropdownRef}>
                   <label
@@ -474,7 +456,7 @@ export default function LoginPage() {
                     <input
                       id="login-email"
                       type="email"
-                      autoComplete="email"
+                      autoComplete="off"
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
@@ -513,7 +495,7 @@ export default function LoginPage() {
                     <input
                       id="login-password"
                       type={showPassword ? "text" : "password"}
-                      autoComplete="current-password"
+                      autoComplete="new-password"
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}

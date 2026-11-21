@@ -41,6 +41,7 @@ import { useCurrentUser, useLogout } from "@/hooks";
 import { normalizeRole, type CanonicalRole } from "@/types";
 import { APP_CONFIG } from "@/lib/constants";
 import { MByteLogo } from "@/components/ui/mbyte-logo";
+import { getRootDomain } from "@/lib/subdomain";
 
 interface NavItem {
   title: string;
@@ -494,7 +495,11 @@ export function Sidebar() {
     try {
       await logoutMutation.mutateAsync();
     } finally {
-      router.push("/login");
+      if (typeof window !== "undefined") {
+        const rootDomain = getRootDomain();
+        const rootHost = rootDomain.split(":")[0];
+        window.location.href = `https://${rootHost}/login`;
+      }
     }
   };
 

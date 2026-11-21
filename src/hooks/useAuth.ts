@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { authService } from "@/services/authService";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useFilterStore } from "@/store";
+import { getRootDomain } from "@/lib/subdomain";
 import type { User } from "@/types";
 
 export function useCurrentUser() {
@@ -129,7 +130,9 @@ export function useLogout() {
       useFilterStore.getState().setSelectedTerritoryId("ALL");
       logout();
       if (typeof window !== "undefined") {
-        window.location.href = "/login";
+        const rootDomain = getRootDomain();
+        const rootHost = rootDomain.split(":")[0];
+        window.location.href = `https://${rootHost}/login`;
       }
     },
   });

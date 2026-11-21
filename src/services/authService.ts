@@ -2,6 +2,7 @@ import { apiClient, tokenStorage, isMockFallbackAllowed } from "../lib/api-clien
 import { mockUsers } from "../mock";
 import { normalizeRole, getRoleLabel, type User } from "../types";
 import { useAuthStore } from "@/store/useAuthStore";
+import { getRootDomain } from "../lib/subdomain";
 
 // Maintain active user state in memory
 let activeUserId = "";
@@ -389,12 +390,24 @@ export const authService = {
     cachedUsers = [];
     if (typeof window !== "undefined") {
       try {
-        window.localStorage.removeItem("mbyte_admin_access_token");
-        window.localStorage.removeItem("mbyte_admin_refresh_token");
-        window.localStorage.removeItem("mbyte_selected_org_id");
-        window.localStorage.removeItem("mbyte_auth_user");
+        window.localStorage.clear();
         window.sessionStorage.clear();
-        document.cookie = "mbyte_tenant_subdomain=; Max-Age=0; path=/;";
+        const rootDomain = getRootDomain();
+        const rootHost = rootDomain.split(":")[0];
+        const cookieNames = [
+          "mbyte_admin_access_token",
+          "mbyte_admin_refresh_token",
+          "mbyte_auth_token",
+          "mbyte_refresh_token",
+          "mbyte_tenant_subdomain",
+          "mbyte_tenant_slug",
+          "mbyte_selected_org_id",
+          "mbyte_auth_user",
+        ];
+        cookieNames.forEach((name) => {
+          document.cookie = `${name}=; path=/; domain=.${rootHost}; Max-Age=0;`;
+          document.cookie = `${name}=; path=/; Max-Age=0;`;
+        });
       } catch {}
     }
     return Promise.resolve();
