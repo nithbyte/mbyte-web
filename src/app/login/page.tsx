@@ -3,22 +3,15 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Shield,
   Building,
-  MapPin,
   Lock,
   Mail,
   Eye,
   EyeOff,
-  CheckCircle2,
   AlertCircle,
   ArrowRight,
-  Database,
-  Smartphone,
-  BarChart3,
-  ExternalLink,
-  Clock,
-  Coins,
+  ShieldCheck,
+  ChevronDown,
 } from "lucide-react";
 import { useLogin, useSelectCompany, usePublicOrganizationBySlug } from "@/hooks";
 import { normalizeRole } from "@/types";
@@ -37,10 +30,11 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Subdomain detection
+  // Subdomain & Manual Tenant Slug
   const [mounted, setMounted] = useState(false);
   const [tenantSlug, setTenantSlug] = useState<string | null>(null);
   const [manualTenantSlug, setManualTenantSlug] = useState("");
+  const [showCompanyField, setShowCompanyField] = useState(false);
 
   // Multi-Company Selection State
   const [multiCompanyData, setMultiCompanyData] = useState<{
@@ -76,11 +70,11 @@ export default function LoginPage() {
     setErrorMsg(null);
 
     if (!email.trim()) {
-      setErrorMsg("Please enter your corporate email address.");
+      setErrorMsg("Please enter your work email address.");
       return;
     }
     if (!password) {
-      setErrorMsg("Please enter your account password.");
+      setErrorMsg("Please enter your password.");
       return;
     }
 
@@ -117,7 +111,7 @@ export default function LoginPage() {
     } catch (err: any) {
       setErrorMsg(
         err?.message ||
-          "Authentication failed. Please verify your email and password."
+          "Authentication failed. Please verify your credentials."
       );
     }
   };
@@ -148,26 +142,26 @@ export default function LoginPage() {
     }
   };
 
-  // If a tenant subdomain is requested but does not exist in backend
+  // If a tenant subdomain is requested but does not exist
   if (tenantSlug && isOrgError) {
     return (
-      <div className="relative min-h-screen flex items-center justify-center bg-slate-950 text-slate-100 overflow-hidden px-4 py-8">
-        <div className="relative w-full max-w-md rounded-2xl border border-rose-500/30 bg-[#242424]/95 p-8 backdrop-blur-xl shadow-2xl text-center space-y-5">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400">
+      <div className="relative min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 p-4 transition-colors">
+        <div className="w-full max-w-md rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-8 shadow-xl shadow-slate-200/50 dark:shadow-none text-center space-y-5">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/40 text-rose-600 dark:text-rose-400">
             <Building className="h-7 w-7" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">Company Workspace Not Found</h1>
-            <p className="mt-2 text-xs text-slate-400 leading-relaxed">
-              The tenant organization subdomain <code className="font-mono text-rose-400 font-semibold">{tenantSlug}</code> does not exist or has been deactivated.
+            <h1 className="text-xl font-bold text-slate-900 dark:text-white">Workspace Not Found</h1>
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              The organization subdomain <code className="font-mono text-rose-600 dark:text-rose-400 font-semibold">{tenantSlug}</code> does not exist or has been suspended.
             </p>
           </div>
           <div className="pt-2">
             <a
               href={`http://${rootDomain}/login`}
-              className="inline-flex items-center gap-2 rounded-xl bg-slate-800 px-4 py-2.5 text-xs font-semibold text-white hover:bg-slate-700 transition-colors"
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-900 dark:bg-slate-800 px-4 py-2.5 text-xs font-semibold text-white hover:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
             >
-              <span>Return to MByte Main Platform</span>
+              <span>Return to Main Portal</span>
               <ArrowRight className="h-3.5 w-3.5" />
             </a>
           </div>
@@ -177,383 +171,269 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-slate-950 text-slate-100 overflow-hidden px-4 py-8 sm:px-6 lg:px-8">
-      {/* Top right Theme Toggle */}
-      <div className="absolute top-4 right-4 z-20">
-        <ThemeToggle className="bg-slate-900/60 border border-slate-800 text-slate-300 hover:bg-slate-800" />
-      </div>
-
-      {/* Background glowing gradients */}
-      <div className="absolute top-[-20%] left-[-10%] h-[500px] w-[500px] rounded-full bg-orange-600/15 blur-[130px] pointer-events-none" />
-      <div className="absolute bottom-[-15%] right-[-10%] h-[600px] w-[600px] rounded-full bg-orange-500/10 blur-[150px] pointer-events-none" />
-      <div className="absolute top-[40%] right-[30%] h-[400px] w-[400px] rounded-full bg-amber-600/10 blur-[120px] pointer-events-none" />
-
-      {/* Grid pattern overlay */}
-      <div
-        className="absolute inset-0 opacity-[0.03] pointer-events-none"
-        style={{
-          backgroundImage: `radial-gradient(circle at 1px 1px, white 1px, transparent 0)`,
-          backgroundSize: "32px 32px",
-        }}
-      />
-
-      <div className="relative w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-center z-10">
-        {/* Left Side: Enterprise Platform or Tenant Overview */}
-        <div className="lg:col-span-5 space-y-6">
-          {tenantSlug && tenantOrg ? (
-            /* Tenant Subdomain Branded View */
-            <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-1 text-[11px] font-semibold text-sky-400">
-                <Building className="h-3.5 w-3.5" />
-                <span>Dedicated Enterprise Subdomain Portal</span>
-              </div>
-
-              <div className="flex items-center gap-3 pt-1">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 text-white font-black text-base shadow-lg shadow-sky-500/20">
-                  {tenantOrg.code ? tenantOrg.code.slice(0, 3) : "ORG"}
-                </div>
-                <div>
-                  <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white capitalize">
-                    {tenantOrg.name}
-                  </h1>
-                  <span className="font-mono text-xs text-sky-400 font-semibold tracking-wide">
-                    {tenantOrg.code} • Subdomain: {tenantOrg.slug}.{rootDomain}
-                  </span>
-                </div>
-              </div>
-
-              <p className="text-xs text-slate-400 leading-relaxed pt-1">
-                Welcome to the official {tenantOrg.name} sales force automation workspace. All operations, visits, orders, and telemetry in this portal are isolated to your organization.
-              </p>
-
-              {/* Tenant Configuration Highlights */}
-              <div className="space-y-2.5 pt-2">
-                <div className="flex items-start gap-3 p-3 rounded-xl border border-slate-800 bg-slate-900/60">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-400">
-                    <MapPin className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <h2 className="text-xs font-semibold text-white">Geofenced GPS Check-In</h2>
-                    <p className="text-[11px] text-slate-400">Enforced radius: {tenantOrg.geofenceRadius || 200} meters for doctor and chemist visits.</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-3 rounded-xl border border-slate-800 bg-slate-900/60">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-purple-500/20 bg-purple-500/10 text-purple-400">
-                    <Clock className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <h2 className="text-xs font-semibold text-white">Company Timezone & Ledger</h2>
-                    <p className="text-[11px] text-slate-400">{tenantOrg.timezone || "Asia/Kolkata"} • Currency: {tenantOrg.currency || "INR"}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-3 rounded-xl border border-slate-800 bg-slate-900/60">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-sky-500/20 bg-sky-500/10 text-sky-400">
-                    <Shield className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <h2 className="text-xs font-semibold text-white">Strict Tenant Boundary</h2>
-                    <p className="text-[11px] text-slate-400">Authentication restricted to authorized {tenantOrg.name} personnel.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            /* Root Domain Platform Overview */
-            <div className="space-y-4">
-              <div className="inline-block py-1">
-                <MByteLogo variant="full" theme="dark" width={260} height={60} priority />
-              </div>
-              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
-                Pharma Field-Force Access & Management
-              </h1>
-              <p className="text-sm text-slate-400 leading-relaxed">
-                Enterprise role-based management platform for pharmaceutical field forces, territory managers, and executive administrators.
-              </p>
-
-              {/* Enterprise Capabilities Showcase */}
-              <div className="space-y-2.5 pt-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Enterprise Security & Architecture
-                </span>
-
-                <div className="space-y-2.5">
-                  <div className="flex items-start gap-3 p-3 rounded-xl border border-slate-800 bg-slate-900/60">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-purple-500/20 bg-purple-500/10 text-purple-400">
-                      <Database className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <h2 className="text-xs font-semibold text-white">Multi-Tenant Subdomain Routing</h2>
-                      <p className="text-[11px] text-slate-400">Each organization operates on its own dedicated subdomain.</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 p-3 rounded-xl border border-slate-800 bg-slate-900/60">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-400">
-                      <MapPin className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <h2 className="text-xs font-semibold text-white">200m PostGIS GPS Geo-Fencing</h2>
-                      <p className="text-[11px] text-slate-400">Verified doctor and chemist field visits with tamper detection.</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 p-3 rounded-xl border border-slate-800 bg-slate-900/60">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-sky-500/20 bg-sky-500/10 text-sky-400">
-                      <Smartphone className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <h2 className="text-xs font-semibold text-white">Offline-First Mobile Sync</h2>
-                      <p className="text-[11px] text-slate-400">Field orders and e-Detailing visual aids with automatic conflict resolution.</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Compliance features badge list */}
-              <div className="hidden sm:flex items-center gap-4 pt-3 border-t border-slate-800/80 text-[11px] text-slate-500">
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                  <span>Multi-Tenant Isolated</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                  <span>200m PostGIS GPS</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                  <span>RBAC Verified</span>
-                </div>
-              </div>
-            </div>
+    <div className="relative min-h-screen flex flex-col justify-between bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200">
+      {/* Top Bar with Discreet Theme Toggle */}
+      <header className="w-full px-6 py-4 flex items-center justify-between z-10">
+        <div className="flex items-center gap-2">
+          {tenantSlug && tenantOrg && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-orange-50 text-orange-700 border border-orange-200/70 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-800/40 shadow-xs">
+              <Building className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
+              <span>{tenantOrg.name}</span>
+            </span>
           )}
         </div>
+        <ThemeToggle className="border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 shadow-xs backdrop-blur-xs" />
+      </header>
 
-        {/* Right Side: Login Card */}
-        <div className="lg:col-span-7">
-          <div className="relative rounded-2xl border border-slate-800 bg-[#242424]/95 p-6 sm:p-8 backdrop-blur-xl shadow-2xl shadow-black/60">
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl overflow-hidden shadow-md shadow-orange-500/20">
-                    <MByteLogo variant="icon" width={44} height={44} />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-white">
-                      {tenantSlug && tenantOrg ? `Sign In to ${tenantOrg.name}` : "Sign In to MByte"}
-                    </h2>
-                    <p className="text-xs text-slate-400">
-                      {tenantSlug && tenantOrg
-                        ? `Authorized ${tenantOrg.name} personnel credentials required`
-                        : "Enter your corporate credentials to continue"}
-                    </p>
-                  </div>
-                </div>
-                <span className="hidden sm:inline-flex items-center rounded-full bg-slate-800 px-2.5 py-1 text-[11px] font-medium text-slate-300">
-                  {tenantSlug ? "Tenant SSO" : "Platform SSO"}
-                </span>
-              </div>
+      {/* Main Content Area */}
+      <main className="flex-1 flex items-center justify-center px-4 py-8 sm:px-6">
+        <div className="w-full max-w-md">
+          {/* Brand Logo & Header */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center mb-5">
+              <MByteLogo variant="full" width={220} height={60} priority />
             </div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+              {tenantSlug && tenantOrg
+                ? `Sign in to ${tenantOrg.name}`
+                : "Sign in to your account"}
+            </h1>
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+              {tenantSlug && tenantOrg
+                ? `Enter your corporate credentials to access the ${tenantOrg.name} portal`
+                : "Welcome back! Enter your credentials to access FieldOps"}
+            </p>
+          </div>
 
+          {/* Form Card */}
+          <div className="rounded-2xl border border-slate-200/90 dark:border-slate-800/90 bg-white dark:bg-slate-900 p-7 sm:p-8 shadow-xl shadow-slate-200/50 dark:shadow-none transition-all">
+            {/* Error Message */}
             {errorMsg && (
-              <div className="mb-5 flex items-start gap-2.5 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">
-                <AlertCircle className="h-4 w-4 shrink-0 text-rose-400 mt-0.5" />
+              <div className="mb-5 flex items-start gap-2.5 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/30 p-3 text-xs text-rose-700 dark:text-rose-300 animate-fadeIn">
+                <AlertCircle className="h-4 w-4 shrink-0 text-rose-600 dark:text-rose-400 mt-0.5" />
                 <div className="flex-1 font-medium">{errorMsg}</div>
               </div>
             )}
 
+            {/* Multi-Company Selection Mode */}
             {multiCompanyData ? (
               <div className="space-y-4">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-500/10 border border-orange-500/30 text-orange-400">
-                    <Building className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-bold text-white">Select Pharmaceutical Company</h3>
-                    <p className="text-xs text-slate-400">Your account is authorized across multiple companies</p>
-                  </div>
+                <div className="mb-3">
+                  <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                    Select Your Organization
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Your account has access to multiple pharmaceutical workspaces:
+                  </p>
                 </div>
 
-                <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1">
+                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
                   {multiCompanyData.availableCompanies.map((comp) => (
                     <button
                       key={comp.id}
                       type="button"
                       onClick={() => handleSelectCompany(comp.id)}
                       disabled={selectCompanyMutation.isPending}
-                      className="w-full flex items-center justify-between p-3.5 rounded-xl border border-slate-700/80 bg-slate-900/80 hover:bg-slate-800/90 hover:border-orange-500/50 transition-all text-left group"
+                      className="w-full flex items-center justify-between p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40 hover:bg-orange-50/50 dark:hover:bg-slate-800/70 hover:border-orange-300 dark:hover:border-orange-500/50 transition-all text-left cursor-pointer group"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-800 text-orange-400 border border-slate-700 font-bold text-xs uppercase">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-orange-600 font-bold text-xs uppercase shadow-xs">
                           {comp.code?.slice(0, 3) || "ORG"}
                         </div>
                         <div>
-                          <div className="text-xs font-bold text-white group-hover:text-orange-400 transition-colors">
+                          <div className="text-xs font-semibold text-slate-900 dark:text-white group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
                             {comp.name}
                           </div>
                           <div className="text-[11px] text-slate-400 font-mono">
-                            {comp.code} • {comp.slug}
+                            {comp.code} {comp.slug ? `· ${comp.slug}` : ""}
                           </div>
                         </div>
                       </div>
-                      <span className="text-[11px] font-semibold text-slate-300 bg-slate-800/80 px-2.5 py-1 rounded-full border border-slate-700">
-                        {comp.role || "Member"}
-                      </span>
+                      <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-orange-600 dark:group-hover:text-orange-400 group-hover:translate-x-0.5 transition-all" />
                     </button>
                   ))}
                 </div>
 
-                <div className="pt-2 text-center">
-                  <button
-                    type="button"
-                    onClick={() => setMultiCompanyData(null)}
-                    className="text-xs text-slate-400 hover:text-white transition-colors"
-                  >
-                    ← Sign in with a different account
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setMultiCompanyData(null)}
+                  className="w-full text-center text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 pt-2 transition-colors cursor-pointer"
+                >
+                  ← Back to login
+                </button>
               </div>
             ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {!tenantSlug && (
-                <div className="space-y-2">
+              /* Standard Credentials Form */
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Optional Company Code (only if not on a subdomain) */}
+                {!tenantSlug && (
+                  <div>
+                    {!showCompanyField && !manualTenantSlug ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowCompanyField(true)}
+                        className="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors mb-1 cursor-pointer"
+                      >
+                        <Building className="h-3.5 w-3.5" />
+                        <span>Sign in with company code</span>
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </button>
+                    ) : (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <label
+                            htmlFor="tenant-slug"
+                            className="block text-xs font-medium text-slate-700 dark:text-slate-300"
+                          >
+                            Company Code (Optional)
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowCompanyField(false);
+                              setManualTenantSlug("");
+                            }}
+                            className="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
+                          >
+                            Hide
+                          </button>
+                        </div>
+                        <div className="relative">
+                          <Building className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+                          <input
+                            id="tenant-slug"
+                            type="text"
+                            value={manualTenantSlug}
+                            onChange={(e) => setManualTenantSlug(e.target.value)}
+                            placeholder="e.g. acme-pharma"
+                            className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3.5 py-2.5 pl-10 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-[#FF6B00] focus:outline-none focus:ring-4 focus:ring-orange-500/10 transition-all"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Email Field */}
+                <div className="space-y-1.5">
                   <label
-                    htmlFor="login-company-slug"
-                    className="block text-xs font-semibold text-slate-300"
+                    htmlFor="login-email"
+                    className="block text-xs font-medium text-slate-700 dark:text-slate-300"
                   >
-                    Company Identifier / Subdomain
+                    Email address
                   </label>
                   <div className="relative">
-                    <Building className="absolute left-3.5 top-3 h-4 w-4 text-slate-500" />
+                    <Mail className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
                     <input
-                      id="login-company-slug"
-                      type="text"
-                      autoCapitalize="none"
-                      value={manualTenantSlug}
-                      onChange={(e) => setManualTenantSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ""))}
-                      placeholder="e.g. novis-pharma, cipla, or company code"
-                      className="w-full rounded-xl border border-slate-700 bg-slate-900/90 px-3.5 py-2.5 pl-10 text-xs text-white placeholder-slate-500 focus:border-[#FF6B00] focus:outline-none focus:ring-1 focus:ring-[#FF6B00] transition-colors"
+                      id="login-email"
+                      type="email"
+                      autoComplete="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="name@company.com"
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3.5 py-2.5 pl-10 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-[#FF6B00] focus:outline-none focus:ring-4 focus:ring-orange-500/10 transition-all"
                     />
                   </div>
-                  <p className="mt-1 text-[11px] text-slate-500">
-                    Enter your company code or slug, or leave blank to select from authorized companies.
-                  </p>
                 </div>
-              )}
 
-              <div>
-                <label
-                  htmlFor="login-email"
-                  className="block text-xs font-semibold text-slate-300 mb-1.5"
-                >
-                  {tenantSlug && tenantOrg ? `${tenantOrg.name} Corporate Email` : "Corporate Email"}
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3.5 top-3 h-4 w-4 text-slate-500" />
-                  <input
-                    id="login-email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder={tenantSlug && tenantOrg ? `username@${tenantOrg.slug}.com` : "name@company.com"}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-900/90 px-3.5 py-2.5 pl-10 text-xs text-white placeholder-slate-500 focus:border-[#FF6B00] focus:outline-none focus:ring-1 focus:ring-[#FF6B00] transition-colors"
-                  />
+                {/* Password Field */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label
+                      htmlFor="login-password"
+                      className="block text-xs font-medium text-slate-700 dark:text-slate-300"
+                    >
+                      Password
+                    </label>
+                    <a
+                      href="#forgot-password"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        alert(
+                          tenantSlug && tenantOrg
+                            ? `Please contact your ${tenantOrg.name} administrator to reset your credentials.`
+                            : "Please contact your company administrator or IT helpdesk to reset your password."
+                        );
+                      }}
+                      className="text-xs font-medium text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-colors"
+                    >
+                      Forgot password?
+                    </a>
+                  </div>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+                    <input
+                      id="login-password"
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="current-password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••••••"
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3.5 py-2.5 pl-10 pr-10 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-[#FF6B00] focus:outline-none focus:ring-4 focus:ring-orange-500/10 transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-2.5 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none cursor-pointer"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label
-                    htmlFor="login-password"
-                    className="block text-xs font-semibold text-slate-300"
-                  >
-                    Account Password
+                {/* Remember Me */}
+                <div className="flex items-center pt-1">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="h-4 w-4 rounded border-slate-300 dark:border-slate-700 text-[#FF6B00] focus:ring-[#FF6B00]/20 cursor-pointer accent-[#FF6B00]"
+                    />
+                    <span className="text-xs text-slate-600 dark:text-slate-400">
+                      Remember this device
+                    </span>
                   </label>
-                  <a
-                    href="#forgot-password"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      alert(
-                        tenantSlug && tenantOrg
-                          ? `Please contact your ${tenantOrg.name} Company Administrator to reset your credentials.`
-                          : "Please contact your Company Administrator or IT support to reset your credentials."
-                      );
-                    }}
-                    className="text-[11px] text-orange-400 hover:text-orange-300 transition-colors"
-                  >
-                    Forgot password?
-                  </a>
                 </div>
-                <div className="relative">
-                  <Lock className="absolute left-3.5 top-3 h-4 w-4 text-slate-500" />
-                  <input
-                    id="login-password"
-                    type={showPassword ? "text" : "password"}
-                    autoComplete="current-password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••••••"
-                    className="w-full rounded-xl border border-slate-700 bg-slate-900/90 px-3.5 py-2.5 pl-10 pr-10 text-xs text-white placeholder-slate-500 focus:border-[#FF6B00] focus:outline-none focus:ring-1 focus:ring-[#FF6B00] transition-colors"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-2.5 p-0.5 text-slate-500 hover:text-slate-300 focus:outline-none"
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
-              </div>
 
-              <div className="flex items-center justify-between pt-1">
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="h-3.5 w-3.5 rounded border-slate-700 bg-slate-950 text-[#FF6B00] focus:ring-[#FF6B00]/20"
-                  />
-                  <span className="text-xs text-slate-400">Remember session</span>
-                </label>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loginMutation.isPending}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#FF6B00] to-[#F45100] px-4 py-3 text-xs font-bold text-white shadow-lg shadow-orange-600/25 hover:from-[#F45100] hover:to-[#C23B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/50 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loginMutation.isPending ? (
-                  <>
-                    <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>Authenticating Identity...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>{tenantSlug && tenantOrg ? `Sign In to ${tenantOrg.name}` : "Sign In to FieldOps Portal"}</span>
-                    <ArrowRight className="h-4 w-4" />
-                  </>
-                )}
-              </button>
-            </form>
+                {/* Submit Button */}
+                <button
+                  type="submit"
+                  disabled={loginMutation.isPending}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#FF6B00] hover:bg-[#E85E00] active:scale-[0.99] px-4 py-3 text-xs font-semibold text-white shadow-md shadow-orange-500/20 hover:shadow-lg hover:shadow-orange-500/25 focus:outline-none focus:ring-4 focus:ring-orange-500/20 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
+                >
+                  {loginMutation.isPending ? (
+                    <>
+                      <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Signing in...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Sign in to FieldOps</span>
+                      <ArrowRight className="h-4 w-4" />
+                    </>
+                  )}
+                </button>
+              </form>
             )}
-
-            <div className="mt-6 pt-5 border-t border-slate-800 text-center">
-              <p className="text-[11px] text-slate-400">
-                Unauthorized access to MByte FieldOps is strictly prohibited. Activity is logged under pharmaceutical audit compliance policies.
-              </p>
-            </div>
           </div>
         </div>
-      </div>
+      </main>
+
+      {/* Subtle, Professional Footer */}
+      <footer className="w-full py-5 text-center text-xs text-slate-400 dark:text-slate-500 border-t border-slate-200/60 dark:border-slate-800/60 z-10">
+        <div className="flex items-center justify-center gap-2">
+          <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-500" />
+          <span>Enterprise Pharmaceutical Field Intelligence · Mediqbyte</span>
+        </div>
+      </footer>
     </div>
   );
 }
