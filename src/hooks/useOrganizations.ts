@@ -56,3 +56,15 @@ export function useUpdateOrganization() {
     },
   });
 }
+
+export function useRetryProvisioning() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => organizationService.retryProvisioning(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ["organizations"] });
+      queryClient.invalidateQueries({ queryKey: ["organization", id] });
+    },
+  });
+}

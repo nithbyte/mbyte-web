@@ -55,6 +55,15 @@ export const organizationService = {
   },
 
   /**
+   * Retry failed tenant database provisioning (SUPER_ADMIN only).
+   */
+  async retryProvisioning(id: string): Promise<Organization> {
+    const res = await apiClient.post<Organization>(`/organizations/${id}/retry-provisioning`);
+    if (res && res.id) return res;
+    throw new Error(`Failed to re-provision tenant database for ${id}`);
+  },
+
+  /**
    * Soft-delete/archive an organization (SUPER_ADMIN only).
    */
   async deleteOrganization(id: string): Promise<void> {

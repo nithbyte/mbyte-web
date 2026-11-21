@@ -22,8 +22,9 @@ import {
   ExternalLink,
   UserPlus,
   AlertCircle,
+  RefreshCw,
 } from "lucide-react";
-import { useOrganizations, useCreateOrganization, useUpdateOrganization, useCurrentUser, useCreateUser } from "@/hooks";
+import { useOrganizations, useCreateOrganization, useUpdateOrganization, useCurrentUser, useCreateUser, useRetryProvisioning } from "@/hooks";
 import { normalizeRole, type Organization, type CreateOrganizationInput, type UpdateOrganizationInput } from "@/types";
 import { Modal } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -63,6 +64,8 @@ export default function CompaniesPage() {
 
   // Provision Admin Modal state
   const createUserMutation = useCreateUser();
+  const retryMutation = useRetryProvisioning();
+  const [retryingOrgId, setRetryingOrgId] = useState<string | null>(null);
   const [adminOrg, setAdminOrg] = useState<Organization | null>(null);
   const [adminForm, setAdminForm] = useState({
     firstName: "",
@@ -73,6 +76,18 @@ export default function CompaniesPage() {
   });
   const [adminError, setAdminError] = useState<string | null>(null);
   const [adminSuccess, setAdminSuccess] = useState<string | null>(null);
+
+  const handleRetryProvision = async (orgId: string) => {
+    try {
+      setRetryingOrgId(orgId);
+      await retryMutation.mutateAsync(orgId);
+      refetch();
+    } catch (err: any) {
+      alert(err?.message || "Failed to retry tenant database provisioning");
+    } finally {
+      setRetryingOrgId(null);
+    }
+  };
 
   const handleOpenAddAdmin = (org: Organization) => {
     setAdminOrg(org);
@@ -492,10 +507,20 @@ export default function CompaniesPage() {
                           Active
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-inset ring-slate-400/20 dark:bg-slate-800 dark:text-slate-400">
-                          <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
-                          Deactivated
-                        </span>
+                        <div className="flex flex-col items-start gap-1">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-semibold text-rose-700 ring-1 ring-inset ring-rose-400/20 dark:bg-rose-950/60 dark:text-rose-400">
+                            <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                            Provisioning Incomplete
+                          </span>
+                          <button
+                            onClick={() => handleRetryProvision(org.id)}
+                            disabled={retryingOrgId === org.id}
+                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-sky-600 hover:text-sky-700 dark:text-sky-400 hover:underline cursor-pointer disabled:opacity-50"
+                          >
+                            <RefreshCw className={`h-3 w-3 ${retryingOrgId === org.id ? "animate-spin" : ""}`} />
+                            <span>{retryingOrgId === org.id ? "Provisioning..." : "Retry Provisioning"}</span>
+                          </button>
+                        </div>
                       )}
                     </td>
 
