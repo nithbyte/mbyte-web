@@ -112,25 +112,59 @@ export default function ChatPage() {
     };
   }, [callState.activeCall, closeChatPanel, isNewChatModalOpen]);
 
-  // Load initial conversations and contacts
+  // Load initial conversations and contacts, and keep recent chats in sync
   useEffect(() => {
+    let isMounted = true;
+
     async function loadData() {
       try {
         const [convList, contactList] = await Promise.all([
           chatService.getConversations(),
           chatService.getContacts(),
         ]);
-        setConversations(convList);
-        setContacts(contactList);
+        if (isMounted) {
+          setConversations(convList);
+          setContacts(contactList);
 
-        if (convList.length > 0) {
-          setSelectedConversationId((prev) => prev || convList[0].id);
+          if (convList.length > 0) {
+            setSelectedConversationId((prev) => prev || convList[0].id);
+          }
         }
       } catch (err) {
         console.error("Failed to load chat data", err);
       }
     }
+
     loadData();
+
+    // Periodic sync of conversations list for real-time recent chats updates
+    const convTimer = setInterval(async () => {
+      try {
+        const freshConvs = await chatService.getConversations();
+        if (isMounted && Array.isArray(freshConvs) && freshConvs.length > 0) {
+          setConversations((prev) => {
+            // Merge fresh list preserving current selection
+            const map = new Map<string, Conversation>();
+            freshConvs.forEach((c) => map.set(c.id, c));
+            // Keep any locally created ones not yet in server list
+            prev.forEach((c) => {
+              if (!map.has(c.id)) map.set(c.id, c);
+            });
+            const merged = Array.from(map.values());
+            return merged.sort((a, b) => {
+              const timeA = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : new Date(a.createdAt).getTime();
+              const timeB = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : new Date(b.createdAt).getTime();
+              return timeB - timeA;
+            });
+          });
+        }
+      } catch {}
+    }, 3500);
+
+    return () => {
+      isMounted = false;
+      clearInterval(convTimer);
+    };
   }, []);
 
   // Load messages when selected conversation changes
@@ -144,12 +178,34 @@ export default function ChatPage() {
         if (isMounted) {
           setMessages(msgs);
           await chatService.markAsRead(selectedConversationId!);
-          // Update local unread status
-          setConversations((prev) =>
-            prev.map((c) =>
-              c.id === selectedConversationId ? { ...c, hasUnread: false } : c
-            )
-          );
+          // Update local unread status and last message text if new message received
+          if (msgs.length > 0) {
+            const last = msgs[msgs.length - 1];
+            setConversations((prev) => {
+              const target = prev.find((c) => c.id === selectedConversationId);
+              if (!target) return prev;
+              const hasChanged =
+                target.hasUnread ||
+                target.lastMessageText !== last.content ||
+                target.lastMessageAt !== last.createdAt;
+              if (!hasChanged) return prev;
+
+              const updated: Conversation = {
+                ...target,
+                hasUnread: false,
+                lastMessageText: last.content,
+                lastMessageAt: last.createdAt,
+                lastMessageSender: last.sender?.firstName || "Colleague",
+              };
+              return [updated, ...prev.filter((c) => c.id !== selectedConversationId)];
+            });
+          } else {
+            setConversations((prev) =>
+              prev.map((c) =>
+                c.id === selectedConversationId ? { ...c, hasUnread: false } : c
+              )
+            );
+          }
         }
       } catch (err) {
         console.error("Failed to fetch messages", err);
@@ -157,7 +213,7 @@ export default function ChatPage() {
     }
 
     loadMessages();
-    const interval = setInterval(loadMessages, 3500); // Polling for new incoming messages
+    const interval = setInterval(loadMessages, 3000); // Polling for new incoming messages
 
     return () => {
       isMounted = false;
@@ -174,9 +230,9 @@ export default function ChatPage() {
     return conversations.find((c) => c.id === selectedConversationId) || null;
   }, [conversations, selectedConversationId]);
 
-  // Filter conversations
+  // Filter conversations with strict chronological sorting
   const filteredConversations = useMemo(() => {
-    return conversations.filter((conv) => {
+    const list = conversations.filter((conv) => {
       const matchSearch =
         conv.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (conv.lastMessageText &&
@@ -185,6 +241,12 @@ export default function ChatPage() {
       if (filterTab === "DIRECT") return conv.type === "DIRECT";
       if (filterTab === "GROUP") return conv.type === "GROUP";
       return true;
+    });
+
+    return list.sort((a, b) => {
+      const timeA = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : new Date(a.createdAt).getTime();
+      const timeB = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : new Date(b.createdAt).getTime();
+      return timeB - timeA;
     });
   }, [conversations, searchQuery, filterTab]);
 
@@ -241,19 +303,19 @@ export default function ChatPage() {
 
       setMessages((prev) => [...prev, newMsg]);
 
-      // Update last message in conversation list
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === selectedConversationId
-            ? {
-                ...c,
-                lastMessageText: content,
-                lastMessageAt: new Date().toISOString(),
-                lastMessageSender: "You",
-              }
-            : c
-        )
-      );
+      // Move active conversation immediately to top of recent chats list
+      setConversations((prev) => {
+        const target = prev.find((c) => c.id === selectedConversationId);
+        if (!target) return prev;
+        const updated: Conversation = {
+          ...target,
+          lastMessageText: content,
+          lastMessageAt: new Date().toISOString(),
+          lastMessageSender: "You",
+          hasUnread: false,
+        };
+        return [updated, ...prev.filter((c) => c.id !== selectedConversationId)];
+      });
     } catch (err) {
       console.error("Failed to send message", err);
     } finally {
@@ -303,18 +365,18 @@ export default function ChatPage() {
       });
 
       setMessages((prev) => [...prev, newMsg]);
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === selectedConversationId
-            ? {
-                ...c,
-                lastMessageText: isImage ? "📷 Image" : `📎 ${file.name}`,
-                lastMessageAt: new Date().toISOString(),
-                lastMessageSender: "You",
-              }
-            : c
-        )
-      );
+      setConversations((prev) => {
+        const target = prev.find((c) => c.id === selectedConversationId);
+        if (!target) return prev;
+        const updated: Conversation = {
+          ...target,
+          lastMessageText: isImage ? "📷 Image" : `📎 ${file.name}`,
+          lastMessageAt: new Date().toISOString(),
+          lastMessageSender: "You",
+          hasUnread: false,
+        };
+        return [updated, ...prev.filter((c) => c.id !== selectedConversationId)];
+      });
     } catch (err) {
       console.error("Upload failed", err);
     } finally {

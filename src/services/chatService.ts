@@ -323,8 +323,8 @@ export const chatService = {
    * Get messages for conversation
    */
   async getMessages(conversationId: string, page = 1, limit = 50): Promise<ChatMessage[]> {
-    const isMockConv = conversationId.startsWith("conv_") || conversationId.startsWith("mock_");
-    if (!isMockConv && chatEndpointsSupported !== false) {
+    const isLocalMockOnly = conversationId.startsWith("mock_");
+    if (!isLocalMockOnly && chatEndpointsSupported !== false) {
       try {
         const res = await apiClient.get<any>(`/chat/conversations/${conversationId}/messages`, {
           params: { page, limit },
@@ -336,8 +336,8 @@ export const chatService = {
         if (Array.isArray(data)) {
           return data;
         }
-      } catch {
-        // fallback
+      } catch (err) {
+        console.warn(`Real getMessages fallback for ${conversationId}:`, err);
       }
     }
 
@@ -358,16 +358,16 @@ export const chatService = {
       metadata?: any;
     }
   ): Promise<ChatMessage> {
-    const isMockConv = conversationId.startsWith("conv_") || conversationId.startsWith("mock_");
-    if (!isMockConv && chatEndpointsSupported !== false) {
+    const isLocalMockOnly = conversationId.startsWith("mock_");
+    if (!isLocalMockOnly && chatEndpointsSupported !== false) {
       try {
         const res = await apiClient.post<any>(`/chat/conversations/${conversationId}/messages`, payload);
         const data = res?.data || res;
         if (data && data.id) {
           return data;
         }
-      } catch {
-        // fallback
+      } catch (err) {
+        console.warn(`Real sendMessage fallback for ${conversationId}:`, err);
       }
     }
 
@@ -519,8 +519,8 @@ export const chatService = {
    * Mark as read
    */
   async markAsRead(conversationId: string): Promise<void> {
-    const isMockConv = conversationId.startsWith("conv_") || conversationId.startsWith("mock_");
-    if (!isMockConv && chatEndpointsSupported !== false) {
+    const isLocalMockOnly = conversationId.startsWith("mock_");
+    if (!isLocalMockOnly && chatEndpointsSupported !== false) {
       try {
         await apiClient.post(`/chat/conversations/${conversationId}/read`);
       } catch {
