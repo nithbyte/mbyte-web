@@ -883,7 +883,7 @@ export default function FieldForcePage() {
                 />
               </div>
             ) : (
-              <Table>
+              <Table containerClassName="overflow-hidden">
                 <TableHeader>
                   <TableRow>
                     <TableHead>User / Employee ID</TableHead>
@@ -1008,17 +1008,14 @@ export default function FieldForcePage() {
                 />
               </div>
             ) : (
-              <Table>
+              <Table containerClassName="overflow-hidden">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Representative & Employee ID</TableHead>
-                    <TableHead>Territory</TableHead>
-                    <TableHead>Reporting Manager</TableHead>
-                    <TableHead>Duty Status</TableHead>
-                    <TableHead>Today&apos;s Visits</TableHead>
-                    <TableHead>Monthly Target</TableHead>
-                    <TableHead>Achievement</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
+                    <TableHead className="w-[28%]">Representative & Details</TableHead>
+                    <TableHead className="w-[20%]">Territory</TableHead>
+                    <TableHead className="w-[18%]">Duty Status & Calls</TableHead>
+                    <TableHead className="w-[16%]">Target & Achievement</TableHead>
+                    <TableHead className="w-[18%] text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1027,16 +1024,16 @@ export default function FieldForcePage() {
                       key={mr.id}
                       className="hover:bg-slate-50/80 dark:hover:bg-slate-800/60 transition-colors"
                     >
-                      <TableCell>
-                        <div className="flex items-center gap-2.5">
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                      <TableCell className="py-2.5">
+                        <div className="flex items-start gap-2.5">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200 mt-0.5">
                             {mr.name
                               .split(" ")
                               .map((n) => n[0])
                               .slice(0, 2)
                               .join("")}
                           </div>
-                          <div>
+                          <div className="min-w-0">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <Link
                                 href={`/field-force/${mr.id}`}
@@ -1055,34 +1052,38 @@ export default function FieldForcePage() {
                               )}
                               {mr.isAtWork && <AtWorkBadge punchInTime={mr.punchInTime} />}
                             </div>
-                            <div className="font-mono text-[11px] text-slate-500">
+                            <div className="font-mono text-[11px] text-slate-500 truncate">
                               {mr.employeeId} • {mr.designation}
+                            </div>
+                            <div className="text-[10px] text-slate-400 mt-0.5 truncate">
+                              Mgr: <span className="font-medium text-slate-600 dark:text-slate-300">{mr.managerName || "Direct Reporting"}</span>
                             </div>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-1">
+                      <TableCell className="py-2.5">
+                        <div className="flex flex-col gap-0.5">
                           <div className="flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-300 font-medium">
                             <MapPin className="h-3.5 w-3.5 text-sky-600 shrink-0" />
-                            <span className="font-semibold">{mr.territoryName}</span>
-                            <Badge variant="success" className="text-[9px] px-1 py-0 font-normal">Primary</Badge>
+                            <span className="font-semibold truncate">{mr.territoryName}</span>
+                            <Badge variant="success" className="text-[9px] px-1 py-0 font-normal shrink-0">Primary</Badge>
                             {canonicalRole === "ADMIN" && (
                               <button
                                 onClick={() => handleOpenAssignTerritory(mr)}
                                 title="Manage Assigned Territories"
-                                className="p-1 text-slate-400 hover:text-sky-600 rounded hover:bg-sky-50 dark:hover:bg-slate-800 cursor-pointer"
+                                className="p-1 text-slate-400 hover:text-sky-600 rounded hover:bg-sky-50 dark:hover:bg-slate-800 cursor-pointer shrink-0"
                               >
                                 <Edit3 className="h-3 w-3" />
                               </button>
                             )}
                           </div>
+                          <div className="text-[10px] text-slate-400 truncate">{mr.headquarters}</div>
                           {mr.assignedTerritories && mr.assignedTerritories.filter((a: any) => a.status === "ACTIVE" && !a.isPrimary).length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-0.5">
                               {mr.assignedTerritories.filter((a: any) => a.status === "ACTIVE" && !a.isPrimary).map((a: any) => (
                                 <span
                                   key={a.id}
-                                  className="inline-flex items-center gap-1 rounded bg-sky-50 dark:bg-sky-950/50 px-1.5 py-0.5 text-[9px] font-medium text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800"
+                                  className="inline-flex items-center gap-1 rounded bg-sky-50 dark:bg-sky-950/50 px-1 py-0.2 text-[9px] font-medium text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800"
                                 >
                                   <span>+ {a.territoryName}</span>
                                 </span>
@@ -1090,99 +1091,95 @@ export default function FieldForcePage() {
                             </div>
                           )}
                         </div>
-                        <div className="text-[10px] text-slate-400 mt-0.5">{mr.headquarters}</div>
                       </TableCell>
-                      <TableCell>
-                        <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                          {mr.managerName}
-                        </div>
-                        <div className="text-[10px] text-slate-400">Area Manager</div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            mr.status === "IN_FIELD"
-                              ? "success"
-                              : mr.status === "COMPLETED"
-                              ? "secondary"
-                              : "default"
-                          }
-                          className="text-[10px]"
-                        >
-                          {mr.status.replace("_", " ")}
-                        </Badge>
-                        <div className="text-[10px] text-slate-400 truncate max-w-[130px] mt-0.5">
-                          {mr.currentActivity}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-semibold text-xs text-slate-900 dark:text-slate-100">
-                          {mr.todayVisits.completed} / {mr.todayVisits.planned} calls
-                        </div>
-                        <div className="flex items-center gap-1.5 mt-1">
-                          <div className="h-1.5 w-14 rounded-full bg-slate-100 overflow-hidden dark:bg-slate-800">
-                            <div
-                              className="h-full bg-sky-600 rounded-full"
-                              style={{ width: `${mr.todayVisits.complianceRate}%` }}
-                            />
+                      <TableCell className="py-2.5">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <Badge
+                              variant={
+                                mr.status === "IN_FIELD"
+                                  ? "success"
+                                  : mr.status === "COMPLETED"
+                                  ? "secondary"
+                                  : "default"
+                              }
+                              className="text-[9px] px-1.5 py-0"
+                            >
+                              {mr.status.replace("_", " ")}
+                            </Badge>
+                            <span className="text-[11px] font-semibold text-slate-800 dark:text-slate-200">
+                              {mr.todayVisits.completed}/{mr.todayVisits.planned} calls
+                            </span>
                           </div>
-                          <span className="text-[10px] text-slate-500 font-medium">
-                            {mr.todayVisits.complianceRate}%
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <div className="h-1.5 w-16 rounded-full bg-slate-100 overflow-hidden dark:bg-slate-800">
+                              <div
+                                className="h-full bg-sky-600 rounded-full"
+                                style={{ width: `${mr.todayVisits.complianceRate}%` }}
+                              />
+                            </div>
+                            <span className="text-[9px] text-slate-500 font-medium">
+                              {mr.todayVisits.complianceRate}%
+                            </span>
+                          </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                        {formatCurrency(mr.monthlyTarget)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-bold text-xs text-slate-900 dark:text-slate-100">
-                            {formatCurrency(mr.monthlyAchieved)}
-                          </span>
-                          {mr.performanceStatus === "AHEAD" ? (
-                            <TrendingUp className="h-3.5 w-3.5 text-emerald-600" />
-                          ) : mr.performanceStatus === "BELOW_TARGET" ? (
-                            <TrendingDown className="h-3.5 w-3.5 text-rose-600" />
-                          ) : (
-                            <Target className="h-3.5 w-3.5 text-sky-600" />
-                          )}
+                      <TableCell className="py-2.5">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1 text-xs">
+                            <span className="font-bold text-slate-900 dark:text-slate-100">
+                              {formatCurrency(mr.monthlyAchieved)}
+                            </span>
+                            <span className="text-[11px] text-slate-400">/</span>
+                            <span className="text-[11px] text-slate-500 font-medium">
+                              {formatCurrency(mr.monthlyTarget)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 text-[10px] text-slate-500">
+                            {mr.performanceStatus === "AHEAD" ? (
+                              <TrendingUp className="h-3 w-3 text-emerald-600 shrink-0" />
+                            ) : mr.performanceStatus === "BELOW_TARGET" ? (
+                              <TrendingDown className="h-3 w-3 text-rose-600 shrink-0" />
+                            ) : (
+                              <Target className="h-3 w-3 text-sky-600 shrink-0" />
+                            )}
+                            <span className="font-medium">{mr.achievementRate}% quota</span>
+                          </div>
                         </div>
-                        <div className="text-[11px] text-slate-500">
-                          {mr.achievementRate}% of quota
-                        </div>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                      <TableCell className="text-right py-2.5">
+                        <div className="flex items-center justify-end gap-1 flex-wrap sm:flex-nowrap">
                           {canonicalRole === "ADMIN" && (
                             <>
                               {mr.role === "MANAGER" || mr.designation?.toLowerCase().includes("manager") ? (
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="h-7 text-xs gap-1 text-slate-700 border-slate-300 hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 cursor-pointer"
+                                  className="h-7 px-2 text-[11px] gap-1 text-slate-700 border-slate-300 hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 cursor-pointer"
                                   onClick={() => handleOpenRoleModal(mr, "MR")}
                                   title="Demote to Medical Representative"
                                 >
                                   <UserMinus className="h-3 w-3 text-amber-600" />
-                                  <span>Demote to MR</span>
+                                  <span>Demote</span>
                                 </Button>
                               ) : (
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="h-7 text-xs gap-1 text-amber-800 border-amber-300 bg-amber-50/50 hover:bg-amber-100 dark:bg-amber-950/30 dark:border-amber-800 dark:text-amber-300 dark:hover:bg-amber-950/60 cursor-pointer"
+                                  className="h-7 px-2 text-[11px] gap-1 text-amber-800 border-amber-300 bg-amber-50/50 hover:bg-amber-100 dark:bg-amber-950/30 dark:border-amber-800 dark:text-amber-300 dark:hover:bg-amber-950/60 cursor-pointer"
                                   onClick={() => handleOpenRoleModal(mr, "MANAGER")}
                                   title="Promote to Area Sales Manager"
                                 >
                                   <ShieldCheck className="h-3 w-3 text-amber-600" />
-                                  <span>Promote to Manager</span>
+                                  <span>Promote</span>
                                 </Button>
                               )}
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="h-7 text-xs gap-1 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+                                className="h-7 px-2 text-[11px] gap-1 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
                                 onClick={() => handleOpenAssignTerritory(mr)}
+                                title="Manage Assigned Territories"
                               >
                                 <MapPin className="h-3 w-3 text-sky-600" />
                                 <span>Territories</span>
@@ -1190,7 +1187,7 @@ export default function FieldForcePage() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className={`h-7 text-xs gap-1 cursor-pointer ${
+                                className={`h-7 px-2 text-[11px] gap-1 cursor-pointer ${
                                   (mr.accountStatus === "INACTIVE" || (mr as any).user?.status === "INACTIVE")
                                     ? "text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 dark:border-emerald-900/50 dark:text-emerald-400"
                                     : "text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 dark:border-rose-900/50 dark:text-rose-400"
@@ -1229,10 +1226,10 @@ export default function FieldForcePage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="h-7 text-xs gap-1 hover:bg-sky-50 hover:text-sky-700 dark:hover:bg-slate-800"
+                              className="h-7 w-7 p-0 hover:bg-sky-50 hover:text-sky-700 dark:hover:bg-slate-800"
+                              title="View Personnel Profile & Details"
                             >
-                              <span>Details</span>
-                              <ArrowRight className="h-3 w-3" />
+                              <ArrowRight className="h-3.5 w-3.5" />
                             </Button>
                           </Link>
                         </div>
