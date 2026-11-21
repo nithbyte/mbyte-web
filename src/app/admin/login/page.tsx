@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Shield,
   Lock,
@@ -11,6 +12,7 @@ import {
   AlertCircle,
   ArrowRight,
   ShieldCheck,
+  ArrowLeft,
 } from "lucide-react";
 import { useLogin } from "@/hooks";
 import { normalizeRole } from "@/types";
@@ -26,6 +28,20 @@ export default function AdminLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Automatically enforce canonical mediqbyte.com domain if accessed via a tenant subdomain
+  useEffect(() => {
+    if (
+      typeof window !== "undefined" &&
+      window.location.hostname !== "localhost" &&
+      !window.location.hostname.startsWith("127.") &&
+      window.location.hostname !== "mediqbyte.com" &&
+      window.location.hostname !== "www.mediqbyte.com" &&
+      window.location.hostname.endsWith("mediqbyte.com")
+    ) {
+      window.location.href = `https://mediqbyte.com/admin/login`;
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +66,7 @@ export default function AdminLoginPage() {
         const canonicalRole = normalizeRole(result.user.role);
         if (canonicalRole !== "SUPER_ADMIN") {
           setErrorMsg(
-            "Access Denied: This portal is exclusively restricted to Platform Super Administrators. Company Administrators and field staff must sign in through the standard portal."
+            "Access Denied: This console is strictly restricted to Platform Super Administrators. Please sign in to your company workspace at /login."
           );
           return;
         }
@@ -67,12 +83,19 @@ export default function AdminLoginPage() {
 
   return (
     <div className="relative min-h-screen flex flex-col justify-between bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200">
-      {/* Top Bar with Discreet Theme Toggle */}
+      {/* Top Bar with Discreet Theme Toggle and Tenant Back Link */}
       <header className="w-full px-6 py-4 flex items-center justify-between z-10">
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200/80 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800/50 shadow-xs">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/login"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors py-1 px-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/60"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span>Tenant Workspace Login</span>
+          </Link>
+          <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200/80 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800/50 shadow-xs">
             <Shield className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
-            <span>Platform Super Admin</span>
+            <span>Platform Governance</span>
           </span>
         </div>
         <ThemeToggle className="border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 shadow-xs backdrop-blur-xs" />
@@ -123,7 +146,7 @@ export default function AdminLoginPage() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="superadmin@mediqbyte.com"
+                    placeholder="admin@platform.com"
                     className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3.5 py-2.5 pl-10 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-[#FF6B00] focus:outline-none focus:ring-4 focus:ring-orange-500/10 transition-all"
                   />
                 </div>
@@ -201,6 +224,20 @@ export default function AdminLoginPage() {
                 )}
               </button>
             </form>
+
+            {/* Back to Tenant Portal Link */}
+            <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 text-center">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Are you a pharmaceutical company employee or field representative?
+              </p>
+              <Link
+                href="/login"
+                className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-[#FF6B00] hover:underline"
+              >
+                <span>Sign in to your Tenant Company Workspace</span>
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
           </div>
         </div>
       </main>

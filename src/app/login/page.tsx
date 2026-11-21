@@ -78,6 +78,22 @@ export default function LoginPage() {
 
   // Auto-detect or pre-select organization from URL query param, subdomain, or default if only 1 exists
   useEffect(() => {
+    // If accessed via a tenant subdomain on production, immediately redirect to https://mediqbyte.com
+    if (
+      typeof window !== "undefined" &&
+      window.location.hostname !== "localhost" &&
+      !window.location.hostname.startsWith("127.") &&
+      window.location.hostname !== "mediqbyte.com" &&
+      window.location.hostname !== "www.mediqbyte.com" &&
+      window.location.hostname.endsWith("mediqbyte.com")
+    ) {
+      const sub = getTenantSubdomain();
+      const target = new URL(window.location.pathname, "https://mediqbyte.com");
+      if (sub) target.searchParams.set("tenant", sub);
+      window.location.href = target.toString();
+      return;
+    }
+
     if (!publicOrganizations || publicOrganizations.length === 0) return;
     if (selectedOrg) return;
 
@@ -307,20 +323,12 @@ export default function LoginPage() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 {/* 1. First Field: Select Tenant Company (Searchable Dropdown) */}
                 <div className="space-y-1.5" ref={dropdownRef}>
-                  <div className="flex items-center justify-between">
-                    <label
-                      htmlFor="tenant-select-button"
-                      className="block text-xs font-semibold text-slate-700 dark:text-slate-300"
-                    >
-                      Tenant Organization / Company *
-                    </label>
-                    <a
-                      href="/admin/login"
-                      className="text-[11px] text-[#FF6B00] hover:underline font-medium"
-                    >
-                      Super Admin Portal &rarr;
-                    </a>
-                  </div>
+                  <label
+                    htmlFor="tenant-select-button"
+                    className="block text-xs font-semibold text-slate-700 dark:text-slate-300"
+                  >
+                    Tenant Organization / Company *
+                  </label>
 
                   <div className="relative">
                     <button
@@ -553,6 +561,15 @@ export default function LoginPage() {
                     </>
                   )}
                 </button>
+
+                <div className="pt-2 text-center">
+                  <a
+                    href="/admin/login"
+                    className="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                  >
+                    Platform Governance Administrator? <span className="underline font-medium text-slate-500 dark:text-slate-400">Sign in here</span>
+                  </a>
+                </div>
               </form>
             )}
           </div>

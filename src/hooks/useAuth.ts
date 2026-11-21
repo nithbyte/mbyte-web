@@ -128,6 +128,9 @@ export function useLogout() {
       queryClient.clear();
       useFilterStore.getState().setSelectedTerritoryId("ALL");
       logout();
+      if (typeof window !== "undefined") {
+        window.location.href = "/login";
+      }
     },
   });
 }

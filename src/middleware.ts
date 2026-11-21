@@ -21,30 +21,28 @@ export function middleware(request: NextRequest) {
   const envRoot = (process.env.NEXT_PUBLIC_ROOT_DOMAIN || defaultRoot).toLowerCase();
   const rootHost = envRoot.split(":")[0];
 
-  let subdomain: string | null = null;
-
-  // Detect if hostname is a subdomain of rootHost
-  if (hostname.endsWith(`.${rootHost}`)) {
+  // In production, enforce single canonical domain https://mediqbyte.com
+  // Redirect any subdomain (e.g. kovelbyte.mediqbyte.com) directly to mediqbyte.com
+  if (
+    process.env.NODE_ENV === "production" &&
+    hostname !== rootHost &&
+    hostname !== `www.${rootHost}` &&
+    hostname.endsWith(`.${rootHost}`)
+  ) {
     const candidate = hostname.slice(0, -(rootHost.length + 1));
     const firstSub = candidate.split(".")[0];
-    if (firstSub && !RESERVED_SUBDOMAINS.has(firstSub)) {
-      subdomain = firstSub;
+
+    const targetUrl = new URL(request.nextUrl.pathname + request.nextUrl.search, `https://${rootHost}`);
+    
+    // If accessing /login from a tenant subdomain, preserve the tenant slug in the query
+    if (request.nextUrl.pathname === "/login" && firstSub && !RESERVED_SUBDOMAINS.has(firstSub)) {
+      targetUrl.searchParams.set("tenant", firstSub);
     }
+
+    return NextResponse.redirect(targetUrl, 301);
   }
 
   const response = NextResponse.next();
-
-  if (subdomain) {
-    response.headers.set("x-tenant-subdomain", subdomain);
-    response.cookies.set("mbyte_tenant_subdomain", subdomain, {
-      path: "/",
-      sameSite: "lax",
-    });
-  } else {
-    response.headers.set("x-tenant-subdomain", "");
-    response.cookies.delete("mbyte_tenant_subdomain");
-  }
-
   return response;
 }
 

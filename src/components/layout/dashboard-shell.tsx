@@ -67,10 +67,23 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }, [currentUser?.id]);
 
   useEffect(() => {
+    // If in production and accessed via a subdomain, redirect to canonical mediqbyte.com
+    if (
+      typeof window !== "undefined" &&
+      window.location.hostname !== "localhost" &&
+      !window.location.hostname.startsWith("127.") &&
+      window.location.hostname !== "mediqbyte.com" &&
+      window.location.hostname !== "www.mediqbyte.com" &&
+      window.location.hostname.endsWith("mediqbyte.com")
+    ) {
+      window.location.href = `https://mediqbyte.com${window.location.pathname}${window.location.search}`;
+      return;
+    }
+
     const token = tokenStorage.getAccessToken();
     // If no token exists, redirect to appropriate portal login
     if (!token && !isLoading) {
-      if (canonicalRole === "SUPER_ADMIN") {
+      if (pathname.startsWith("/companies") || pathname.startsWith("/admin")) {
         router.push("/admin/login");
       } else {
         router.push("/login");
@@ -78,7 +91,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     } else {
       setAuthChecked(true);
     }
-  }, [isLoading, router, canonicalRole]);
+  }, [isLoading, router, pathname]);
 
   useEffect(() => {
     if (canonicalRole === "SUPER_ADMIN" && pathname === "/") {

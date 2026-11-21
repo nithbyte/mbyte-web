@@ -388,7 +388,14 @@ export const authService = {
     activeUserId = "";
     cachedUsers = [];
     if (typeof window !== "undefined") {
-      try { window.localStorage.removeItem("mbyte_selected_org_id"); } catch {}
+      try {
+        window.localStorage.removeItem("mbyte_admin_access_token");
+        window.localStorage.removeItem("mbyte_admin_refresh_token");
+        window.localStorage.removeItem("mbyte_selected_org_id");
+        window.localStorage.removeItem("mbyte_auth_user");
+        window.sessionStorage.clear();
+        document.cookie = "mbyte_tenant_subdomain=; Max-Age=0; path=/;";
+      } catch {}
     }
     return Promise.resolve();
   },
