@@ -23,6 +23,9 @@ import {
   PhoneMissed,
   FileText,
   Download,
+  Megaphone,
+  Building2,
+  Globe,
 } from "lucide-react";
 import { chatService } from "@/services/chatService";
 import { apiClient } from "@/lib/api-client";
@@ -32,7 +35,7 @@ import {
   ColleagueContact,
   ChatMessageType,
 } from "@/types/chat";
-import { useCurrentUser } from "@/hooks";
+import { useCurrentUser, useOrganizations } from "@/hooks";
 import { useAuthStore } from "@/store/useAuthStore";
 import { cn } from "@/lib/utils";
 import { useWebRTCCall } from "@/features/chat/useWebRTCCall";
@@ -45,6 +48,25 @@ export default function ChatPage() {
   const currentUser = currentUserQuery || authStoreUser;
   const currentUserId = currentUser?.id || "curr_user";
   const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  const isSuperAdmin =
+    currentUser?.role === "SUPER_ADMIN" ||
+    (Array.isArray((currentUser as any)?.roles) && (currentUser as any).roles.includes("SUPER_ADMIN"));
+  const isCompanyAdmin =
+    currentUser?.role === "COMPANY_ADMIN" ||
+    (Array.isArray((currentUser as any)?.roles) && (currentUser as any).roles.includes("COMPANY_ADMIN"));
+  const canPostAnnouncement = isSuperAdmin || isCompanyAdmin;
+
+  const { data: organizationsList } = useOrganizations(undefined, { enabled: isSuperAdmin });
+  const [selectedTenantOrgId, setSelectedTenantOrgId] = useState<string>("all");
+
+  const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(false);
+  const [announcementTitle, setAnnouncementTitle] = useState("");
+  const [announcementContent, setAnnouncementContent] = useState("");
+  const [announcementPriority, setAnnouncementPriority] = useState<"NORMAL" | "HIGH" | "URGENT" | "POLICY">("NORMAL");
+  const [announcementTargetOrgId, setAnnouncementTargetOrgId] = useState<string>("all");
+  const [announcementNotify, setAnnouncementNotify] = useState<boolean>(true);
+  const [isPostingAnnouncement, setIsPostingAnnouncement] = useState(false);
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
@@ -119,15 +141,20 @@ export default function ChatPage() {
     async function loadData() {
       try {
         const [convList, contactList] = await Promise.all([
-          chatService.getConversations(),
-          chatService.getContacts(),
+          chatService.getConversations(undefined, selectedTenantOrgId),
+          chatService.getContacts(undefined, selectedTenantOrgId),
         ]);
         if (isMounted) {
           setConversations(convList);
           setContacts(contactList);
 
           if (convList.length > 0) {
-            setSelectedConversationId((prev) => prev || convList[0].id);
+            setSelectedConversationId((prev) =>
+              convList.some((c) => c.id === prev) ? prev : convList[0].id
+            );
+          } else {
+            setSelectedConversationId(null);
+            setMessages([]);
           }
         }
       } catch (err) {
@@ -140,23 +167,12 @@ export default function ChatPage() {
     // Periodic sync of conversations list for real-time recent chats updates
     const convTimer = setInterval(async () => {
       try {
-        const freshConvs = await chatService.getConversations();
-        if (isMounted && Array.isArray(freshConvs) && freshConvs.length > 0) {
-          setConversations((prev) => {
-            // Merge fresh list preserving current selection
-            const map = new Map<string, Conversation>();
-            freshConvs.forEach((c) => map.set(c.id, c));
-            // Keep any locally created ones not yet in server list
-            prev.forEach((c) => {
-              if (!map.has(c.id)) map.set(c.id, c);
-            });
-            const merged = Array.from(map.values());
-            return merged.sort((a, b) => {
-              const timeA = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : new Date(a.createdAt).getTime();
-              const timeB = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : new Date(b.createdAt).getTime();
-              return timeB - timeA;
-            });
-          });
+        const freshConvs = await chatService.getConversations(
+          searchQuery || undefined,
+          selectedTenantOrgId
+        );
+        if (isMounted && Array.isArray(freshConvs)) {
+          setConversations(freshConvs);
         }
       } catch {}
     }, 3500);
@@ -165,7 +181,7 @@ export default function ChatPage() {
       isMounted = false;
       clearInterval(convTimer);
     };
-  }, []);
+  }, [selectedTenantOrgId]);
 
   // Load messages when selected conversation changes
   useEffect(() => {
@@ -174,10 +190,20 @@ export default function ChatPage() {
     let isMounted = true;
     async function loadMessages() {
       try {
-        const msgs = await chatService.getMessages(selectedConversationId!);
+        const currentConv = conversations.find((c) => c.id === selectedConversationId);
+        const targetOrg =
+          currentConv?.organizationId ||
+          (selectedTenantOrgId !== "all" ? selectedTenantOrgId : undefined);
+
+        const msgs = await chatService.getMessages(
+          selectedConversationId!,
+          1,
+          50,
+          targetOrg
+        );
         if (isMounted) {
           setMessages(msgs);
-          await chatService.markAsRead(selectedConversationId!);
+          await chatService.markAsRead(selectedConversationId!, targetOrg);
           // Update local unread status and last message text if new message received
           if (msgs.length > 0) {
             const last = msgs[msgs.length - 1];
@@ -219,7 +245,7 @@ export default function ChatPage() {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [selectedConversationId]);
+  }, [selectedConversationId, selectedTenantOrgId]);
 
   // Scroll to bottom on messages update
   useEffect(() => {
@@ -296,10 +322,19 @@ export default function ChatPage() {
     setIsSubmitting(true);
 
     try {
-      const newMsg = await chatService.sendMessage(selectedConversationId, {
-        content,
-        messageType: "TEXT",
-      });
+      const currentConv = conversations.find((c) => c.id === selectedConversationId);
+      const targetOrg =
+        currentConv?.organizationId ||
+        (selectedTenantOrgId !== "all" ? selectedTenantOrgId : undefined);
+
+      const newMsg = await chatService.sendMessage(
+        selectedConversationId,
+        {
+          content,
+          messageType: "TEXT",
+        },
+        targetOrg
+      );
 
       setMessages((prev) => [...prev, newMsg]);
 
@@ -356,13 +391,22 @@ export default function ChatPage() {
         });
       }
 
-      const newMsg = await chatService.sendMessage(selectedConversationId, {
-        content: isImage ? "Shared an image" : `Shared document: ${file.name}`,
-        messageType: msgType,
-        fileUrl: uploadedUrl,
-        fileName: file.name,
-        fileSize: file.size,
-      });
+      const currentConv = conversations.find((c) => c.id === selectedConversationId);
+      const targetOrg =
+        currentConv?.organizationId ||
+        (selectedTenantOrgId !== "all" ? selectedTenantOrgId : undefined);
+
+      const newMsg = await chatService.sendMessage(
+        selectedConversationId,
+        {
+          content: isImage ? "Shared an image" : `Shared document: ${file.name}`,
+          messageType: msgType,
+          fileUrl: uploadedUrl,
+          fileName: file.name,
+          fileSize: file.size,
+        },
+        targetOrg
+      );
 
       setMessages((prev) => [...prev, newMsg]);
       setConversations((prev) => {
@@ -389,11 +433,14 @@ export default function ChatPage() {
   const handleCallColleague = async (colleague: ColleagueContact, type: "AUDIO" | "VIDEO") => {
     setIsNewChatModalOpen(false);
     try {
-      const conv = await chatService.createConversation({
-        type: "DIRECT",
-        recipientId: colleague.id,
-        participantIds: [colleague.id],
-      });
+      const conv = await chatService.createConversation(
+        {
+          type: "DIRECT",
+          recipientId: colleague.id,
+          participantIds: [colleague.id],
+        },
+        colleague.organizationId || (selectedTenantOrgId !== "all" ? selectedTenantOrgId : undefined)
+      );
       setConversations((prev) => [conv, ...prev.filter((c) => c.id !== conv.id)]);
       setSelectedConversationId(conv.id);
       callState.startCall(conv.id, colleague.id, colleague.name, type);
@@ -422,11 +469,19 @@ export default function ChatPage() {
   // Create Conversation
   const handleCreateConversation = async (participantId: string) => {
     try {
-      const conv = await chatService.createConversation({
-        type: "DIRECT",
-        recipientId: participantId,
-        participantIds: [participantId],
-      });
+      const matchedContact = contacts.find((c) => c.id === participantId);
+      const targetOrg =
+        matchedContact?.organizationId ||
+        (selectedTenantOrgId !== "all" ? selectedTenantOrgId : undefined);
+
+      const conv = await chatService.createConversation(
+        {
+          type: "DIRECT",
+          recipientId: participantId,
+          participantIds: [participantId],
+        },
+        targetOrg
+      );
       setConversations((prev) => [conv, ...prev.filter((c) => c.id !== conv.id)]);
       setSelectedConversationId(conv.id);
       setIsNewChatModalOpen(false);
@@ -439,11 +494,14 @@ export default function ChatPage() {
   const handleCreateGroup = async () => {
     if (!groupTitle.trim() || selectedContactIds.length === 0) return;
     try {
-      const conv = await chatService.createConversation({
-        type: "GROUP",
-        title: groupTitle.trim(),
-        participantIds: selectedContactIds,
-      });
+      const conv = await chatService.createConversation(
+        {
+          type: "GROUP",
+          title: groupTitle.trim(),
+          participantIds: selectedContactIds,
+        },
+        selectedTenantOrgId !== "all" ? selectedTenantOrgId : undefined
+      );
       setConversations((prev) => [conv, ...prev]);
       setSelectedConversationId(conv.id);
       setIsNewChatModalOpen(false);
@@ -452,6 +510,38 @@ export default function ChatPage() {
       setIsGroupMode(false);
     } catch (err) {
       console.error("Failed to create group", err);
+    }
+  };
+
+  // Post Announcement
+  const handlePostAnnouncement = async () => {
+    if (!announcementTitle.trim() || !announcementContent.trim()) return;
+    setIsPostingAnnouncement(true);
+    try {
+      await chatService.postAnnouncement({
+        title: announcementTitle.trim(),
+        content: announcementContent.trim(),
+        priority: announcementPriority,
+        organizationId: isSuperAdmin ? announcementTargetOrgId : undefined,
+        sendNotification: announcementNotify,
+      });
+      setIsAnnouncementModalOpen(false);
+      setAnnouncementTitle("");
+      setAnnouncementContent("");
+      setAnnouncementPriority("NORMAL");
+      // Refetch conversations immediately
+      const updatedConvs = await chatService.getConversations(
+        searchQuery || undefined,
+        selectedTenantOrgId
+      );
+      setConversations(updatedConvs);
+      if (updatedConvs.length > 0) {
+        setSelectedConversationId(updatedConvs[0].id);
+      }
+    } catch (err: any) {
+      alert("Failed to post announcement: " + (err?.response?.data?.message || err?.message));
+    } finally {
+      setIsPostingAnnouncement(false);
     }
   };
 
@@ -465,7 +555,7 @@ export default function ChatPage() {
     setIsNewChatModalOpen(true);
     setContactSearchQuery("");
     try {
-      const fresh = await chatService.getContacts();
+      const fresh = await chatService.getContacts(undefined, selectedTenantOrgId);
       if (Array.isArray(fresh) && fresh.length > 0) {
         setContacts(fresh);
       }
@@ -512,23 +602,73 @@ export default function ChatPage() {
       >
         {/* Header & New Chat button */}
         <div className="p-4 pb-3 border-b border-[#E5E1D9] dark:border-[#333333]">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-2.5">
             <div className="flex items-center gap-2">
               <div className="p-2 rounded-xl bg-orange-500/10 text-[#FF6B00]">
                 <MessageSquare className="w-5 h-5" />
               </div>
-              <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                Team Messages
-              </h1>
+              <div>
+                <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100 leading-tight">
+                  Team Messages
+                </h1>
+                {isSuperAdmin && (
+                  <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 block -mt-0.5">
+                    Platform Control
+                  </span>
+                )}
+              </div>
             </div>
-            <button
-              onClick={handleOpenNewChatModal}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FF6B00] hover:bg-[#e66000] text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>New</span>
-            </button>
+            <div className="flex items-center gap-1.5">
+              {canPostAnnouncement && (
+                <button
+                  onClick={() => {
+                    setAnnouncementTargetOrgId(selectedTenantOrgId === "all" ? "all" : selectedTenantOrgId);
+                    setIsAnnouncementModalOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                  title="Broadcast System or Company Announcement"
+                >
+                  <Megaphone className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Announce</span>
+                </button>
+              )}
+              <button
+                onClick={handleOpenNewChatModal}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#FF6B00] hover:bg-[#e66000] text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>New</span>
+              </button>
+            </div>
           </div>
+
+          {/* Super Admin Tenant Scope Selector */}
+          {isSuperAdmin && (
+            <div className="mb-2.5 p-2 rounded-xl bg-orange-50/70 dark:bg-orange-950/20 border border-orange-200/60 dark:border-orange-900/30">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] font-bold text-orange-800 dark:text-orange-300 uppercase tracking-wider flex items-center gap-1">
+                  <Building2 className="w-3 h-3" /> Tenant Scope
+                </span>
+                <span className="text-[10px] text-slate-400">
+                  {selectedTenantOrgId === "all" ? "All active tenants" : "Single tenant"}
+                </span>
+              </div>
+              <div className="relative">
+                <select
+                  value={selectedTenantOrgId}
+                  onChange={(e) => setSelectedTenantOrgId(e.target.value)}
+                  className="w-full pl-2.5 pr-8 py-1.5 text-xs rounded-lg bg-white dark:bg-[#1E1E1E] border border-orange-200 dark:border-orange-900/50 text-slate-900 dark:text-slate-100 font-semibold focus:outline-none focus:ring-1 focus:ring-[#FF6B00] cursor-pointer"
+                >
+                  <option value="all">🌐 All Tenants (Global Supervision)</option>
+                  {(organizationsList || []).map((org) => (
+                    <option key={org.id} value={org.id}>
+                      🏢 {org.name} ({org.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
 
           {/* Search Bar */}
           <div className="relative">
@@ -624,6 +764,9 @@ export default function ChatPage() {
             filteredConversations.map((conv) => {
               const isSelected = conv.id === selectedConversationId;
               const isGroup = conv.type === "GROUP";
+              const isAnnouncement =
+                conv.title.includes("📢") ||
+                conv.title.toLowerCase().includes("announcement");
 
               return (
                 <div
@@ -641,15 +784,19 @@ export default function ChatPage() {
                     <div
                       className={cn(
                         "w-11 h-11 rounded-2xl flex items-center justify-center font-bold text-sm shadow-xs",
-                        isGroup
+                        isAnnouncement
+                          ? "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300"
+                          : isGroup
                           ? "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300"
                           : "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200"
                       )}
                     >
-                      {isGroup ? (
+                      {isAnnouncement ? (
+                        <Megaphone className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                      ) : isGroup ? (
                         <Users className="w-5 h-5" />
                       ) : (
-                        conv.title.slice(0, 2).toUpperCase()
+                        (conv.title || "C").slice(0, 2).toUpperCase()
                       )}
                     </div>
                     {conv.isOnline && (
@@ -660,11 +807,18 @@ export default function ChatPage() {
                   {/* Text details */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-0.5">
-                      <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
-                        {conv.title}
-                      </h3>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+                          {conv.title}
+                        </h3>
+                        {conv.organizationName && (
+                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium shrink-0">
+                            {conv.organizationName}
+                          </span>
+                        )}
+                      </div>
                       {conv.lastMessageAt && (
-                        <span className="text-[10px] text-slate-400 shrink-0">
+                        <span className="text-[10px] text-slate-400 shrink-0 ml-1">
                           {new Date(conv.lastMessageAt).toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",
@@ -704,7 +858,10 @@ export default function ChatPage() {
 
               <div className="relative shrink-0">
                 <div className="w-10 h-10 rounded-2xl bg-orange-100 dark:bg-orange-950/40 text-[#FF6B00] flex items-center justify-center font-bold text-sm shadow-xs">
-                  {activeConversation.type === "GROUP" ? (
+                  {activeConversation.title.includes("📢") ||
+                  activeConversation.title.toLowerCase().includes("announcement") ? (
+                    <Megaphone className="w-5 h-5 text-amber-600" />
+                  ) : activeConversation.type === "GROUP" ? (
                     <Users className="w-5 h-5" />
                   ) : (
                     activeConversation.title.slice(0, 2).toUpperCase()
@@ -716,9 +873,16 @@ export default function ChatPage() {
               </div>
 
               <div className="min-w-0">
-                <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
-                  {activeConversation.title}
-                </h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
+                    {activeConversation.title}
+                  </h2>
+                  {activeConversation.organizationName && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-100 text-[#FF6B00] dark:bg-orange-950/40 font-semibold shrink-0">
+                      🏢 {activeConversation.organizationName}
+                    </span>
+                  )}
+                </div>
                 <p className="text-[11px] text-slate-400 truncate">
                   {activeConversation.subtitle ||
                     (activeConversation.isOnline ? "Active now" : "Offline")}
@@ -1107,8 +1271,9 @@ export default function ChatPage() {
                     )}
                   </div>
                 );
-              }))}
-            </div>
+              })
+            )}
+          </div>
 
             {/* Group Submit Footer */}
             {isGroupMode && (
@@ -1125,6 +1290,166 @@ export default function ChatPage() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* POST ANNOUNCEMENT MODAL */}
+      {isAnnouncementModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setIsAnnouncementModalOpen(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-lg rounded-3xl bg-white dark:bg-[#1E1E1E] border border-[#E5E1D9] dark:border-[#333333] shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
+          >
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-[#E5E1D9] dark:border-[#333333] flex items-center justify-between bg-gradient-to-r from-amber-500/10 to-orange-500/10">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-amber-500 text-white shadow-xs">
+                  <Megaphone className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                    Broadcast Announcement
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    {isSuperAdmin
+                      ? "Publish company-wide policy, circular, or critical notice across tenants"
+                      : "Publish company announcement to all team members"}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsAnnouncementModalOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <div className="p-6 space-y-4 overflow-y-auto">
+              {/* Target Scope (if Super Admin) */}
+              {isSuperAdmin && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Target Organization / Scope
+                  </label>
+                  <select
+                    value={announcementTargetOrgId}
+                    onChange={(e) => setAnnouncementTargetOrgId(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-[#E5E1D9] dark:border-[#333333] bg-slate-50 dark:bg-[#252525] text-slate-900 dark:text-slate-100 font-semibold focus:outline-none focus:border-[#FF6B00]"
+                  >
+                    <option value="all">🌐 All Active Tenants (Global Broadcast)</option>
+                    {(organizationsList || []).map((org) => (
+                      <option key={org.id} value={org.id}>
+                        🏢 {org.name} ({org.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Announcement Title */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Announcement Title *
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Q4 Target Revision & Product Launch Policy"
+                  value={announcementTitle}
+                  onChange={(e) => setAnnouncementTitle(e.target.value)}
+                  className="w-full px-3.5 py-2 text-xs rounded-xl border border-[#E5E1D9] dark:border-[#333333] bg-slate-50 dark:bg-[#252525] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-[#FF6B00]"
+                />
+              </div>
+
+              {/* Priority */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Priority / Tag
+                </label>
+                <div className="grid grid-cols-4 gap-2">
+                  {(["NORMAL", "HIGH", "URGENT", "POLICY"] as const).map((pr) => (
+                    <button
+                      type="button"
+                      key={pr}
+                      onClick={() => setAnnouncementPriority(pr)}
+                      className={cn(
+                        "py-1.5 px-2 rounded-xl text-xs font-bold transition-all border text-center cursor-pointer",
+                        announcementPriority === pr
+                          ? pr === "URGENT"
+                            ? "bg-red-500 text-white border-red-500"
+                            : pr === "POLICY"
+                            ? "bg-purple-600 text-white border-purple-600"
+                            : pr === "HIGH"
+                            ? "bg-amber-500 text-white border-amber-500"
+                            : "bg-[#FF6B00] text-white border-[#FF6B00]"
+                          : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-transparent hover:bg-slate-200"
+                      )}
+                    >
+                      {pr}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Announcement Content */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Message Content / Details *
+                </label>
+                <textarea
+                  rows={4}
+                  placeholder="Type the full announcement message for field force and management..."
+                  value={announcementContent}
+                  onChange={(e) => setAnnouncementContent(e.target.value)}
+                  className="w-full px-3.5 py-2 text-xs rounded-xl border border-[#E5E1D9] dark:border-[#333333] bg-slate-50 dark:bg-[#252525] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-[#FF6B00] resize-none"
+                />
+              </div>
+
+              {/* In-app Notification Toggle */}
+              <label className="flex items-center gap-2 cursor-pointer pt-1">
+                <input
+                  type="checkbox"
+                  checked={announcementNotify}
+                  onChange={(e) => setAnnouncementNotify(e.target.checked)}
+                  className="rounded text-[#FF6B00] focus:ring-[#FF6B00]"
+                />
+                <span className="text-xs text-slate-600 dark:text-slate-400">
+                  Send immediate in-app push notification to active members
+                </span>
+              </label>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3.5 border-t border-[#E5E1D9] dark:border-[#333333] bg-slate-50 dark:bg-[#1E1E1E] flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsAnnouncementModalOpen(false)}
+                className="px-4 py-2 text-xs font-semibold rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handlePostAnnouncement}
+                disabled={!announcementTitle.trim() || !announcementContent.trim() || isPostingAnnouncement}
+                className={cn(
+                  "px-5 py-2 text-xs font-bold rounded-xl text-white transition-all shadow-xs cursor-pointer flex items-center gap-1.5",
+                  announcementTitle.trim() && announcementContent.trim() && !isPostingAnnouncement
+                    ? "bg-amber-500 hover:bg-amber-600 active:scale-95"
+                    : "bg-slate-300 dark:bg-slate-700 cursor-not-allowed text-slate-400"
+                )}
+              >
+                <Megaphone className="w-3.5 h-3.5" />
+                <span>{isPostingAnnouncement ? "Broadcasting..." : "Broadcast Announcement"}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

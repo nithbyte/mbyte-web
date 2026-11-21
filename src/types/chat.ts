@@ -16,6 +16,8 @@ export interface ChatParticipant {
 export interface Conversation {
   id: string;
   organizationId: string;
+  organizationName?: string | null;
+  organizationCode?: string | null;
   type: ConversationType;
   title: string;
   avatarUrl?: string | null;
@@ -92,5 +94,15 @@ export interface ColleagueContact {
   headquarters?: string;
   designation?: string;
   isOnline: boolean;
+  organizationId?: string;
+  organizationName?: string | null;
+}
+
+export interface CreateAnnouncementInput {
+  title: string;
+  content: string;
+  organizationId?: string;
+  priority?: 'NORMAL' | 'HIGH' | 'URGENT' | 'POLICY';
+  sendNotification?: boolean;
 }
 
