@@ -6,22 +6,25 @@ import { PageHeader } from "@/components/layout/page-header";
 import { DashboardOverview } from "@/features/dashboard/DashboardOverview";
 import { Badge } from "@/components/ui/badge";
 import { useCurrentUser } from "@/hooks";
+import { useAuthStore } from "@/store/useAuthStore";
 import { normalizeRole } from "@/types";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { data: currentUser, isLoading } = useCurrentUser();
+  const storeUser = useAuthStore((s) => s.user);
+  const { data: fetchedUser, isLoading } = useCurrentUser();
+  const currentUser = fetchedUser ?? storeUser;
   const canonicalRole = normalizeRole(currentUser?.role);
 
   useEffect(() => {
-    if (!isLoading && canonicalRole === "SUPER_ADMIN") {
+    if (canonicalRole === "SUPER_ADMIN") {
       router.replace("/companies");
-    } else if (!isLoading && canonicalRole === "MR") {
+    } else if (canonicalRole === "MR") {
       router.replace("/visits");
     }
-  }, [canonicalRole, isLoading, router]);
+  }, [canonicalRole, router]);
 
-  if (isLoading || canonicalRole === "SUPER_ADMIN" || canonicalRole === "MR") {
+  if ((isLoading && !currentUser) || canonicalRole === "SUPER_ADMIN" || canonicalRole === "MR") {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-sky-600 border-t-transparent" />

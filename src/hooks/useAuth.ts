@@ -6,7 +6,8 @@ import { useFilterStore } from "@/store";
 import type { User } from "@/types";
 
 export function useCurrentUser() {
-  const { user: storeUser, setUser } = useAuthStore();
+  const storeUser = useAuthStore((s) => s.user);
+  const setUser = useAuthStore((s) => s.setUser);
 
   const query = useQuery<User | null>({
     queryKey: ["currentUser"],
@@ -22,7 +23,10 @@ export function useCurrentUser() {
     }
   }, [query.data, setUser]);
 
-  return query;
+  return {
+    ...query,
+    data: query.data ?? storeUser ?? null,
+  };
 }
 
 export function useUserList() {

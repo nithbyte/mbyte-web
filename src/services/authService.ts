@@ -34,7 +34,9 @@ function formatUser(rawUser: any): User {
         "User";
 
   let extractedRole = rawUser.role;
-  if (!extractedRole && Array.isArray(rawUser.roles) && rawUser.roles.length > 0) {
+  if (rawUser.isSuperAdmin === true || (Array.isArray(rawUser.roles) && rawUser.roles.includes("SUPER_ADMIN"))) {
+    extractedRole = "SUPER_ADMIN";
+  } else if (!extractedRole && Array.isArray(rawUser.roles) && rawUser.roles.length > 0) {
     extractedRole = rawUser.roles[0];
   }
   if (!extractedRole && Array.isArray(rawUser.userRoles) && rawUser.userRoles.length > 0) {

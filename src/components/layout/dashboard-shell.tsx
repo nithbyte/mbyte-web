@@ -7,6 +7,7 @@ import { ShieldAlert, ArrowLeft, CalendarCheck } from "lucide-react";
 import { Sidebar } from "./sidebar";
 import { Header } from "./header";
 import { useSidebarStore } from "@/store";
+import { useAuthStore } from "@/store/useAuthStore";
 import { useCurrentUser } from "@/hooks";
 import { tokenStorage } from "@/lib/api-client";
 import { normalizeRole } from "@/types";
@@ -46,7 +47,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { isCollapsed } = useSidebarStore();
-  const { data: currentUser, isLoading } = useCurrentUser();
+  const storeUser = useAuthStore((s) => s.user);
+  const { data: fetchedUser, isLoading } = useCurrentUser();
+  const currentUser = fetchedUser ?? storeUser;
   const [authChecked, setAuthChecked] = useState(false);
 
   const canonicalRole = normalizeRole(currentUser?.role);
@@ -80,13 +83,15 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   // Check Role Route Authorization
   const isSuperAdminRoute = pathname.startsWith("/companies");
-  const isBlockedSuperAdmin = isSuperAdminRoute && canonicalRole !== "SUPER_ADMIN";
+  const isBlockedSuperAdmin = Boolean(currentUser) && isSuperAdminRoute && canonicalRole !== "SUPER_ADMIN";
 
   const isBlockedOperationalForSuperAdmin =
+    Boolean(currentUser) &&
     canonicalRole === "SUPER_ADMIN" &&
     SUPER_ADMIN_RESTRICTED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 
   const isBlockedMR =
+    Boolean(currentUser) &&
     canonicalRole === "MR" &&
     MR_RESTRICTED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 
