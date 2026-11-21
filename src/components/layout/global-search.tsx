@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
   X,
@@ -409,72 +410,80 @@ export function GlobalSearch({ role }: { role: CanonicalRole }) {
         </button>
       ) : null}
 
-      {isOpen && (
-        <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-50 w-[92vw] sm:w-[480px] max-w-[520px] rounded-2xl border border-white/90 bg-white/90 backdrop-blur-3xl shadow-[0_20px_50px_rgba(0,0,0,0.15),inset_0_1px_1px_rgba(255,255,255,0.95)] dark:border-white/15 dark:bg-[#121620]/95 overflow-hidden max-h-[440px] flex flex-col">
-          <div className="px-4 py-2.5 border-b border-white/80 dark:border-white/10 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-            <span>
-              {query.trim().length >= 2
-                ? `Search Results (${combinedResults.length})`
-                : "Quick Jump — Type 2+ chars to search records"}
-            </span>
-            <span className="hidden sm:inline font-mono">ESC</span>
-          </div>
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: -6 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -6 }}
+            transition={{ type: "spring", damping: 26, stiffness: 360 }}
+            className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-50 w-[92vw] sm:w-[480px] max-w-[520px] rounded-2xl border border-white/90 bg-white/90 backdrop-blur-3xl shadow-[0_20px_50px_rgba(0,0,0,0.15),inset_0_1px_1px_rgba(255,255,255,0.95)] dark:border-white/15 dark:bg-[#121620]/95 overflow-hidden max-h-[440px] flex flex-col"
+          >
+            <div className="px-4 py-2.5 border-b border-white/80 dark:border-white/10 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              <span>
+                {query.trim().length >= 2
+                  ? `Search Results (${combinedResults.length})`
+                  : "Quick Jump — Type 2+ chars to search records"}
+              </span>
+              <span className="hidden sm:inline font-mono">ESC</span>
+            </div>
 
-          <div className="overflow-y-auto divide-y divide-white/60 dark:divide-white/5">
-            {combinedResults.length === 0 ? (
-              <div className="px-4 py-6 text-center text-xs text-slate-500 dark:text-slate-400">
-                {isSearching
-                  ? "Searching doctors, chemists, products, MRs & orders..."
-                  : `No matching records found for "${query.trim()}".`}
-              </div>
-            ) : (
-              combinedResults.map((item, idx) => {
-                const meta = getCategoryMeta(item.category);
-                const Icon = meta.icon;
-                const isActive = idx === highlightedIndex;
+            <div className="overflow-y-auto divide-y divide-white/60 dark:divide-white/5">
+              {combinedResults.length === 0 ? (
+                <div className="px-4 py-6 text-center text-xs text-slate-500 dark:text-slate-400">
+                  {isSearching
+                    ? "Searching doctors, chemists, products, MRs & orders..."
+                    : `No matching records found for "${query.trim()}".`}
+                </div>
+              ) : (
+                combinedResults.map((item, idx) => {
+                  const meta = getCategoryMeta(item.category);
+                  const Icon = meta.icon;
+                  const isActive = idx === highlightedIndex;
 
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onMouseEnter={() => setHighlightedIndex(idx)}
-                    onClick={() => handleSelect(item)}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors cursor-pointer",
-                      isActive
-                        ? "bg-orange-50/80 dark:bg-[#FF6B00]/15"
-                        : "hover:bg-slate-50/80 dark:hover:bg-[#2A2A2A]/60"
-                    )}
-                  >
-                    <div className={cn("p-1.5 rounded-lg shrink-0", meta.badge)}>
-                      <Icon className="h-3.5 w-3.5" />
-                    </div>
-                    <div className="flex-1 min-w-0 pr-1">
-                      <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">
-                        {item.title}
-                      </p>
-                      {item.subtitle && (
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                          {item.subtitle}
-                        </p>
-                      )}
-                    </div>
-                    <span
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onMouseEnter={() => setHighlightedIndex(idx)}
+                      onClick={() => handleSelect(item)}
                       className={cn(
-                        "text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0",
-                        meta.badge
+                        "w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors cursor-pointer",
+                        isActive
+                          ? "bg-orange-50/80 dark:bg-[#FF6B00]/15"
+                          : "hover:bg-slate-50/80 dark:hover:bg-[#2A2A2A]/60"
                       )}
                     >
-                      {meta.label}
-                    </span>
-                    <ArrowRight className="h-3 w-3 text-slate-400 shrink-0" />
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </div>
-      )}
+                      <div className={cn("p-1.5 rounded-lg shrink-0", meta.badge)}>
+                        <Icon className="h-3.5 w-3.5" />
+                      </div>
+                      <div className="flex-1 min-w-0 pr-1">
+                        <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">
+                          {item.title}
+                        </p>
+                        {item.subtitle && (
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                            {item.subtitle}
+                          </p>
+                        )}
+                      </div>
+                      <span
+                        className={cn(
+                          "text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0",
+                          meta.badge
+                        )}
+                      >
+                        {meta.label}
+                      </span>
+                      <ArrowRight className="h-3 w-3 text-slate-400 shrink-0" />
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

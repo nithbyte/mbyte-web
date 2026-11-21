@@ -15,6 +15,7 @@ import { getTenantSubdomain, getRootDomain, buildTenantSubdomainUrl } from "@/li
 import { cn } from "@/lib/utils";
 import { useWebRTCCall } from "@/features/chat/useWebRTCCall";
 import { CallOverlay } from "@/features/chat/CallOverlay";
+import { PageTransition } from "./page-transition";
 
 const MR_RESTRICTED_PREFIXES = [
   "/orders",
@@ -243,7 +244,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 </div>
               </div>
             ) : (
-              children
+              <PageTransition>{children}</PageTransition>
             )}
           </div>
         </main>

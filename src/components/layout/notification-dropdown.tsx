@@ -2,6 +2,7 @@
 
 import React, { useRef, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Bell,
   Check,
@@ -173,10 +174,16 @@ export function NotificationDropdown({
   };
 
   return (
-    <div
-      ref={dropdownRef}
-      className="absolute right-0 top-full mt-2 w-80 sm:w-96 rounded-2xl border border-[#E5E1D9] bg-white shadow-2xl dark:border-[#333333] dark:bg-[#202020] z-50 overflow-hidden animate-in fade-in-0 zoom-in-95 duration-150"
-    >
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          ref={dropdownRef}
+          initial={{ opacity: 0, scale: 0.94, y: -6 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.94, y: -6 }}
+          transition={{ type: "spring", damping: 25, stiffness: 350 }}
+          className="absolute right-0 top-full mt-2 w-80 sm:w-96 rounded-2xl border border-white/80 bg-white/90 shadow-2xl backdrop-blur-3xl dark:border-white/10 dark:bg-[#121620]/95 z-50 overflow-hidden"
+        >
       {/* Header */}
       <div className="p-3.5 border-b border-[#E5E1D9] dark:border-[#333333] flex items-center justify-between bg-slate-50/60 dark:bg-[#1a1a1a]/80">
         <div className="flex items-center gap-2">
@@ -304,7 +311,7 @@ export function NotificationDropdown({
       </div>
 
       {/* Footer */}
-      <div className="p-2 border-t border-[#E5E1D9] dark:border-[#333333] bg-slate-50 dark:bg-[#1a1a1a] text-center">
+      <div className="p-2 border-t border-white/80 dark:border-white/10 bg-white/50 dark:bg-[#121620]/50 text-center">
         <Button
           variant="ghost"
           size="sm"
@@ -317,6 +324,8 @@ export function NotificationDropdown({
           View Field Telemetry & Exception Center →
         </Button>
       </div>
-    </div>
+    </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

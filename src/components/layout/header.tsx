@@ -287,7 +287,7 @@ export function Header() {
         {/* Right: Tenant Badge, Notifications & User Info */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {/* Tenant Organization Tag */}
-          <div className="hidden 2xl:flex items-center gap-1.5 rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-xs font-semibold text-[#FF6B00] dark:border-orange-900/60 dark:bg-[#FF6B00]/10 dark:text-[#FF6B00] shrink-0 max-w-[140px]">
+          <div className="hidden 2xl:flex h-9 items-center gap-1.5 rounded-xl border border-orange-500/25 bg-orange-500/10 backdrop-blur-xl px-2.5 text-xs font-semibold text-[#FF6B00] dark:border-orange-500/30 dark:bg-orange-500/15 shadow-[0_2px_8px_rgba(255,107,0,0.06),inset_0_1px_1px_rgba(255,255,255,0.9)] shrink-0 max-w-[140px]">
             <Building className="h-3.5 w-3.5 text-[#FF6B00] shrink-0" aria-hidden="true" />
             <span suppressHydrationWarning className="truncate">{tenantCompanyName}</span>
           </div>
@@ -300,14 +300,14 @@ export function Header() {
             type="button"
             onClick={handleToggleChat}
             className={cn(
-              "relative rounded-xl border border-white/70 bg-white/60 backdrop-blur-xl p-2 text-slate-600 hover:bg-white/90 hover:border-white shadow-[0_2px_8px_rgba(0,0,0,0.03),inset_0_1px_1px_rgba(255,255,255,0.9)] dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] shrink-0 transition-all cursor-pointer",
+              "relative flex h-9 w-9 items-center justify-center rounded-xl border border-white/70 bg-white/60 backdrop-blur-xl text-slate-600 hover:bg-white/90 hover:border-white shadow-[0_2px_8px_rgba(0,0,0,0.03),inset_0_1px_1px_rgba(255,255,255,0.9)] dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] shrink-0 transition-all cursor-pointer",
               isChatOpen && "bg-gradient-to-r from-orange-500/20 to-amber-500/15 border-orange-500/35 text-[#FF6B00] dark:bg-[#FF6B00]/20 dark:text-[#FF6B00]"
             )}
             title={isChatOpen ? "Close Team Chat & Calls" : "Team Chat & Calls"}
             aria-label={isChatOpen ? "Close Team Chat & Calls" : "Open Team Chat & Calls"}
             aria-pressed={isChatOpen}
           >
-            <MessageSquare className="h-5 w-5" />
+            <MessageSquare className="h-4.5 w-4.5" />
           </button>
 
           {/* Notification Bell with Popover Dropdown */}
@@ -316,15 +316,15 @@ export function Header() {
               ref={notificationButtonRef}
               onClick={() => setIsNotificationOpen((prev) => !prev)}
               className={cn(
-                "relative rounded-xl border border-white/70 bg-white/60 backdrop-blur-xl p-2 text-slate-600 hover:bg-white/90 hover:border-white shadow-[0_2px_8px_rgba(0,0,0,0.03),inset_0_1px_1px_rgba(255,255,255,0.9)] dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] shrink-0 transition-all cursor-pointer",
+                "relative flex h-9 w-9 items-center justify-center rounded-xl border border-white/70 bg-white/60 backdrop-blur-xl text-slate-600 hover:bg-white/90 hover:border-white shadow-[0_2px_8px_rgba(0,0,0,0.03),inset_0_1px_1px_rgba(255,255,255,0.9)] dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] shrink-0 transition-all cursor-pointer",
                 isNotificationOpen && "bg-gradient-to-r from-orange-500/20 to-amber-500/15 border-orange-500/35 text-[#FF6B00]"
               )}
               aria-label="View notifications"
               title="View notifications"
             >
-              <Bell className="h-5 w-5" />
+              <Bell className="h-4.5 w-4.5" />
               {unreadNotificationsCount > 0 && (
-                <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#FF6B00] px-1 text-[9px] font-bold text-white shadow-xs">
+                <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#FF6B00] px-1 text-[9px] font-bold text-white shadow-xs">
                   {unreadNotificationsCount > 9 ? "9+" : unreadNotificationsCount}
                 </span>
               )}
@@ -345,9 +345,9 @@ export function Header() {
             }}
             aria-label="User Profile and Account Details"
             suppressHydrationWarning
-            className="flex items-center gap-2 rounded-xl border border-white/80 bg-white/60 backdrop-blur-xl px-2.5 py-1 text-left shadow-[0_2px_12px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,0.95)] hover:bg-white/90 hover:border-white dark:border-white/10 dark:bg-white/5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] shrink-0 cursor-pointer"
+            className="flex h-9 items-center gap-2 rounded-xl border border-white/80 bg-white/60 backdrop-blur-xl px-2.5 text-left shadow-[0_2px_12px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,0.95)] hover:bg-white/90 hover:border-white dark:border-white/10 dark:bg-white/5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] shrink-0 cursor-pointer"
           >
-            <div suppressHydrationWarning className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-[#FF6B00] to-[#F45100] text-xs font-bold text-white shadow-xs shrink-0">
+            <div suppressHydrationWarning className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-tr from-[#FF6B00] to-[#F45100] text-xs font-bold text-white shadow-xs shrink-0">
               {initials}
             </div>
             <div className="hidden sm:flex flex-col text-left max-w-[100px] 2xl:max-w-[130px]">
