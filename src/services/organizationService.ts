@@ -3,6 +3,19 @@ import type { Organization, CreateOrganizationInput, UpdateOrganizationInput } f
 
 export const organizationService = {
   /**
+   * List all active tenant organizations for public login dropdown (unauthenticated).
+   */
+  async getPublicList(): Promise<Array<{ id: string; name: string; slug: string; code: string; logoUrl?: string }>> {
+    try {
+      const res = await apiClient.get<any>("/organizations/public/list");
+      return Array.isArray(res) ? res : res?.data || [];
+    } catch (err) {
+      console.warn("Failed to fetch public organizations list:", err);
+      return [];
+    }
+  },
+
+  /**
    * Get public organization branding and details by subdomain slug (unauthenticated).
    */
   async getPublicBySlug(slug: string): Promise<Organization> {

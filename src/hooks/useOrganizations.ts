@@ -32,6 +32,14 @@ export function usePublicOrganizationBySlug(slug?: string | null) {
   });
 }
 
+export function usePublicOrganizations() {
+  return useQuery({
+    queryKey: ["publicOrganizationsList"],
+    queryFn: () => organizationService.getPublicList(),
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
 export function useCreateOrganization() {
   const queryClient = useQueryClient();
 

@@ -89,32 +89,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const currentSubdomain = typeof window !== "undefined" ? getTenantSubdomain() : null;
   const userOrgSlug = currentUser?.organization?.slug;
 
-  useEffect(() => {
-    // Forward tenant users to their dedicated tenant subdomain portal
-    if (
-      currentUser &&
-      canonicalRole !== "SUPER_ADMIN" &&
-      userOrgSlug &&
-      currentSubdomain !== userOrgSlug &&
-      typeof window !== "undefined"
-    ) {
-      const destination = buildTenantSubdomainUrl(userOrgSlug, pathname);
-      window.location.href = destination;
-    }
-  }, [currentUser, canonicalRole, userOrgSlug, currentSubdomain, pathname]);
-
-  useEffect(() => {
-    // Route Super Admin back to central platform if they are on a tenant subdomain
-    if (
-      currentUser &&
-      canonicalRole === "SUPER_ADMIN" &&
-      currentSubdomain &&
-      typeof window !== "undefined"
-    ) {
-      window.location.href = `https://${getRootDomain()}/companies`;
-    }
-  }, [currentUser, canonicalRole, currentSubdomain]);
-
   // Check Role Route Authorization
   const isSuperAdminRoute = pathname.startsWith("/companies");
   const isBlockedSuperAdmin = Boolean(currentUser) && isSuperAdminRoute && canonicalRole !== "SUPER_ADMIN";
