@@ -193,55 +193,55 @@ body {
   animation: liquid-pulse 9s ease-in-out infinite;
 }
 
-/* Global Liquid Glass Surfaces */
+/* Global Glass Surfaces against Light Cream Canvas */
 aside {
-  background: rgba(255, 255, 255, 0.65) !important;
-  backdrop-filter: blur(32px) saturate(210%) !important;
-  -webkit-backdrop-filter: blur(32px) saturate(210%) !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.75) !important;
-  box-shadow: 4px 0 30px 0 rgba(15, 23, 42, 0.04), inset -1px 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+  background: rgba(255, 255, 255, 0.88) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  border-right: 1px solid rgba(229, 225, 217, 0.8) !important;
+  box-shadow: 4px 0 24px 0 rgba(15, 23, 42, 0.03), inset -1px 0 1px 0 rgba(255, 255, 255, 0.95) !important;
 }
 
 .dark aside {
-  background: rgba(14, 19, 32, 0.75) !important;
+  background: rgba(23, 23, 23, 0.88) !important;
   border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
   box-shadow: 4px 0 30px 0 rgba(0, 0, 0, 0.4) !important;
 }
 
 header {
-  background: rgba(255, 255, 255, 0.65) !important;
-  backdrop-filter: blur(32px) saturate(210%) !important;
-  -webkit-backdrop-filter: blur(32px) saturate(210%) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.75) !important;
-  box-shadow: 0 4px 24px 0 rgba(15, 23, 42, 0.03), inset 0 -1px 1px 0 rgba(255, 255, 255, 0.9) !important;
+  background: rgba(255, 255, 255, 0.88) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  border-bottom: 1px solid rgba(229, 225, 217, 0.8) !important;
+  box-shadow: 0 4px 20px 0 rgba(15, 23, 42, 0.02), inset 0 -1px 1px 0 rgba(255, 255, 255, 0.95) !important;
 }
 
 .dark header {
-  background: rgba(14, 19, 32, 0.75) !important;
+  background: rgba(23, 23, 23, 0.88) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
   box-shadow: 0 4px 24px 0 rgba(0, 0, 0, 0.3) !important;
 }
 
 /* Glass Card & Panels */
 .glass-card {
-  background: rgba(255, 255, 255, 0.7) !important;
-  backdrop-filter: blur(28px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(28px) saturate(200%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.8) !important;
-  box-shadow: 0 10px 32px 0 rgba(15, 23, 42, 0.05), inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.95) !important;
+  background: rgba(255, 255, 255, 0.88) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid rgba(229, 225, 217, 0.85) !important;
+  box-shadow: 0 8px 24px 0 rgba(15, 23, 42, 0.04), inset 0 1px 1px 0 rgba(255, 255, 255, 0.95) !important;
   border-radius: 1.25rem !important;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 .dark .glass-card {
-  background: rgba(22, 29, 47, 0.72) !important;
+  background: rgba(28, 28, 28, 0.8) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  box-shadow: 0 10px 32px 0 rgba(0, 0, 0, 0.4), inset 0 1px 1px 0 rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 8px 28px 0 rgba(0, 0, 0, 0.35), inset 0 1px 1px 0 rgba(255, 255, 255, 0.06) !important;
 }
 
 .glass-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 16px 44px 0 rgba(15, 23, 42, 0.1), inset 0 1.5px 1px 0 rgba(255, 255, 255, 1) !important;
+  box-shadow: 0 14px 36px 0 rgba(15, 23, 42, 0.07), inset 0 1px 1px 0 rgba(255, 255, 255, 1) !important;
 }
 
 /* Glass Pill Badge */

@@ -162,15 +162,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-[#F4F6FB] via-[#EFF2F8] to-[#E9EDF5] dark:from-[#0B0F19] dark:via-[#0F1422] dark:to-[#080B12] overflow-x-hidden selection:bg-orange-500 selection:text-white">
-      {/* Ambient Animated Liquid Mesh Glows */}
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden opacity-90 dark:opacity-60">
-        <div className="absolute -top-[10%] -left-[10%] h-[600px] w-[600px] rounded-full bg-gradient-to-br from-orange-500/30 via-amber-400/20 to-transparent blur-[110px] animate-liquid-pulse" />
-        <div className="absolute top-[25%] -right-[15%] h-[650px] w-[650px] rounded-full bg-gradient-to-bl from-sky-500/30 via-indigo-400/25 to-transparent blur-[120px] animate-liquid-float" />
-        <div className="absolute top-[60%] -left-[12%] h-[550px] w-[550px] rounded-full bg-gradient-to-tr from-violet-500/25 via-purple-400/20 to-transparent blur-[110px] animate-liquid-pulse" />
-        <div className="absolute -bottom-[10%] right-[20%] h-[500px] w-[500px] rounded-full bg-gradient-to-tr from-emerald-400/25 via-teal-300/20 to-transparent blur-[100px] animate-liquid-float" />
-      </div>
-
+    <div className="relative min-h-screen bg-[#F5F3EE] dark:bg-[#171717] overflow-x-hidden selection:bg-orange-500 selection:text-white">
       <Suspense fallback={<div className="w-16 lg:w-64" />}>
         <Sidebar />
       </Suspense>
