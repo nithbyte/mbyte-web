@@ -11,7 +11,8 @@ export function useCurrentUser() {
   const query = useQuery<User | null>({
     queryKey: ["currentUser"],
     queryFn: () => authService.getCurrentUser(),
-    staleTime: 1000 * 60 * 10,
+    staleTime: 1000 * 15,
+    refetchOnWindowFocus: true,
     initialData: storeUser || undefined,
   });
 

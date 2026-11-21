@@ -42,7 +42,7 @@ export function Header() {
   const { selectedTerritoryId, setSelectedTerritoryId, operatingDate, setOperatingDate } = useFilterStore();
   const { data: territories } = useTerritories();
   const storeUser = useAuthStore((s) => s.user);
-  const { data: fetchedUser } = useCurrentUser();
+  const { data: fetchedUser, refetch: refetchCurrentUser } = useCurrentUser();
   const currentUser = fetchedUser ?? storeUser;
   const { data: unreadNotificationsCount = 0 } = useUnreadNotificationsCount();
   const logoutMutation = useLogout();
@@ -334,7 +334,10 @@ export function Header() {
 
           {/* User Profile Pill */}
           <button
-            onClick={() => setIsProfileModalOpen(true)}
+            onClick={() => {
+              refetchCurrentUser();
+              setIsProfileModalOpen(true);
+            }}
             aria-label="User Profile and Account Details"
             suppressHydrationWarning
             className="flex items-center gap-2 pl-2 border-l border-[#E5E1D9] dark:border-[#333333] hover:opacity-85 transition-opacity text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] dark:focus-visible:ring-[#FF6B00] rounded-lg py-1 px-1.5 shrink-0 cursor-pointer"
@@ -413,7 +416,10 @@ export function Header() {
                 <span>Designation:</span>
               </span>
               <span className="font-medium text-slate-900 dark:text-white">
-                {currentUser?.designation || userRole}
+                {(currentUser as any)?.designation ||
+                  (currentUser as any)?.mrProfile?.designation ||
+                  (currentUser as any)?.medicalRepresentative?.designation ||
+                  userRole}
               </span>
             </div>
 
@@ -423,7 +429,11 @@ export function Header() {
                 <span>Employee Identification:</span>
               </span>
               <span className="font-mono font-medium text-slate-900 dark:text-white">
-                {currentUser?.employeeId || "EMP-001"}
+                {(currentUser as any)?.employeeCode ||
+                  (currentUser as any)?.employeeId ||
+                  (currentUser as any)?.mrProfile?.employeeCode ||
+                  (currentUser as any)?.medicalRepresentative?.employeeCode ||
+                  "—"}
               </span>
             </div>
           </div>
