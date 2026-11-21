@@ -87,7 +87,17 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }, [canonicalRole, pathname, router]);
 
   const currentSubdomain = typeof window !== "undefined" ? getTenantSubdomain() : null;
-  const userOrgSlug = currentUser?.organization?.slug;
+  const userOrgSlug =
+    currentUser?.organization?.slug ||
+    (typeof window !== "undefined" ? window.localStorage.getItem("mbyte_tenant_slug") : null);
+
+  useEffect(() => {
+    if (currentUser?.organization?.slug && typeof window !== "undefined") {
+      try {
+        window.localStorage.setItem("mbyte_tenant_slug", currentUser.organization.slug);
+      } catch {}
+    }
+  }, [currentUser?.organization?.slug]);
 
   useEffect(() => {
     // Forward tenant users to their dedicated tenant subdomain portal

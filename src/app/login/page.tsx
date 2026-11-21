@@ -175,11 +175,16 @@ export default function LoginPage() {
           targetPath = "/field-force";
         }
 
-        const orgSlug = result.user.organization?.slug;
+        const orgSlug = result.user?.organization?.slug || selectedOrg?.slug;
         const currentSubdomain = getTenantSubdomain();
 
         // Redirect tenant users to their dedicated tenant subdomain portal
         if (orgSlug && canonicalRole !== "SUPER_ADMIN" && currentSubdomain !== orgSlug) {
+          if (typeof window !== "undefined") {
+            try {
+              window.localStorage.setItem("mbyte_tenant_slug", orgSlug);
+            } catch {}
+          }
           const destinationUrl = buildTenantSubdomainUrl(orgSlug, targetPath);
           window.location.href = destinationUrl;
           return;
