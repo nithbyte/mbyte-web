@@ -410,8 +410,8 @@ export function GlobalSearch({ role }: { role: CanonicalRole }) {
       ) : null}
 
       {isOpen && (
-        <div className="absolute left-0 right-0 top-full mt-2 z-50 rounded-2xl border border-white/90 bg-white/85 backdrop-blur-3xl shadow-[0_20px_50px_rgba(0,0,0,0.12),inset_0_1px_1px_rgba(255,255,255,0.95)] dark:border-white/15 dark:bg-[#121620]/90 overflow-hidden max-h-[420px] flex flex-col">
-          <div className="px-3.5 py-2 border-b border-white/80 dark:border-white/10 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+        <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-50 w-[92vw] sm:w-[480px] max-w-[520px] rounded-2xl border border-white/90 bg-white/90 backdrop-blur-3xl shadow-[0_20px_50px_rgba(0,0,0,0.15),inset_0_1px_1px_rgba(255,255,255,0.95)] dark:border-white/15 dark:bg-[#121620]/95 overflow-hidden max-h-[440px] flex flex-col">
+          <div className="px-4 py-2.5 border-b border-white/80 dark:border-white/10 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-slate-400">
             <span>
               {query.trim().length >= 2
                 ? `Search Results (${combinedResults.length})`
@@ -440,16 +440,16 @@ export function GlobalSearch({ role }: { role: CanonicalRole }) {
                     onMouseEnter={() => setHighlightedIndex(idx)}
                     onClick={() => handleSelect(item)}
                     className={cn(
-                      "w-full flex items-center gap-3 px-3.5 py-2.5 text-left transition-colors cursor-pointer",
+                      "w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors cursor-pointer",
                       isActive
                         ? "bg-orange-50/80 dark:bg-[#FF6B00]/15"
-                        : "hover:bg-slate-50 dark:hover:bg-[#2A2A2A]"
+                        : "hover:bg-slate-50/80 dark:hover:bg-[#2A2A2A]/60"
                     )}
                   >
                     <div className={cn("p-1.5 rounded-lg shrink-0", meta.badge)}>
                       <Icon className="h-3.5 w-3.5" />
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 pr-1">
                       <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">
                         {item.title}
                       </p>
@@ -461,7 +461,7 @@ export function GlobalSearch({ role }: { role: CanonicalRole }) {
                     </div>
                     <span
                       className={cn(
-                        "text-[10px] font-semibold px-1.5 py-0.5 rounded-md shrink-0",
+                        "text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0",
                         meta.badge
                       )}
                     >

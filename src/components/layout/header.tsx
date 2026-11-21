@@ -280,7 +280,7 @@ export function Header() {
         </div>
 
         {/* Center: Flexible Global Search Bar */}
-        <div className="hidden lg:flex flex-1 items-center justify-center max-w-xs xl:max-w-sm 2xl:max-w-md mx-2 min-w-0">
+        <div className="hidden lg:flex flex-1 items-center justify-center max-w-sm xl:max-w-md 2xl:max-w-lg mx-2 min-w-[240px]">
           <GlobalSearch role={canonicalRole} />
         </div>
 
