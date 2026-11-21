@@ -168,7 +168,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       </Suspense>
       <div
         className={cn(
-          "relative z-10 flex min-h-screen flex-col transition-all duration-300 ease-in-out",
+          "relative z-10 flex min-h-screen flex-col transition-all duration-300 ease-in-out min-w-0 max-w-full overflow-x-clip",
           isCollapsed ? "lg:pl-16" : "lg:pl-64"
         )}
       >

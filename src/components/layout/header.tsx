@@ -39,7 +39,7 @@ export function Header() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const isMounted = useIsMounted();
-  const { toggleMobileOpen } = useSidebarStore();
+  const { toggleMobileOpen, isCollapsed } = useSidebarStore();
   const { selectedTerritoryId, setSelectedTerritoryId, operatingDate, setOperatingDate } = useFilterStore();
   const { data: territories } = useTerritories();
   const storeUser = useAuthStore((s) => s.user);
@@ -280,12 +280,19 @@ export function Header() {
         </div>
 
         {/* Center: Flexible Global Search Bar */}
-        <div className="hidden md:flex flex-1 items-center justify-center max-w-xs xl:max-w-sm 2xl:max-w-md mx-2 min-w-0">
+        <div
+          className={cn(
+            "hidden items-center justify-center mx-1 sm:mx-2 min-w-0 transition-all",
+            isCollapsed
+              ? "md:flex flex-1 max-w-xs xl:max-w-sm 2xl:max-w-md"
+              : "xl:flex flex-1 max-w-xs 2xl:max-w-md"
+          )}
+        >
           <GlobalSearch role={canonicalRole} />
         </div>
 
         {/* Right: Tenant Badge, Notifications & User Info */}
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <div className="flex items-center gap-1 sm:gap-1.5 xl:gap-2 shrink-0">
           {/* Tenant Organization Tag */}
           <div className="hidden 2xl:flex h-9 items-center gap-1.5 rounded-xl border border-orange-200 bg-orange-50/80 px-2.5 text-xs font-semibold text-[#FF6B00] dark:border-orange-900/60 dark:bg-[#FF6B00]/15 dark:text-[#FF6B00] shrink-0 max-w-[140px]">
             <Building className="h-3.5 w-3.5 text-[#FF6B00] shrink-0" aria-hidden="true" />
@@ -350,7 +357,14 @@ export function Header() {
             <div suppressHydrationWarning className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-tr from-[#FF6B00] to-[#F45100] text-xs font-bold text-white shadow-xs shrink-0">
               {initials}
             </div>
-            <div className="hidden sm:flex flex-col text-left min-w-0 max-w-[85px] md:max-w-[100px] xl:max-w-[125px]">
+            <div
+              className={cn(
+                "hidden sm:flex flex-col text-left min-w-0 transition-all",
+                isCollapsed
+                  ? "max-w-[85px] md:max-w-[105px] xl:max-w-[130px]"
+                  : "max-w-[70px] md:max-w-[90px] xl:max-w-[125px]"
+              )}
+            >
               <div className="flex items-center gap-0.5 sm:gap-1 min-w-0">
                 <span suppressHydrationWarning className="text-xs font-semibold text-slate-800 dark:text-slate-200 leading-tight truncate">
                   {userName}
