@@ -1008,7 +1008,7 @@ export default function FieldForcePage() {
                 />
               </div>
             ) : (
-              <Table containerClassName="overflow-hidden">
+              <Table containerClassName="overflow-x-hidden overflow-y-visible" className="w-full table-fixed">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[28%]">Representative & Details</TableHead>

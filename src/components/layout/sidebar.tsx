@@ -617,19 +617,19 @@ export function Sidebar() {
                       }}
                       title={isCollapsed ? item.title : undefined}
                       className={cn(
-                        "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
+                        "group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all duration-300 relative",
                         isActive
-                          ? "bg-orange-50 font-semibold text-[#FF6B00] shadow-xs dark:bg-[#FF6B00]/10 dark:text-[#FF6B00]"
-                          : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200",
+                          ? "bg-gradient-to-r from-orange-500/20 via-amber-500/15 to-orange-500/10 font-bold text-[#FF6B00] border border-orange-500/35 backdrop-blur-xl shadow-[0_4px_20px_rgba(255,107,0,0.18),inset_0_1px_1px_rgba(255,255,255,0.9)] dark:border-orange-500/40 dark:shadow-[0_4px_20px_rgba(255,107,0,0.3)]"
+                          : "text-slate-600 hover:bg-white/70 hover:backdrop-blur-xl hover:text-slate-900 hover:shadow-xs hover:border hover:border-white/80 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-slate-100 dark:hover:border-white/10",
                         isCollapsed && "justify-center px-2"
                       )}
                     >
                       <Icon
                         className={cn(
-                          "h-4 w-4 shrink-0 transition-colors",
+                          "h-4 w-4 shrink-0 transition-transform duration-200 group-hover:scale-110",
                           isActive
                             ? "text-[#FF6B00] dark:text-[#FF6B00]"
-                            : "text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300"
+                            : "text-slate-400 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-200"
                         )}
                       />
 
@@ -661,12 +661,12 @@ export function Sidebar() {
       </div>
 
       {/* Footer & Logout */}
-      <div className="shrink-0 border-t border-slate-200/80 p-3 dark:border-[#123261]">
+      <div className="shrink-0 border-t border-white/60 p-3 dark:border-white/10">
         {/* Sign Out Button */}
         <button
           onClick={handleLogout}
           className={cn(
-            "flex w-full items-center gap-2.5 rounded-lg py-2 px-3 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40 transition-colors cursor-pointer",
+            "flex w-full items-center gap-2.5 rounded-xl py-2 px-3 text-xs font-semibold text-rose-600 border border-rose-200/60 bg-rose-50/40 backdrop-blur-xl hover:bg-rose-100/60 hover:border-rose-300 dark:bg-rose-950/20 dark:border-rose-900/40 dark:text-rose-400 dark:hover:bg-rose-950/40 shadow-xs transition-all cursor-pointer",
             isCollapsed && "justify-center px-0"
           )}
           title="Sign Out of Portal"

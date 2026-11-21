@@ -198,7 +198,7 @@ export function Header() {
           </button>
 
           {/* Territory Selector */}
-          <div className="hidden sm:flex items-center gap-1.5 rounded-lg border border-[#E5E1D9] bg-white/90 px-2 sm:px-2.5 py-1 text-xs shadow-xs dark:border-[#333333] dark:bg-[#2C2C2C]/90 shrink">
+          <div className="hidden sm:flex items-center gap-1.5 rounded-xl border border-white/80 bg-white/60 px-2 sm:px-2.5 py-1 text-xs shadow-[0_2px_12px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,0.95)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5 shrink">
             <MapPin className="h-3.5 w-3.5 text-[#FF6B00] shrink-0" aria-hidden="true" />
             <label htmlFor="header-territory-select" className="font-semibold text-slate-500 dark:text-slate-400 shrink-0 hidden md:inline">
               Territory:
@@ -211,12 +211,12 @@ export function Header() {
               suppressHydrationWarning
               className="bg-transparent font-medium text-slate-900 focus:outline-none dark:text-slate-100 cursor-pointer text-xs max-w-[100px] sm:max-w-[130px] md:max-w-[160px] truncate"
             >
-              <option value="ALL" className="bg-white dark:bg-[#242424] text-slate-900 dark:text-slate-100">
+              <option value="ALL" className="bg-white dark:bg-[#1a1a1a] text-slate-900 dark:text-slate-100">
                 All Authorized Territories
               </option>
               {isMounted &&
                 territories?.map((t) => (
-                  <option key={t.id} value={t.id} className="bg-white dark:bg-[#242424] text-slate-900 dark:text-slate-100">
+                  <option key={t.id} value={t.id} className="bg-white dark:bg-[#1a1a1a] text-slate-900 dark:text-slate-100">
                     {t.name} ({t.code})
                   </option>
                 ))}
@@ -224,7 +224,7 @@ export function Header() {
           </div>
 
           {/* Operating Date Selector & Context Controls */}
-          <div className="hidden sm:flex items-center gap-1 rounded-lg border border-[#E5E1D9] bg-white/95 p-1 text-xs shadow-xs dark:border-[#333333] dark:bg-[#2C2C2C]/95 shrink">
+          <div className="hidden sm:flex items-center gap-1 rounded-xl border border-white/80 bg-white/60 p-1 text-xs shadow-[0_2px_12px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,0.95)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5 shrink">
             <div className="flex items-center gap-1 px-1 text-slate-500 dark:text-slate-400">
               <Calendar className="h-3.5 w-3.5 text-[#FF6B00] shrink-0" aria-hidden="true" />
               <label htmlFor="header-operating-date" className="font-semibold hidden 2xl:inline text-slate-600 dark:text-slate-300">
@@ -237,10 +237,10 @@ export function Header() {
               type="button"
               onClick={() => handleDateChange(getLocalTodayDate())}
               className={cn(
-                "rounded px-1.5 py-0.5 text-xs font-medium transition-colors cursor-pointer",
+                "rounded-lg px-2 py-0.5 text-xs font-medium transition-all cursor-pointer",
                 todayDate && operatingDate === todayDate
-                  ? "bg-orange-50 font-semibold text-[#FF6B00] dark:bg-[#FF6B00]/20 dark:text-[#FF6B00]"
-                  : "text-slate-600 hover:bg-[#F5F3EE] dark:text-slate-300 dark:hover:bg-[#333333]"
+                  ? "bg-gradient-to-r from-orange-500/20 to-amber-500/15 border border-orange-500/35 font-bold text-[#FF6B00] shadow-xs backdrop-blur-md dark:bg-[#FF6B00]/20"
+                  : "text-slate-600 hover:bg-white/70 hover:backdrop-blur-md dark:text-slate-300 dark:hover:bg-white/10"
               )}
               title="Set operating date to Today"
             >
@@ -252,10 +252,10 @@ export function Header() {
               type="button"
               onClick={() => handleDateChange(getLocalYesterdayDate())}
               className={cn(
-                "hidden xl:inline-block rounded px-1.5 py-0.5 text-xs font-medium transition-colors cursor-pointer",
+                "hidden xl:inline-block rounded-lg px-2 py-0.5 text-xs font-medium transition-all cursor-pointer",
                 yesterdayDate && operatingDate === yesterdayDate
-                  ? "bg-orange-50 font-semibold text-[#FF6B00] dark:bg-[#FF6B00]/20 dark:text-[#FF6B00]"
-                  : "text-slate-600 hover:bg-[#F5F3EE] dark:text-slate-300 dark:hover:bg-[#333333]"
+                  ? "bg-gradient-to-r from-orange-500/20 to-amber-500/15 border border-orange-500/35 font-bold text-[#FF6B00] shadow-xs backdrop-blur-md dark:bg-[#FF6B00]/20"
+                  : "text-slate-600 hover:bg-white/70 hover:backdrop-blur-md dark:text-slate-300 dark:hover:bg-white/10"
               )}
               title="Set operating date to Yesterday"
             >
@@ -274,7 +274,7 @@ export function Header() {
                 }
               }}
               suppressHydrationWarning
-              className="w-[122px] rounded border border-transparent bg-transparent px-1 py-0.5 text-xs font-semibold text-slate-900 focus:border-[#FF6B00] focus:outline-none dark:text-slate-100 dark:hover:border-slate-700 cursor-pointer"
+              className="w-[122px] rounded-lg border border-transparent bg-transparent px-1 py-0.5 text-xs font-semibold text-slate-900 focus:border-[#FF6B00] focus:outline-none dark:text-slate-100 dark:hover:border-slate-700 cursor-pointer"
             />
           </div>
         </div>
@@ -300,8 +300,8 @@ export function Header() {
             type="button"
             onClick={handleToggleChat}
             className={cn(
-              "relative rounded-lg p-2 text-slate-600 hover:bg-[#F5F3EE] dark:text-slate-300 dark:hover:bg-[#2C2C2C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] dark:focus-visible:ring-[#FF6B00] shrink-0 transition-colors cursor-pointer",
-              isChatOpen && "bg-orange-50 text-[#FF6B00] dark:bg-[#2C2C2C] dark:text-[#FF6B00]"
+              "relative rounded-xl border border-white/70 bg-white/60 backdrop-blur-xl p-2 text-slate-600 hover:bg-white/90 hover:border-white shadow-[0_2px_8px_rgba(0,0,0,0.03),inset_0_1px_1px_rgba(255,255,255,0.9)] dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] shrink-0 transition-all cursor-pointer",
+              isChatOpen && "bg-gradient-to-r from-orange-500/20 to-amber-500/15 border-orange-500/35 text-[#FF6B00] dark:bg-[#FF6B00]/20 dark:text-[#FF6B00]"
             )}
             title={isChatOpen ? "Close Team Chat & Calls" : "Team Chat & Calls"}
             aria-label={isChatOpen ? "Close Team Chat & Calls" : "Open Team Chat & Calls"}
@@ -316,8 +316,8 @@ export function Header() {
               ref={notificationButtonRef}
               onClick={() => setIsNotificationOpen((prev) => !prev)}
               className={cn(
-                "relative rounded-lg p-2 text-slate-600 hover:bg-[#F5F3EE] dark:text-slate-300 dark:hover:bg-[#2C2C2C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] dark:focus-visible:ring-[#FF6B00] shrink-0 transition-colors cursor-pointer",
-                isNotificationOpen && "bg-orange-50 text-[#FF6B00] dark:bg-[#2C2C2C]"
+                "relative rounded-xl border border-white/70 bg-white/60 backdrop-blur-xl p-2 text-slate-600 hover:bg-white/90 hover:border-white shadow-[0_2px_8px_rgba(0,0,0,0.03),inset_0_1px_1px_rgba(255,255,255,0.9)] dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] shrink-0 transition-all cursor-pointer",
+                isNotificationOpen && "bg-gradient-to-r from-orange-500/20 to-amber-500/15 border-orange-500/35 text-[#FF6B00]"
               )}
               aria-label="View notifications"
               title="View notifications"
@@ -345,7 +345,7 @@ export function Header() {
             }}
             aria-label="User Profile and Account Details"
             suppressHydrationWarning
-            className="flex items-center gap-2 pl-2 border-l border-[#E5E1D9] dark:border-[#333333] hover:opacity-85 transition-opacity text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] dark:focus-visible:ring-[#FF6B00] rounded-lg py-1 px-1.5 shrink-0 cursor-pointer"
+            className="flex items-center gap-2 rounded-xl border border-white/80 bg-white/60 backdrop-blur-xl px-2.5 py-1 text-left shadow-[0_2px_12px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,0.95)] hover:bg-white/90 hover:border-white dark:border-white/10 dark:bg-white/5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] shrink-0 cursor-pointer"
           >
             <div suppressHydrationWarning className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-[#FF6B00] to-[#F45100] text-xs font-bold text-white shadow-xs shrink-0">
               {initials}

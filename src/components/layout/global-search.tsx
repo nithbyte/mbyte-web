@@ -389,7 +389,7 @@ export function GlobalSearch({ role }: { role: CanonicalRole }) {
         onKeyDown={handleKeyDown}
         aria-label="Search portal records"
         placeholder="Search records, doctors, orders..."
-        className="h-8.5 w-full rounded-lg border border-[#E5E1D9] bg-[#F5F3EE]/60 pl-8 pr-8 text-xs text-slate-900 placeholder:text-slate-400 transition-all focus:border-[#FF6B00] focus:bg-white focus:outline-none dark:border-[#333333] dark:bg-[#242424] dark:text-slate-100 dark:focus:bg-[#2C2C2C] shadow-2xs"
+        className="h-9 w-full rounded-xl border border-white/80 bg-white/60 pl-8.5 pr-8 text-xs text-slate-900 placeholder:text-slate-400 backdrop-blur-xl transition-all focus:border-[#FF6B00]/60 focus:bg-white/90 focus:ring-2 focus:ring-[#FF6B00]/20 focus:outline-none dark:border-white/10 dark:bg-white/5 dark:text-slate-100 shadow-[0_2px_10px_rgba(0,0,0,0.03),inset_0_1px_1px_rgba(255,255,255,0.9)]"
       />
 
       {isSearching ? (
@@ -410,8 +410,8 @@ export function GlobalSearch({ role }: { role: CanonicalRole }) {
       ) : null}
 
       {isOpen && (
-        <div className="absolute left-0 right-0 top-full mt-2 z-50 rounded-2xl border border-[#E5E1D9] bg-white shadow-2xl dark:border-[#333333] dark:bg-[#1E1E1E] overflow-hidden max-h-[420px] flex flex-col">
-          <div className="px-3.5 py-2 border-b border-[#E5E1D9]/70 dark:border-[#333333] flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+        <div className="absolute left-0 right-0 top-full mt-2 z-50 rounded-2xl border border-white/90 bg-white/85 backdrop-blur-3xl shadow-[0_20px_50px_rgba(0,0,0,0.12),inset_0_1px_1px_rgba(255,255,255,0.95)] dark:border-white/15 dark:bg-[#121620]/90 overflow-hidden max-h-[420px] flex flex-col">
+          <div className="px-3.5 py-2 border-b border-white/80 dark:border-white/10 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-slate-400">
             <span>
               {query.trim().length >= 2
                 ? `Search Results (${combinedResults.length})`
@@ -420,7 +420,7 @@ export function GlobalSearch({ role }: { role: CanonicalRole }) {
             <span className="hidden sm:inline font-mono">ESC</span>
           </div>
 
-          <div className="overflow-y-auto divide-y divide-[#E5E1D9]/40 dark:divide-[#333333]/50">
+          <div className="overflow-y-auto divide-y divide-white/60 dark:divide-white/5">
             {combinedResults.length === 0 ? (
               <div className="px-4 py-6 text-center text-xs text-slate-500 dark:text-slate-400">
                 {isSearching
