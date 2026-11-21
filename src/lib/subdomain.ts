@@ -72,8 +72,8 @@ export function getTenantSubdomain(): string | null {
  */
 export function buildTenantSubdomainUrl(slug: string, path: string = ""): string {
   const rootDomain = getRootDomain();
-  const defaultProtocol = rootDomain.includes("localhost") || rootDomain.startsWith("127.") ? "http:" : "https:";
-  const protocol = typeof window !== "undefined" && window.location.protocol ? window.location.protocol : defaultProtocol;
+  const isLocal = rootDomain.includes("localhost") || rootDomain.startsWith("127.");
+  const protocol = isLocal ? "http:" : "https:";
   const cleanSlug = slug.trim().toLowerCase();
   const cleanPath = path.startsWith("/") ? path : path ? `/${path}` : "";
 

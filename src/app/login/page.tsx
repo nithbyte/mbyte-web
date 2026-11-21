@@ -20,7 +20,7 @@ import { useLogin, useSelectCompany, usePublicOrganizations } from "@/hooks";
 import { normalizeRole } from "@/types";
 import { MByteLogo } from "@/components/ui/mbyte-logo";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { getTenantSubdomain, buildTenantSubdomainUrl } from "@/lib/subdomain";
+import { getTenantSubdomain, buildTenantSubdomainUrl, getRootDomain } from "@/lib/subdomain";
 import { cn } from "@/lib/utils";
 
 interface PublicOrganization {
@@ -64,6 +64,20 @@ export default function LoginPage() {
       role?: string;
     }>;
   } | null>(null);
+
+  // Redirect to canonical root domain if accessed directly on a tenant subdomain
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const subdomain = getTenantSubdomain();
+      if (subdomain) {
+        const rootDomain = getRootDomain();
+        const rootHost = rootDomain.split(":")[0];
+        const isLocal = rootHost.includes("localhost") || rootHost.startsWith("127.");
+        const protocol = isLocal ? "http:" : "https:";
+        window.location.href = `${protocol}//${rootDomain}/login`;
+      }
+    }
+  }, []);
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -221,14 +235,7 @@ export default function LoginPage() {
     <div className="relative min-h-screen flex flex-col justify-between bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200">
       {/* Top Bar */}
       <header className="w-full px-6 py-4 flex items-center justify-between z-10">
-        <div className="flex items-center gap-2">
-          {selectedOrg && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-orange-50 text-orange-700 border border-orange-200/70 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-800/40 shadow-xs">
-              <Building className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
-              <span>{selectedOrg.name}</span>
-            </span>
-          )}
-        </div>
+        <div />
         <ThemeToggle className="border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 shadow-xs backdrop-blur-xs" />
       </header>
 

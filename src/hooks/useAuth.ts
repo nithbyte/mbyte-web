@@ -132,7 +132,9 @@ export function useLogout() {
       if (typeof window !== "undefined") {
         const rootDomain = getRootDomain();
         const rootHost = rootDomain.split(":")[0];
-        window.location.href = `https://${rootHost}/login`;
+        const isLocal = rootHost.includes("localhost") || rootHost.startsWith("127.");
+        const protocol = isLocal ? "http:" : "https:";
+        window.location.href = `${protocol}//${rootDomain}/login`;
       }
     },
   });

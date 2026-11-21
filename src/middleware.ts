@@ -32,9 +32,16 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // If someone visits /admin or /companies while on a tenant subdomain, redirect to central platform
-  if (subdomain && (request.nextUrl.pathname.startsWith("/admin") || request.nextUrl.pathname.startsWith("/companies"))) {
-    const targetUrl = new URL(request.nextUrl.pathname + request.nextUrl.search, `https://${rootHost}`);
+  // If someone visits /admin, /companies, or /login while on a tenant subdomain, redirect to central platform
+  if (
+    subdomain &&
+    (request.nextUrl.pathname.startsWith("/admin") ||
+      request.nextUrl.pathname.startsWith("/companies") ||
+      request.nextUrl.pathname === "/login")
+  ) {
+    const isLocal = rootHost.includes("localhost") || rootHost.startsWith("127.");
+    const protocol = isLocal ? "http:" : "https:";
+    const targetUrl = new URL(request.nextUrl.pathname + request.nextUrl.search, `${protocol}//${envRoot}`);
     return NextResponse.redirect(targetUrl, 307);
   }
 
@@ -50,7 +57,12 @@ export function middleware(request: NextRequest) {
     });
   } else {
     response.headers.set("x-tenant-subdomain", "");
-    response.cookies.delete("mbyte_tenant_subdomain");
+    const cookieDomain = process.env.NODE_ENV === "production" ? `.${rootHost}` : undefined;
+    response.cookies.delete({
+      name: "mbyte_tenant_subdomain",
+      domain: cookieDomain,
+      path: "/",
+    });
   }
 
   return response;
