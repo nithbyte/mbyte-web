@@ -245,7 +245,7 @@ export function DashboardOverview() {
       {/* ============================================================ */}
       {/* 0. Live Telemetry Status Banner & Action Toolbar            */}
       {/* ============================================================ */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-gradient-to-r from-sky-50 via-white to-indigo-50/50 p-4 rounded-xl border border-sky-100 dark:border-slate-800 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-2xl border border-white/80 bg-white/65 backdrop-blur-2xl shadow-[0_8px_30px_rgba(0,0,0,0.04),inset_0_1.5px_1px_rgba(255,255,255,0.9)] dark:border-white/10 dark:bg-[#161D2F]/70">
         <div className="flex items-center gap-3">
           <div className="flex h-3 w-3 relative">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
@@ -358,7 +358,7 @@ export function DashboardOverview() {
       {/* ============================================================ */}
       {/* 2. "WHAT NEEDS ATTENTION?" (Critical Alerts Matrix)          */}
       {/* ============================================================ */}
-      <Card className="border-rose-200/80 bg-rose-50/20 dark:border-rose-950 dark:bg-rose-950/10">
+      <Card className="border-rose-200/90 bg-rose-50/50 backdrop-blur-2xl shadow-[0_8px_32px_rgba(244,63,94,0.06),inset_0_1.5px_1px_rgba(255,255,255,0.95)] dark:border-rose-900/40 dark:bg-rose-950/20">
         <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-3">
           <div className="space-y-1">
             <div className="flex items-center gap-2">

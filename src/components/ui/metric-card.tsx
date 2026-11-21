@@ -42,7 +42,7 @@ export function MetricCard({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-xl border border-slate-200/90 bg-white p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)] transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] dark:border-slate-800 dark:bg-slate-900/90",
+        "relative overflow-hidden rounded-2xl border border-white/80 bg-white/65 backdrop-blur-2xl p-5 shadow-[0_8px_30px_rgba(0,0,0,0.06),inset_0_1.5px_1px_0_rgba(255,255,255,0.95)] transition-all duration-300 hover:shadow-[0_16px_40px_rgba(0,0,0,0.12),inset_0_1.5px_1px_0_rgba(255,255,255,1)] hover:-translate-y-1 hover:border-white dark:border-white/10 dark:bg-[#161D2F]/70 dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)] group cursor-pointer",
         className
       )}
     >
@@ -58,7 +58,7 @@ export function MetricCard({
 
         <div
           className={cn(
-            "flex h-11 w-11 items-center justify-center rounded-xl border transition-transform hover:scale-105",
+            "flex h-11 w-11 items-center justify-center rounded-2xl border border-white/60 dark:border-white/10 backdrop-blur-xl shadow-xs transition-transform duration-300 group-hover:scale-110",
             colorMap[iconColor]
           )}
         >

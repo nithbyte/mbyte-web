@@ -616,7 +616,7 @@ export default function FieldForcePage() {
       {/* Quick Summary Strip */}
       {canonicalRole === "SUPER_ADMIN" ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="rounded-xl border border-slate-200/90 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+          <div className="rounded-2xl border border-white/80 bg-white/65 backdrop-blur-2xl p-4 shadow-[0_8px_30px_rgba(0,0,0,0.05),inset_0_1.5px_1px_rgba(255,255,255,0.95)] hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.1)] transition-all dark:border-white/10 dark:bg-[#161D2F]/70 dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)]">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Total Company Personnel
             </span>
@@ -626,7 +626,7 @@ export default function FieldForcePage() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-slate-200/90 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+          <div className="rounded-2xl border border-white/80 bg-white/65 backdrop-blur-2xl p-4 shadow-[0_8px_30px_rgba(0,0,0,0.05),inset_0_1.5px_1px_rgba(255,255,255,0.95)] hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.1)] transition-all dark:border-white/10 dark:bg-[#161D2F]/70 dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)]">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Active Tenant Companies
             </span>
@@ -638,7 +638,7 @@ export default function FieldForcePage() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-slate-200/90 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+          <div className="rounded-2xl border border-white/80 bg-white/65 backdrop-blur-2xl p-4 shadow-[0_8px_30px_rgba(0,0,0,0.05),inset_0_1.5px_1px_rgba(255,255,255,0.95)] hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.1)] transition-all dark:border-white/10 dark:bg-[#161D2F]/70 dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)]">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Company Administrators
             </span>
@@ -650,7 +650,7 @@ export default function FieldForcePage() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-slate-200/90 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+          <div className="rounded-2xl border border-white/80 bg-white/65 backdrop-blur-2xl p-4 shadow-[0_8px_30px_rgba(0,0,0,0.05),inset_0_1.5px_1px_rgba(255,255,255,0.95)] hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.1)] transition-all dark:border-white/10 dark:bg-[#161D2F]/70 dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)]">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Field Staff & Managers
             </span>
@@ -664,7 +664,7 @@ export default function FieldForcePage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="rounded-xl border border-slate-200/90 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+          <div className="rounded-2xl border border-white/80 bg-white/65 backdrop-blur-2xl p-4 shadow-[0_8px_30px_rgba(0,0,0,0.05),inset_0_1.5px_1px_rgba(255,255,255,0.95)] hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.1)] transition-all dark:border-white/10 dark:bg-[#161D2F]/70 dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)]">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Total Field Force
             </span>
@@ -674,7 +674,7 @@ export default function FieldForcePage() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-slate-200/90 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+          <div className="rounded-2xl border border-white/80 bg-white/65 backdrop-blur-2xl p-4 shadow-[0_8px_30px_rgba(0,0,0,0.05),inset_0_1.5px_1px_rgba(255,255,255,0.95)] hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.1)] transition-all dark:border-white/10 dark:bg-[#161D2F]/70 dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)]">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Commercial Orders Booked
             </span>
@@ -686,7 +686,7 @@ export default function FieldForcePage() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-slate-200/90 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+          <div className="rounded-2xl border border-white/80 bg-white/65 backdrop-blur-2xl p-4 shadow-[0_8px_30px_rgba(0,0,0,0.05),inset_0_1.5px_1px_rgba(255,255,255,0.95)] hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.1)] transition-all dark:border-white/10 dark:bg-[#161D2F]/70 dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)]">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Below Quota Run-Rate
             </span>
@@ -698,7 +698,7 @@ export default function FieldForcePage() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-slate-200/90 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+          <div className="rounded-2xl border border-white/80 bg-white/65 backdrop-blur-2xl p-4 shadow-[0_8px_30px_rgba(0,0,0,0.05),inset_0_1.5px_1px_rgba(255,255,255,0.95)] hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.1)] transition-all dark:border-white/10 dark:bg-[#161D2F]/70 dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)]">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Coverage Territories
             </span>
