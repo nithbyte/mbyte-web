@@ -617,10 +617,10 @@ export function Sidebar() {
                       }}
                       title={isCollapsed ? item.title : undefined}
                       className={cn(
-                        "group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all duration-300 relative",
+                        "group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all duration-200 relative",
                         isActive
-                          ? "bg-gradient-to-r from-orange-500/20 via-amber-500/15 to-orange-500/10 font-bold text-[#FF6B00] border border-orange-500/35 backdrop-blur-xl shadow-[0_4px_20px_rgba(255,107,0,0.18),inset_0_1px_1px_rgba(255,255,255,0.9)] dark:border-orange-500/40 dark:shadow-[0_4px_20px_rgba(255,107,0,0.3)]"
-                          : "text-slate-600 hover:bg-white/70 hover:backdrop-blur-xl hover:text-slate-900 hover:shadow-xs hover:border hover:border-white/80 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-slate-100 dark:hover:border-white/10",
+                          ? "bg-orange-50/90 font-bold text-[#FF6B00] border border-orange-200/90 shadow-none dark:bg-[#FF6B00]/15 dark:border-orange-500/30 dark:text-[#FF6B00]"
+                          : "text-slate-600 hover:bg-white/80 hover:text-slate-900 hover:border hover:border-slate-200/60 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-slate-100 dark:hover:border-white/10",
                         isCollapsed && "justify-center px-2"
                       )}
                     >

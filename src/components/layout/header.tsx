@@ -239,8 +239,8 @@ export function Header() {
               className={cn(
                 "rounded-lg px-2 py-0.5 text-xs font-medium transition-all cursor-pointer",
                 todayDate && operatingDate === todayDate
-                  ? "bg-gradient-to-r from-orange-500/20 to-amber-500/15 border border-orange-500/35 font-bold text-[#FF6B00] shadow-xs backdrop-blur-md dark:bg-[#FF6B00]/20"
-                  : "text-slate-600 hover:bg-white/70 hover:backdrop-blur-md dark:text-slate-300 dark:hover:bg-white/10"
+                  ? "bg-orange-50 border border-orange-200 font-bold text-[#FF6B00] dark:bg-[#FF6B00]/20 dark:border-orange-900/60"
+                  : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10"
               )}
               title="Set operating date to Today"
             >
@@ -254,8 +254,8 @@ export function Header() {
               className={cn(
                 "hidden xl:inline-block rounded-lg px-2 py-0.5 text-xs font-medium transition-all cursor-pointer",
                 yesterdayDate && operatingDate === yesterdayDate
-                  ? "bg-gradient-to-r from-orange-500/20 to-amber-500/15 border border-orange-500/35 font-bold text-[#FF6B00] shadow-xs backdrop-blur-md dark:bg-[#FF6B00]/20"
-                  : "text-slate-600 hover:bg-white/70 hover:backdrop-blur-md dark:text-slate-300 dark:hover:bg-white/10"
+                  ? "bg-orange-50 border border-orange-200 font-bold text-[#FF6B00] dark:bg-[#FF6B00]/20 dark:border-orange-900/60"
+                  : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10"
               )}
               title="Set operating date to Yesterday"
             >
@@ -287,7 +287,7 @@ export function Header() {
         {/* Right: Tenant Badge, Notifications & User Info */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {/* Tenant Organization Tag */}
-          <div className="hidden 2xl:flex h-9 items-center gap-1.5 rounded-xl border border-orange-500/25 bg-orange-500/10 backdrop-blur-xl px-2.5 text-xs font-semibold text-[#FF6B00] dark:border-orange-500/30 dark:bg-orange-500/15 shadow-[0_2px_8px_rgba(255,107,0,0.06),inset_0_1px_1px_rgba(255,255,255,0.9)] shrink-0 max-w-[140px]">
+          <div className="hidden 2xl:flex h-9 items-center gap-1.5 rounded-xl border border-orange-200 bg-orange-50/80 px-2.5 text-xs font-semibold text-[#FF6B00] dark:border-orange-900/60 dark:bg-[#FF6B00]/15 dark:text-[#FF6B00] shrink-0 max-w-[140px]">
             <Building className="h-3.5 w-3.5 text-[#FF6B00] shrink-0" aria-hidden="true" />
             <span suppressHydrationWarning className="truncate">{tenantCompanyName}</span>
           </div>
@@ -301,7 +301,7 @@ export function Header() {
             onClick={handleToggleChat}
             className={cn(
               "relative flex h-9 w-9 items-center justify-center rounded-xl border border-white/70 bg-white/60 backdrop-blur-xl text-slate-600 hover:bg-white/90 hover:border-white shadow-[0_2px_8px_rgba(0,0,0,0.03),inset_0_1px_1px_rgba(255,255,255,0.9)] dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] shrink-0 transition-all cursor-pointer",
-              isChatOpen && "bg-gradient-to-r from-orange-500/20 to-amber-500/15 border-orange-500/35 text-[#FF6B00] dark:bg-[#FF6B00]/20 dark:text-[#FF6B00]"
+              isChatOpen && "bg-orange-50 border-orange-200 text-[#FF6B00] dark:bg-[#FF6B00]/20 dark:text-[#FF6B00] dark:border-orange-900/60"
             )}
             title={isChatOpen ? "Close Team Chat & Calls" : "Team Chat & Calls"}
             aria-label={isChatOpen ? "Close Team Chat & Calls" : "Open Team Chat & Calls"}
