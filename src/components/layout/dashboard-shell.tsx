@@ -89,15 +89,19 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const currentSubdomain = typeof window !== "undefined" ? getTenantSubdomain() : null;
   const userOrgSlug =
     currentUser?.organization?.slug ||
-    (typeof window !== "undefined" ? window.localStorage.getItem("mbyte_tenant_slug") : null);
+    (canonicalRole !== "SUPER_ADMIN" && typeof window !== "undefined" ? window.localStorage.getItem("mbyte_tenant_slug") : null);
 
   useEffect(() => {
-    if (currentUser?.organization?.slug && typeof window !== "undefined") {
+    if (canonicalRole === "SUPER_ADMIN" && typeof window !== "undefined") {
+      try {
+        window.localStorage.removeItem("mbyte_tenant_slug");
+      } catch {}
+    } else if (currentUser?.organization?.slug && typeof window !== "undefined") {
       try {
         window.localStorage.setItem("mbyte_tenant_slug", currentUser.organization.slug);
       } catch {}
     }
-  }, [currentUser?.organization?.slug]);
+  }, [canonicalRole, currentUser?.organization?.slug]);
 
   useEffect(() => {
     // Forward tenant users to their dedicated tenant subdomain portal
@@ -109,7 +113,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       typeof window !== "undefined"
     ) {
       const destination = buildTenantSubdomainUrl(userOrgSlug, pathname);
-      window.location.href = destination;
+      if (window.location.href !== destination) {
+        window.location.href = destination;
+      }
     }
   }, [currentUser, canonicalRole, userOrgSlug, currentSubdomain, pathname]);
 
@@ -121,7 +127,11 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       currentSubdomain &&
       typeof window !== "undefined"
     ) {
-      window.location.href = `https://${getRootDomain()}/companies`;
+      const rootDomain = getRootDomain();
+      const rootHost = rootDomain.split(":")[0];
+      if (window.location.hostname !== rootHost && window.location.hostname !== `www.${rootHost}`) {
+        window.location.href = `https://${rootDomain}/companies`;
+      }
     }
   }, [currentUser, canonicalRole, currentSubdomain]);
 

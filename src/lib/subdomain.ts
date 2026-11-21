@@ -34,34 +34,32 @@ export function getRootDomain(): string {
 }
 
 /**
- * Extracts the tenant subdomain slug from the active browser window or cookie.
- * Returns null when on the platform root domain (e.g. localhost:3000, mediqbyte.com).
+ * Extracts the tenant subdomain slug from the active browser window.
+ * Returns null when on the platform root domain (e.g. localhost:3000, mediqbyte.com, www.mediqbyte.com).
  */
 export function getTenantSubdomain(): string | null {
   if (typeof window === "undefined") return null;
 
-  // 1. Check for cookie set by Next.js middleware
-  const matchCookie = document.cookie.match(/(?:^|;\s*)mbyte_tenant_subdomain=([^;]+)/);
-  if (matchCookie && matchCookie[1]) {
-    const slug = decodeURIComponent(matchCookie[1]).trim().toLowerCase();
-    if (slug && !RESERVED_SUBDOMAINS.has(slug)) {
-      return slug;
-    }
-  }
-
-  // 2. Direct hostname inspection
-  const host = window.location.host.toLowerCase();
   const hostname = window.location.hostname.toLowerCase();
   const rootDomain = getRootDomain();
   const rootHost = rootDomain.split(":")[0];
 
-  // If host ends with `.<rootHost>`
+  // If on the root domain directly or localhost
+  if (
+    hostname === rootHost ||
+    hostname === `www.${rootHost}` ||
+    hostname === "localhost" ||
+    hostname.startsWith("127.")
+  ) {
+    return null;
+  }
+
+  // If hostname ends with `.<rootHost>`
   if (hostname.endsWith(`.${rootHost}`)) {
     const candidate = hostname.slice(0, -(rootHost.length + 1)).toLowerCase();
-    // Handle multi-level like "kovel" from "kovel.localhost"
-    const sub = candidate.split(".")[0];
-    if (sub && !RESERVED_SUBDOMAINS.has(sub)) {
-      return sub;
+    const firstSub = candidate.split(".")[0];
+    if (firstSub && !RESERVED_SUBDOMAINS.has(firstSub)) {
+      return firstSub;
     }
   }
 
