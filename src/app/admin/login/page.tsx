@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import {
   Shield,
   Building,
@@ -214,16 +213,7 @@ export default function AdminLoginPage() {
               </div>
             </div>
 
-            {/* Link to standard field login */}
-            <div className="pt-2">
-              <Link
-                href="/login"
-                className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-orange-400 transition-colors"
-              >
-                <span>Looking for Field Representative or Staff Sign In?</span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
+
           </div>
         </div>
 
@@ -499,12 +489,7 @@ export default function AdminLoginPage() {
                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
                 <span>Privileged Session Active</span>
               </div>
-              <Link
-                href="/login"
-                className="text-orange-400 hover:text-orange-300 font-medium transition-colors"
-              >
-                Standard Field Login →
-              </Link>
+              <span className="text-slate-500">MByte Private Governance</span>
             </div>
           </div>
         </div>

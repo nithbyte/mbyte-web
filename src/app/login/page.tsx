@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import {
   Shield,
   Building,
@@ -42,7 +41,6 @@ export default function LoginPage() {
   const [mounted, setMounted] = useState(false);
   const [tenantSlug, setTenantSlug] = useState<string | null>(null);
   const [manualTenantSlug, setManualTenantSlug] = useState("");
-  const [isSuperAdminLogin, setIsSuperAdminLogin] = useState(false);
 
   // Multi-Company Selection State
   const [multiCompanyData, setMultiCompanyData] = useState<{
@@ -86,9 +84,7 @@ export default function LoginPage() {
       return;
     }
 
-    const effectiveSlug = isSuperAdminLogin
-      ? undefined
-      : (tenantSlug || manualTenantSlug).trim().toLowerCase() || undefined;
+    const effectiveSlug = (tenantSlug || manualTenantSlug).trim().toLowerCase() || undefined;
 
     try {
       const result = await loginMutation.mutateAsync({
@@ -422,42 +418,27 @@ export default function LoginPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {!tenantSlug && (
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label
-                      htmlFor="login-company-slug"
-                      className="block text-xs font-semibold text-slate-300"
-                    >
-                      Company Identifier / Subdomain
-                    </label>
-                    <label className="flex items-center gap-1.5 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={isSuperAdminLogin}
-                        onChange={(e) => setIsSuperAdminLogin(e.target.checked)}
-                        className="rounded border-slate-700 bg-slate-900 text-orange-500 focus:ring-orange-500 h-3 w-3"
-                      />
-                      <span className="text-[11px] text-orange-400 font-medium">Platform Super Admin</span>
-                    </label>
+                  <label
+                    htmlFor="login-company-slug"
+                    className="block text-xs font-semibold text-slate-300"
+                  >
+                    Company Identifier / Subdomain
+                  </label>
+                  <div className="relative">
+                    <Building className="absolute left-3.5 top-3 h-4 w-4 text-slate-500" />
+                    <input
+                      id="login-company-slug"
+                      type="text"
+                      autoCapitalize="none"
+                      value={manualTenantSlug}
+                      onChange={(e) => setManualTenantSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ""))}
+                      placeholder="e.g. novis-pharma, cipla, or company code"
+                      className="w-full rounded-xl border border-slate-700 bg-slate-900/90 px-3.5 py-2.5 pl-10 text-xs text-white placeholder-slate-500 focus:border-[#FF6B00] focus:outline-none focus:ring-1 focus:ring-[#FF6B00] transition-colors"
+                    />
                   </div>
-                  {!isSuperAdminLogin && (
-                    <>
-                      <div className="relative">
-                        <Building className="absolute left-3.5 top-3 h-4 w-4 text-slate-500" />
-                        <input
-                          id="login-company-slug"
-                          type="text"
-                          autoCapitalize="none"
-                          value={manualTenantSlug}
-                          onChange={(e) => setManualTenantSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ""))}
-                          placeholder="e.g. novis-pharma, cipla, or company code"
-                          className="w-full rounded-xl border border-slate-700 bg-slate-900/90 px-3.5 py-2.5 pl-10 text-xs text-white placeholder-slate-500 focus:border-[#FF6B00] focus:outline-none focus:ring-1 focus:ring-[#FF6B00] transition-colors"
-                        />
-                      </div>
-                      <p className="mt-1 text-[11px] text-slate-500">
-                        Enter your company code or slug, or leave blank to select from authorized companies.
-                      </p>
-                    </>
-                  )}
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    Enter your company code or slug, or leave blank to select from authorized companies.
+                  </p>
                 </div>
               )}
 
@@ -565,17 +546,10 @@ export default function LoginPage() {
             </form>
             )}
 
-            <div className="mt-6 pt-5 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+            <div className="mt-6 pt-5 border-t border-slate-800 text-center">
               <p className="text-[11px] text-slate-400">
                 Unauthorized access to MByte FieldOps is strictly prohibited. Activity is logged under pharmaceutical audit compliance policies.
               </p>
-              <Link
-                href="/admin/login"
-                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-orange-500/30 bg-orange-500/10 text-xs font-semibold text-orange-400 hover:bg-orange-500/20 transition-colors"
-              >
-                <Shield className="h-3.5 w-3.5" />
-                <span>Admin Portal Login →</span>
-              </Link>
             </div>
           </div>
         </div>
