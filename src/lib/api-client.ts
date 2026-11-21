@@ -39,6 +39,42 @@ export class ApiError extends Error {
   }
 }
 
+// Helper to get cookie domain for sharing across subdomains (.mediqbyte.com)
+function getCookieDomain(): string {
+  if (typeof window === "undefined") return "";
+  const host = window.location.hostname.toLowerCase();
+  if (host.includes("localhost") || host.startsWith("127.")) {
+    return "";
+  }
+  const parts = host.split(".");
+  if (parts.length >= 2) {
+    return "." + parts.slice(-2).join(".");
+  }
+  return "";
+}
+
+function getCookie(name: string): string | null {
+  if (typeof window === "undefined") return null;
+  const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+function setCookie(name: string, value: string, days = 7) {
+  if (typeof window === "undefined") return;
+  const domain = getCookieDomain();
+  const domainAttr = domain ? `; domain=${domain}` : "";
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  const expires = new Date(Date.now() + days * 864e5).toUTCString();
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/${domainAttr}; expires=${expires}; SameSite=Lax${secure}`;
+}
+
+function removeCookie(name: string) {
+  if (typeof window === "undefined") return;
+  const domain = getCookieDomain();
+  const domainAttr = domain ? `; domain=${domain}` : "";
+  document.cookie = `${name}=; path=/${domainAttr}; Max-Age=0; SameSite=Lax`;
+}
+
 // Token storage abstraction (localStorage in browser, in-memory in Node/SSR/tests)
 let memoryAccessToken: string | null = null;
 let memoryRefreshToken: string | null = null;
@@ -46,14 +82,28 @@ let memoryRefreshToken: string | null = null;
 export const tokenStorage = {
   getAccessToken: (): string | null => {
     if (typeof window !== "undefined" && window.localStorage) {
-      return window.localStorage.getItem("mbyte_admin_access_token") || memoryAccessToken;
+      let token = window.localStorage.getItem("mbyte_admin_access_token");
+      if (!token) {
+        token = getCookie("mbyte_auth_token");
+        if (token) {
+          window.localStorage.setItem("mbyte_admin_access_token", token);
+        }
+      }
+      return token || memoryAccessToken;
     }
     return memoryAccessToken;
   },
 
   getRefreshToken: (): string | null => {
     if (typeof window !== "undefined" && window.localStorage) {
-      return window.localStorage.getItem("mbyte_admin_refresh_token") || memoryRefreshToken;
+      let refresh = window.localStorage.getItem("mbyte_admin_refresh_token");
+      if (!refresh) {
+        refresh = getCookie("mbyte_refresh_token");
+        if (refresh) {
+          window.localStorage.setItem("mbyte_admin_refresh_token", refresh);
+        }
+      }
+      return refresh || memoryRefreshToken;
     }
     return memoryRefreshToken;
   },
@@ -61,18 +111,26 @@ export const tokenStorage = {
   setTokens: (access: string, refresh?: string): void => {
     memoryAccessToken = access;
     if (refresh) memoryRefreshToken = refresh;
-    if (typeof window !== "undefined" && window.localStorage) {
-      window.localStorage.setItem("mbyte_admin_access_token", access);
-      if (refresh) window.localStorage.setItem("mbyte_admin_refresh_token", refresh);
+    if (typeof window !== "undefined") {
+      if (window.localStorage) {
+        window.localStorage.setItem("mbyte_admin_access_token", access);
+        if (refresh) window.localStorage.setItem("mbyte_admin_refresh_token", refresh);
+      }
+      setCookie("mbyte_auth_token", access);
+      if (refresh) setCookie("mbyte_refresh_token", refresh);
     }
   },
 
   clearTokens: (): void => {
     memoryAccessToken = null;
     memoryRefreshToken = null;
-    if (typeof window !== "undefined" && window.localStorage) {
-      window.localStorage.removeItem("mbyte_admin_access_token");
-      window.localStorage.removeItem("mbyte_admin_refresh_token");
+    if (typeof window !== "undefined") {
+      if (window.localStorage) {
+        window.localStorage.removeItem("mbyte_admin_access_token");
+        window.localStorage.removeItem("mbyte_admin_refresh_token");
+      }
+      removeCookie("mbyte_auth_token");
+      removeCookie("mbyte_refresh_token");
     }
   },
 };

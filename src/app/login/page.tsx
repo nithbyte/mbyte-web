@@ -20,7 +20,7 @@ import { useLogin, useSelectCompany, usePublicOrganizations } from "@/hooks";
 import { normalizeRole } from "@/types";
 import { MByteLogo } from "@/components/ui/mbyte-logo";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { getTenantSubdomain } from "@/lib/subdomain";
+import { getTenantSubdomain, buildTenantSubdomainUrl } from "@/lib/subdomain";
 import { cn } from "@/lib/utils";
 
 interface PublicOrganization {
@@ -78,22 +78,6 @@ export default function LoginPage() {
 
   // Auto-detect or pre-select organization from URL query param, subdomain, or default if only 1 exists
   useEffect(() => {
-    // If accessed via a tenant subdomain on production, immediately redirect to https://mediqbyte.com
-    if (
-      typeof window !== "undefined" &&
-      window.location.hostname !== "localhost" &&
-      !window.location.hostname.startsWith("127.") &&
-      window.location.hostname !== "mediqbyte.com" &&
-      window.location.hostname !== "www.mediqbyte.com" &&
-      window.location.hostname.endsWith("mediqbyte.com")
-    ) {
-      const sub = getTenantSubdomain();
-      const target = new URL(window.location.pathname, "https://mediqbyte.com");
-      if (sub) target.searchParams.set("tenant", sub);
-      window.location.href = target.toString();
-      return;
-    }
-
     if (!publicOrganizations || publicOrganizations.length === 0) return;
     if (selectedOrg) return;
 
@@ -191,7 +175,16 @@ export default function LoginPage() {
           targetPath = "/field-force";
         }
 
-        // Navigate directly on mediqbyte.com without subdomain redirects
+        const orgSlug = result.user.organization?.slug;
+        const currentSubdomain = getTenantSubdomain();
+
+        // Redirect tenant users to their dedicated tenant subdomain portal
+        if (orgSlug && canonicalRole !== "SUPER_ADMIN" && currentSubdomain !== orgSlug) {
+          const destinationUrl = buildTenantSubdomainUrl(orgSlug, targetPath);
+          window.location.href = destinationUrl;
+          return;
+        }
+
         router.push(targetPath);
       }
     } catch (err: any) {
@@ -220,6 +213,15 @@ export default function LoginPage() {
         targetPath = "/visits";
       } else if (canonicalRole === "ADMIN" || canonicalRole === "TERRITORY_MANAGER") {
         targetPath = "/field-force";
+      }
+
+      const orgSlug = user.organization?.slug;
+      const currentSubdomain = getTenantSubdomain();
+
+      if (orgSlug && canonicalRole !== "SUPER_ADMIN" && currentSubdomain !== orgSlug) {
+        const destinationUrl = buildTenantSubdomainUrl(orgSlug, targetPath);
+        window.location.href = destinationUrl;
+        return;
       }
 
       router.push(targetPath);
