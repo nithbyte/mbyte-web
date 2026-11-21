@@ -200,7 +200,7 @@ export default function CollectionsPage() {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Today's Collections */}
-        <Card className="border-l-4 border-l-emerald-500 shadow-xs">
+        <Card className="shadow-xs">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -229,7 +229,7 @@ export default function CollectionsPage() {
         </Card>
 
         {/* Monthly Collections Total */}
-        <Card className="border-l-4 border-l-teal-500 shadow-xs">
+        <Card className="shadow-xs">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -258,7 +258,7 @@ export default function CollectionsPage() {
         </Card>
 
         {/* UPI & Bank Transfer */}
-        <Card className="border-l-4 border-l-sky-500 shadow-xs">
+        <Card className="shadow-xs">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -284,7 +284,7 @@ export default function CollectionsPage() {
         </Card>
 
         {/* Cheque & Cash Clearance */}
-        <Card className="border-l-4 border-l-amber-500 shadow-xs">
+        <Card className="shadow-xs">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">

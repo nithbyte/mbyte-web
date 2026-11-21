@@ -436,7 +436,7 @@ export default function LiveTrackingPage() {
 
       {/* Top Real-Time Fleet KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        <Card className="border-l-4 border-l-slate-500 shadow-xs">
+        <Card className="shadow-xs">
           <CardContent className="p-3.5 flex items-center justify-between">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Total MRs</p>
@@ -446,7 +446,7 @@ export default function LiveTrackingPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-[#FF6B00] shadow-xs">
+        <Card className="shadow-xs">
           <CardContent className="p-3.5 flex items-center justify-between">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Tracking ON</p>
@@ -456,7 +456,7 @@ export default function LiveTrackingPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-emerald-500 shadow-xs">
+        <Card className="shadow-xs">
           <CardContent className="p-3.5 flex items-center justify-between">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Live Online</p>
@@ -466,7 +466,7 @@ export default function LiveTrackingPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-sky-500 shadow-xs">
+        <Card className="shadow-xs">
           <CardContent className="p-3.5 flex items-center justify-between">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Moving Now</p>
@@ -476,7 +476,7 @@ export default function LiveTrackingPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-indigo-500 shadow-xs col-span-2 sm:col-span-1">
+        <Card className="shadow-xs col-span-2 sm:col-span-1">
           <CardContent className="p-3.5 flex items-center justify-between">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Distance Covered</p>
@@ -550,10 +550,10 @@ export default function LiveTrackingPage() {
                     key={mr.mrId}
                     onClick={() => setSelectedMrId(mr.mrId)}
                     className={cn(
-                      "p-3 transition-colors cursor-pointer",
+                      "p-3 transition-colors cursor-pointer rounded-lg mx-1.5 my-0.5",
                       isSelected
-                        ? "bg-orange-50/80 dark:bg-[#FF6B00]/10 border-l-4 border-l-[#FF6B00]"
-                        : "hover:bg-slate-50 dark:hover:bg-slate-800/50 border-l-4 border-l-transparent",
+                        ? "bg-orange-50/90 dark:bg-[#FF6B00]/15 border border-orange-200/90"
+                        : "hover:bg-slate-50 dark:hover:bg-slate-800/50 border border-transparent",
                     )}
                   >
                     <div className="flex items-start justify-between gap-2">

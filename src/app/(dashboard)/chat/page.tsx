@@ -773,10 +773,10 @@ export default function ChatPage() {
                   key={conv.id}
                   onClick={() => setSelectedConversationId(conv.id)}
                   className={cn(
-                    "flex items-center gap-3 p-3.5 transition-colors cursor-pointer relative",
+                    "flex items-center gap-3 p-3.5 transition-colors cursor-pointer relative rounded-lg mx-1.5 my-0.5 border",
                     isSelected
-                      ? "bg-orange-50/70 dark:bg-[#FF6B00]/10 border-l-4 border-[#FF6B00]"
-                      : "hover:bg-slate-100/70 dark:hover:bg-[#2a2a2a]"
+                      ? "bg-orange-50/80 dark:bg-[#FF6B00]/10 border-orange-200/90"
+                      : "hover:bg-slate-100/70 dark:hover:bg-[#2a2a2a] border-transparent"
                   )}
                 >
                   {/* Avatar */}

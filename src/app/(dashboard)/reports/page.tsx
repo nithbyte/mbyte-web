@@ -627,25 +627,25 @@ export default function ReportsPage() {
         <div className="space-y-4 animate-in fade-in">
           {/* KPI Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="p-4 border-l-4 border-l-indigo-500">
+            <Card className="p-4">
               <div className="text-xs text-slate-500 font-semibold uppercase">Total Field Force</div>
               <div className="text-2xl font-bold mt-1 text-slate-900 dark:text-white">
                 {mrLoading ? <Skeleton className="h-8 w-16" /> : `${mrReport?.totalMRs} Representatives`}
               </div>
             </Card>
-            <Card className="p-4 border-l-4 border-l-emerald-500">
+            <Card className="p-4">
               <div className="text-xs text-slate-500 font-semibold uppercase">Avg Call Compliance</div>
               <div className="text-2xl font-bold mt-1 text-emerald-600">
                 {mrLoading ? <Skeleton className="h-8 w-16" /> : `${mrReport?.avgCompliancePercent}%`}
               </div>
             </Card>
-            <Card className="p-4 border-l-4 border-l-sky-500">
+            <Card className="p-4">
               <div className="text-xs text-slate-500 font-semibold uppercase">Total Orders Booked</div>
               <div className="text-2xl font-bold mt-1 text-sky-600">
                 {mrLoading ? <Skeleton className="h-8 w-24" /> : formatCurrency(mrReport?.totalOrdersValue || 0)}
               </div>
             </Card>
-            <Card className="p-4 border-l-4 border-l-teal-500">
+            <Card className="p-4">
               <div className="text-xs text-slate-500 font-semibold uppercase">Total Collections Realized</div>
               <div className="text-2xl font-bold mt-1 text-teal-600">
                 {mrLoading ? <Skeleton className="h-8 w-24" /> : formatCurrency(mrReport?.totalCollectionsValue || 0)}
@@ -959,19 +959,19 @@ export default function ReportsPage() {
         <div className="space-y-4 animate-in fade-in">
           {/* KPI Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Card className="p-4 border-l-4 border-l-sky-500">
+            <Card className="p-4">
               <div className="text-xs text-slate-500 font-semibold uppercase">Total Sales Orders</div>
               <div className="text-2xl font-bold mt-1 text-slate-900 dark:text-white">
                 {salesLoading ? <Skeleton className="h-8 w-16" /> : `${salesReport?.totalOrders} Orders`}
               </div>
             </Card>
-            <Card className="p-4 border-l-4 border-l-emerald-500">
+            <Card className="p-4">
               <div className="text-xs text-slate-500 font-semibold uppercase">Total Commercial Value</div>
               <div className="text-2xl font-bold mt-1 text-emerald-600">
                 {salesLoading ? <Skeleton className="h-8 w-24" /> : formatCurrency(salesReport?.totalSalesValue || 0)}
               </div>
             </Card>
-            <Card className="p-4 border-l-4 border-l-indigo-500">
+            <Card className="p-4">
               <div className="text-xs text-slate-500 font-semibold uppercase">Average Ticket Size</div>
               <div className="text-2xl font-bold mt-1 text-indigo-600">
                 {salesLoading ? <Skeleton className="h-8 w-24" /> : formatCurrency(salesReport?.avgOrderValue || 0)}
@@ -1125,19 +1125,19 @@ export default function ReportsPage() {
         <div className="space-y-4 animate-in fade-in">
           {/* KPI Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="p-4 border-l-4 border-l-emerald-500">
+            <Card className="p-4">
               <div className="text-xs text-slate-500 font-semibold uppercase">Total Receipts</div>
               <div className="text-2xl font-bold mt-1 text-slate-900 dark:text-white">
                 {colLoading ? <Skeleton className="h-8 w-16" /> : `${collectionReport?.totalReceipts} Vouchers`}
               </div>
             </Card>
-            <Card className="p-4 border-l-4 border-l-teal-500">
+            <Card className="p-4">
               <div className="text-xs text-slate-500 font-semibold uppercase">Total Cash Collected</div>
               <div className="text-2xl font-bold mt-1 text-teal-600">
                 {colLoading ? <Skeleton className="h-8 w-24" /> : formatCurrency(collectionReport?.totalCollectedValue || 0)}
               </div>
             </Card>
-            <Card className="p-4 border-l-4 border-l-sky-500">
+            <Card className="p-4">
               <div className="text-xs text-slate-500 font-semibold uppercase">UPI & Digital Inflow</div>
               <div className="text-2xl font-bold mt-1 text-sky-600">
                 {colLoading ? (
@@ -1150,7 +1150,7 @@ export default function ReportsPage() {
                 )}
               </div>
             </Card>
-            <Card className="p-4 border-l-4 border-l-amber-500">
+            <Card className="p-4">
               <div className="text-xs text-slate-500 font-semibold uppercase">Cheque & Cash Clearance</div>
               <div className="text-2xl font-bold mt-1 text-amber-600">
                 {colLoading ? (
@@ -1299,25 +1299,25 @@ export default function ReportsPage() {
         <div className="space-y-4 animate-in fade-in">
           {/* KPI Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="p-4 border-l-4 border-l-purple-500">
+            <Card className="p-4">
               <div className="text-xs text-slate-500 font-semibold uppercase">Total Target Quota</div>
               <div className="text-2xl font-bold mt-1 text-slate-900 dark:text-white">
                 {targetLoading ? <Skeleton className="h-8 w-24" /> : formatCurrency(targetReport?.totalTargetAmount || 0)}
               </div>
             </Card>
-            <Card className="p-4 border-l-4 border-l-emerald-500">
+            <Card className="p-4">
               <div className="text-xs text-slate-500 font-semibold uppercase">Realized Revenue</div>
               <div className="text-2xl font-bold mt-1 text-emerald-600">
                 {targetLoading ? <Skeleton className="h-8 w-24" /> : formatCurrency(targetReport?.totalAchievedAmount || 0)}
               </div>
             </Card>
-            <Card className="p-4 border-l-4 border-l-indigo-500">
+            <Card className="p-4">
               <div className="text-xs text-slate-500 font-semibold uppercase">Overall Revenue Quota %</div>
               <div className="text-2xl font-bold mt-1 text-indigo-600">
                 {targetLoading ? <Skeleton className="h-8 w-16" /> : `${targetReport?.overallAchievementPercent}%`}
               </div>
             </Card>
-            <Card className="p-4 border-l-4 border-l-sky-500">
+            <Card className="p-4">
               <div className="text-xs text-slate-500 font-semibold uppercase">Visit Quota Completion</div>
               <div className="text-2xl font-bold mt-1 text-sky-600">
                 {targetLoading ? <Skeleton className="h-8 w-16" /> : `${targetReport?.overallVisitPercent}%`}

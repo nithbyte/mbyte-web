@@ -273,7 +273,7 @@ export default function ReceivablesPage() {
 
       {/* Top Metric Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-l-4 border-l-blue-500">
+        <Card>
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -294,7 +294,7 @@ export default function ReceivablesPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-emerald-500">
+        <Card>
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -315,7 +315,7 @@ export default function ReceivablesPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-amber-500">
+        <Card>
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -336,7 +336,7 @@ export default function ReceivablesPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-rose-500">
+        <Card>
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">

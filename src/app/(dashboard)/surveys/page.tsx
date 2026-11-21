@@ -158,7 +158,7 @@ export default function SurveysPage() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-l-4 border-l-blue-500 shadow-sm">
+        <Card className="shadow-sm">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Active Questionnaires</p>
@@ -168,7 +168,7 @@ export default function SurveysPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-emerald-500 shadow-sm">
+        <Card className="shadow-sm">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Campaign Associations</p>
@@ -180,7 +180,7 @@ export default function SurveysPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-purple-500 shadow-sm">
+        <Card className="shadow-sm">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Responses Recorded</p>

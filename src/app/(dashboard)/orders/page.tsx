@@ -293,7 +293,7 @@ export default function OrdersPage() {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Today's Orders */}
-        <Card className="border-l-4 border-l-sky-500 shadow-xs">
+        <Card className="shadow-xs">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -322,7 +322,7 @@ export default function OrdersPage() {
         </Card>
 
         {/* Monthly Orders Total */}
-        <Card className="border-l-4 border-l-indigo-500 shadow-xs">
+        <Card className="shadow-xs">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -351,7 +351,7 @@ export default function OrdersPage() {
         </Card>
 
         {/* Average Order Value */}
-        <Card className="border-l-4 border-l-emerald-500 shadow-xs">
+        <Card className="shadow-xs">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -377,7 +377,7 @@ export default function OrdersPage() {
         </Card>
 
         {/* Pending Fulfillment */}
-        <Card className="border-l-4 border-l-amber-500 shadow-xs">
+        <Card className="shadow-xs">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">

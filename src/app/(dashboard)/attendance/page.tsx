@@ -323,7 +323,7 @@ export default function AttendancePage() {
 
       {/* Summary Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card className="border-l-4 border-l-blue-500 shadow-sm">
+        <Card className="shadow-sm">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wide">
@@ -338,7 +338,7 @@ export default function AttendancePage() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-emerald-500 shadow-sm">
+        <Card className="shadow-sm">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Present Shifts</p>
@@ -348,7 +348,7 @@ export default function AttendancePage() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-indigo-500 shadow-sm">
+        <Card className="shadow-sm">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Avg Daily Hours</p>
@@ -359,7 +359,7 @@ export default function AttendancePage() {
         </Card>
 
         <Card
-          className="border-l-4 border-l-amber-500 shadow-sm cursor-pointer hover:bg-muted/20 transition-colors"
+          className="shadow-sm cursor-pointer hover:bg-muted/20 transition-colors"
           onClick={() => setActiveTab("corrections")}
         >
           <CardContent className="p-4 flex items-center justify-between">
@@ -374,7 +374,7 @@ export default function AttendancePage() {
         </Card>
 
         <Card
-          className="border-l-4 border-l-purple-500 shadow-sm cursor-pointer hover:bg-muted/20 transition-colors"
+          className="shadow-sm cursor-pointer hover:bg-muted/20 transition-colors"
           onClick={() => setActiveTab("leaves")}
         >
           <CardContent className="p-4 flex items-center justify-between">

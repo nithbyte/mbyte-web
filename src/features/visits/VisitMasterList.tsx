@@ -171,10 +171,10 @@ export const VisitMasterList: React.FC<VisitMasterListProps> = ({
             role="option"
             aria-selected={isSelected}
             onClick={() => onSelectVisit(v)}
-            className={`w-full text-left p-3.5 transition-all flex items-start gap-3 relative focus:outline-none focus:ring-1 focus:ring-sky-500 ${
+            className={`w-full text-left p-3.5 transition-all flex items-start gap-3 relative focus:outline-none focus:ring-1 focus:ring-sky-500 rounded-lg mx-1 my-0.5 border ${
               isSelected
-                ? "bg-sky-50/70 dark:bg-sky-950/30 border-l-4 border-l-[#0052FF]"
-                : "hover:bg-slate-50 dark:hover:bg-slate-900/60 border-l-4 border-l-transparent"
+                ? "bg-sky-50/80 dark:bg-sky-950/30 border-sky-200/90"
+                : "hover:bg-slate-50 dark:hover:bg-slate-900/60 border-transparent"
             }`}
           >
             {/* Customer Type Icon Badge */}
