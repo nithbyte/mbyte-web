@@ -186,9 +186,9 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-20 flex h-16 w-full items-center justify-between border-b border-white/60 bg-white/80 px-3 sm:px-4 backdrop-blur-2xl dark:border-white/10 dark:bg-[#1a1a1a]/80 lg:px-6 2xl:px-8 gap-2 sm:gap-4 transition-all">
+      <header className="sticky top-0 z-20 flex h-16 w-full items-center justify-between border-b border-white/60 bg-white/80 px-3 sm:px-4 backdrop-blur-2xl dark:border-white/10 dark:bg-[#1a1a1a]/80 lg:px-4 xl:px-6 2xl:px-8 gap-1.5 sm:gap-2.5 xl:gap-3 transition-all">
         {/* Left: Mobile Toggle, Territory Filter & Date Badge */}
-        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 min-w-0">
           <button
             onClick={toggleMobileOpen}
             className="lg:hidden rounded-lg p-2 text-slate-600 hover:bg-[#F5F3EE] dark:text-slate-300 dark:hover:bg-[#2C2C2C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] dark:focus-visible:ring-[#FF6B00] shrink-0"
@@ -198,9 +198,9 @@ export function Header() {
           </button>
 
           {/* Territory Selector */}
-          <div className="hidden sm:flex items-center gap-1.5 rounded-xl border border-white/80 bg-white/60 px-2 sm:px-2.5 py-1 text-xs shadow-[0_2px_12px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,0.95)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5 shrink">
+          <div className="hidden sm:flex items-center gap-1 sm:gap-1.5 rounded-xl border border-white/80 bg-white/60 px-2 sm:px-2.5 py-1 text-xs shadow-[0_2px_12px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,0.95)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5 shrink">
             <MapPin className="h-3.5 w-3.5 text-[#FF6B00] shrink-0" aria-hidden="true" />
-            <label htmlFor="header-territory-select" className="font-semibold text-slate-500 dark:text-slate-400 shrink-0 hidden md:inline">
+            <label htmlFor="header-territory-select" className="font-semibold text-slate-500 dark:text-slate-400 shrink-0 hidden xl:inline">
               Territory:
             </label>
             <select
@@ -209,7 +209,7 @@ export function Header() {
               value={selectedTerritoryId}
               onChange={(e) => handleTerritoryChange(e.target.value)}
               suppressHydrationWarning
-              className="bg-transparent font-medium text-slate-900 focus:outline-none dark:text-slate-100 cursor-pointer text-xs max-w-[100px] sm:max-w-[130px] md:max-w-[160px] truncate"
+              className="bg-transparent font-medium text-slate-900 focus:outline-none dark:text-slate-100 cursor-pointer text-xs max-w-[90px] sm:max-w-[115px] xl:max-w-[150px] truncate"
             >
               <option value="ALL" className="bg-white dark:bg-[#1a1a1a] text-slate-900 dark:text-slate-100">
                 All Authorized Territories
@@ -252,7 +252,7 @@ export function Header() {
               type="button"
               onClick={() => handleDateChange(getLocalYesterdayDate())}
               className={cn(
-                "hidden xl:inline-block rounded-lg px-2 py-0.5 text-xs font-medium transition-all cursor-pointer",
+                "hidden 2xl:inline-block rounded-lg px-2 py-0.5 text-xs font-medium transition-all cursor-pointer",
                 yesterdayDate && operatingDate === yesterdayDate
                   ? "bg-orange-50 border border-orange-200 font-bold text-[#FF6B00] dark:bg-[#FF6B00]/20 dark:border-orange-900/60"
                   : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10"
@@ -274,13 +274,13 @@ export function Header() {
                 }
               }}
               suppressHydrationWarning
-              className="w-[122px] rounded-lg border border-transparent bg-transparent px-1 py-0.5 text-xs font-semibold text-slate-900 focus:border-[#FF6B00] focus:outline-none dark:text-slate-100 dark:hover:border-slate-700 cursor-pointer"
+              className="w-[110px] sm:w-[118px] rounded-lg border border-transparent bg-transparent px-1 py-0.5 text-xs font-semibold text-slate-900 focus:border-[#FF6B00] focus:outline-none dark:text-slate-100 dark:hover:border-slate-700 cursor-pointer"
             />
           </div>
         </div>
 
         {/* Center: Flexible Global Search Bar */}
-        <div className="hidden lg:flex flex-1 items-center justify-center max-w-sm xl:max-w-md 2xl:max-w-lg mx-2 min-w-[240px]">
+        <div className="hidden md:flex flex-1 items-center justify-center max-w-xs xl:max-w-sm 2xl:max-w-md mx-2 min-w-0">
           <GlobalSearch role={canonicalRole} />
         </div>
 
@@ -345,13 +345,13 @@ export function Header() {
             }}
             aria-label="User Profile and Account Details"
             suppressHydrationWarning
-            className="flex h-9 items-center gap-2 rounded-xl border border-white/80 bg-white/60 backdrop-blur-xl px-2.5 text-left shadow-[0_2px_12px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,0.95)] hover:bg-white/90 hover:border-white dark:border-white/10 dark:bg-white/5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] shrink-0 cursor-pointer"
+            className="flex h-9 items-center gap-1.5 sm:gap-2 rounded-xl border border-white/80 bg-white/60 backdrop-blur-xl px-2 sm:px-2.5 text-left shadow-[0_2px_12px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,0.95)] hover:bg-white/90 hover:border-white dark:border-white/10 dark:bg-white/5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] shrink-0 cursor-pointer"
           >
             <div suppressHydrationWarning className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-tr from-[#FF6B00] to-[#F45100] text-xs font-bold text-white shadow-xs shrink-0">
               {initials}
             </div>
-            <div className="hidden sm:flex flex-col text-left max-w-[100px] 2xl:max-w-[130px]">
-              <div className="flex items-center gap-1">
+            <div className="hidden sm:flex flex-col text-left min-w-0 max-w-[85px] md:max-w-[100px] xl:max-w-[125px]">
+              <div className="flex items-center gap-0.5 sm:gap-1 min-w-0">
                 <span suppressHydrationWarning className="text-xs font-semibold text-slate-800 dark:text-slate-200 leading-tight truncate">
                   {userName}
                 </span>
