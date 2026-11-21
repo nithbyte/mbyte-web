@@ -11,7 +11,6 @@ import {
   AlertCircle,
   ArrowRight,
   ShieldCheck,
-  ChevronDown,
 } from "lucide-react";
 import { useLogin, useSelectCompany, usePublicOrganizationBySlug } from "@/hooks";
 import { normalizeRole } from "@/types";
@@ -34,7 +33,6 @@ export default function LoginPage() {
   const [mounted, setMounted] = useState(false);
   const [tenantSlug, setTenantSlug] = useState<string | null>(null);
   const [manualTenantSlug, setManualTenantSlug] = useState("");
-  const [showCompanyField, setShowCompanyField] = useState(false);
 
   // Multi-Company Selection State
   const [multiCompanyData, setMultiCompanyData] = useState<{
@@ -68,6 +66,11 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
+
+    if (!tenantSlug && !manualTenantSlug.trim()) {
+      setErrorMsg("Please enter your Company Code to continue.");
+      return;
+    }
 
     if (!email.trim()) {
       setErrorMsg("Please enter your work email address.");
@@ -265,52 +268,39 @@ export default function LoginPage() {
             ) : (
               /* Standard Credentials Form */
               <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Optional Company Code (only if not on a subdomain) */}
-                {!tenantSlug && (
-                  <div>
-                    {!showCompanyField && !manualTenantSlug ? (
-                      <button
-                        type="button"
-                        onClick={() => setShowCompanyField(true)}
-                        className="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors mb-1 cursor-pointer"
-                      >
-                        <Building className="h-3.5 w-3.5" />
-                        <span>Sign in with company code</span>
-                        <ChevronDown className="h-3.5 w-3.5" />
-                      </button>
-                    ) : (
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <label
-                            htmlFor="tenant-slug"
-                            className="block text-xs font-medium text-slate-700 dark:text-slate-300"
-                          >
-                            Company Code (Optional)
-                          </label>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setShowCompanyField(false);
-                              setManualTenantSlug("");
-                            }}
-                            className="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
-                          >
-                            Hide
-                          </button>
-                        </div>
-                        <div className="relative">
-                          <Building className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
-                          <input
-                            id="tenant-slug"
-                            type="text"
-                            value={manualTenantSlug}
-                            onChange={(e) => setManualTenantSlug(e.target.value)}
-                            placeholder="e.g. acme-pharma"
-                            className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3.5 py-2.5 pl-10 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-[#FF6B00] focus:outline-none focus:ring-4 focus:ring-orange-500/10 transition-all"
-                          />
-                        </div>
-                      </div>
-                    )}
+                {/* Mandatory Company Code (or Subdomain Indicator) */}
+                {!tenantSlug ? (
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="tenant-slug"
+                      className="block text-xs font-medium text-slate-700 dark:text-slate-300"
+                    >
+                      Company Code <span className="text-rose-500 font-bold">*</span>
+                    </label>
+                    <div className="relative">
+                      <Building className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+                      <input
+                        id="tenant-slug"
+                        type="text"
+                        required
+                        value={manualTenantSlug}
+                        onChange={(e) => setManualTenantSlug(e.target.value)}
+                        placeholder="e.g. KOV-01 or kovel"
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3.5 py-2.5 pl-10 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-[#FF6B00] focus:outline-none focus:ring-4 focus:ring-orange-500/10 transition-all font-mono uppercase placeholder:normal-case placeholder:font-sans"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-orange-200/60 dark:border-orange-900/40 bg-orange-50/50 dark:bg-orange-950/20 px-3.5 py-2.5 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <Building className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                      <span className="font-medium text-slate-700 dark:text-slate-300">
+                        Workspace: <strong className="text-orange-600 dark:text-orange-400 font-semibold">{tenantOrg?.name || tenantSlug}</strong>
+                      </span>
+                    </div>
+                    <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800">
+                      {tenantSlug}
+                    </span>
                   </div>
                 )}
 
