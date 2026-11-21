@@ -73,7 +73,7 @@ function formatUser(rawUser: any): User {
 
   return {
     id: rawUser.id,
-    organizationId: rawUser.organizationId || null,
+    organizationId: rawUser.organizationId || rawUser.organization?.id || null,
     organization: rawUser.organization || null,
     organizationName: companyName,
     companyName: companyName,

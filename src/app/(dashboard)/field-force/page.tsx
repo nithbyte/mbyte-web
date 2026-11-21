@@ -272,7 +272,10 @@ export default function FieldForcePage() {
     }
   };
 
-  const companyOrgId = canonicalRole === "SUPER_ADMIN" ? undefined : currentUser?.organizationId || undefined;
+  const companyOrgId =
+    canonicalRole === "SUPER_ADMIN"
+      ? undefined
+      : currentUser?.organizationId || currentUser?.organization?.id || undefined;
   const { data: territories, refetch: refetchTerritories } = useTerritories(companyOrgId);
   const { data: managers } = useManagers(companyOrgId);
   const { data: mrList, isLoading: isMRLoading, refetch: refetchMRs } = useMRList({
@@ -290,7 +293,7 @@ export default function FieldForcePage() {
         ? selectedOrgId !== "ALL"
           ? selectedOrgId
           : lastSelectedOrgId || ""
-        : currentUser?.organizationId || "";
+        : currentUser?.organizationId || currentUser?.organization?.id || "";
 
     setUserForm({
       firstName: "",
@@ -327,7 +330,7 @@ export default function FieldForcePage() {
       const targetOrgId =
         canonicalRole === "SUPER_ADMIN"
           ? userForm.organizationId
-          : currentUser?.organizationId || undefined;
+          : currentUser?.organizationId || currentUser?.organization?.id || userForm.organizationId || undefined;
 
       await createUserMutation.mutateAsync({
         ...userForm,
