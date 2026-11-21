@@ -84,7 +84,7 @@ export interface User {
   managerId?: string;
   managerName?: string;
   avatarUrl?: string;
-  status: "ACTIVE" | "INACTIVE" | "ON_LEAVE";
+  status: "ACTIVE" | "INACTIVE" | "SUSPENDED" | "ON_LEAVE";
   designation?: string;
   createdAt?: string;
 }
@@ -94,6 +94,7 @@ export interface MRPerformanceSummary {
   name: string;
   territoryName: string;
   status: "ACTIVE" | "IN_FIELD" | "IDLE" | "COMPLETED";
+  accountStatus?: "ACTIVE" | "INACTIVE" | "SUSPENDED";
   currentActivity?: string;
   callsPlannedToday: number;
   callsCompletedToday: number;
@@ -148,6 +149,7 @@ export interface MRListItem {
   designation: string;
   joiningDate: string;
   status: "ACTIVE" | "IN_FIELD" | "IDLE" | "COMPLETED";
+  accountStatus?: "ACTIVE" | "INACTIVE" | "SUSPENDED";
   currentActivity?: string;
   todayVisits: {
     planned: number;

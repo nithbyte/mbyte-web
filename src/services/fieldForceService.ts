@@ -1000,4 +1000,24 @@ export const fieldForceService = {
       return { success: true };
     }
   },
+
+  async updateUserStatus(userId: string, status: "ACTIVE" | "INACTIVE" | "SUSPENDED"): Promise<any> {
+    try {
+      return await apiClient.patch<any>(`/users/${userId}/status`, { status });
+    } catch (err: any) {
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
+      console.warn("Backend updateUserStatus failed, updating mock data:", err);
+      const targetMockUser = mockUsers.find((u) => u.id === userId);
+      if (targetMockUser) {
+        targetMockUser.status = status as any;
+      }
+      const targetMockMR = mockMRs.find((m) => m.userId === userId || m.id === userId);
+      if (targetMockMR && targetMockMR.user) {
+        (targetMockMR.user as any).status = status;
+      }
+      return { success: true, status };
+    }
+  },
 };

@@ -34,6 +34,7 @@ import {
   useRevokeTerritory,
   useCreateTerritory,
   useChangeRole,
+  useUpdateUserStatus,
 } from "@/hooks";
 import { formatCurrency } from "@/lib/utils";
 import { normalizeRole, getRoleLabel } from "@/types";
@@ -60,6 +61,8 @@ import {
   Star,
   Trash2,
   History,
+  UserX,
+  UserCheck,
 } from "lucide-react";
 
 export default function FieldForcePage() {
@@ -209,6 +212,63 @@ export default function FieldForcePage() {
       }, 1200);
     } catch (err: any) {
       setRoleModalError(err?.message || "Failed to update role. Please verify network or credentials.");
+    }
+  };
+
+  const updateUserStatusMutation = useUpdateUserStatus();
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+  const [selectedUserForStatus, setSelectedUserForStatus] = useState<{
+    id: string;
+    name: string;
+    email: string;
+    role?: string;
+    organizationName?: string;
+    currentStatus: string;
+    targetStatus: "ACTIVE" | "INACTIVE";
+  } | null>(null);
+  const [statusModalError, setStatusModalError] = useState<string | null>(null);
+  const [statusModalSuccess, setStatusModalSuccess] = useState<string | null>(null);
+
+  const handleOpenStatusModal = (
+    user: { id: string; firstName?: string; lastName?: string; name?: string; email: string; role?: string; organizationName?: string; status?: string; companyName?: string },
+    targetStatus: "ACTIVE" | "INACTIVE"
+  ) => {
+    const name = user.name || `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email;
+    const org = organizations?.find((o) => o.id === (user as any).organizationId)?.name || user.organizationName || user.companyName || "Company";
+    setSelectedUserForStatus({
+      id: user.id,
+      name,
+      email: user.email,
+      role: user.role,
+      organizationName: org,
+      currentStatus: user.status || "ACTIVE",
+      targetStatus,
+    });
+    setStatusModalError(null);
+    setStatusModalSuccess(null);
+    setIsStatusModalOpen(true);
+  };
+
+  const handleConfirmStatusChange = async () => {
+    if (!selectedUserForStatus) return;
+    setStatusModalError(null);
+    setStatusModalSuccess(null);
+    try {
+      await updateUserStatusMutation.mutateAsync({
+        userId: selectedUserForStatus.id,
+        status: selectedUserForStatus.targetStatus,
+      });
+      const verb = selectedUserForStatus.targetStatus === "ACTIVE" ? "activated" : "deactivated";
+      setStatusModalSuccess(`Account for ${selectedUserForStatus.name} has been ${verb} successfully.`);
+      refetchUsers();
+      refetchMRs();
+      setTimeout(() => {
+        setIsStatusModalOpen(false);
+        setSelectedUserForStatus(null);
+        setStatusModalSuccess(null);
+      }, 1200);
+    } catch (err: any) {
+      setStatusModalError(err?.message || "Failed to update account status.");
     }
   };
 
@@ -828,7 +888,7 @@ export default function FieldForcePage() {
                     <TableHead>Role & Designation</TableHead>
                     <TableHead>Territory Allocation</TableHead>
                     <TableHead>Account Status</TableHead>
-                    <TableHead className="text-right">Operational Access</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -894,9 +954,33 @@ export default function FieldForcePage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <span className="text-[11px] text-slate-500 font-medium bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg">
-                            Details Protected
-                          </span>
+                          {user.id === currentUser?.id ? (
+                            <span className="text-[11px] text-slate-400 font-medium px-2.5 py-1">
+                              Current Session
+                            </span>
+                          ) : user.status === "ACTIVE" ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs gap-1 text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 dark:border-rose-900/50 dark:text-rose-400 dark:hover:bg-rose-950/40 cursor-pointer"
+                              onClick={() => handleOpenStatusModal(user, "INACTIVE")}
+                              title="Deactivate Tenant Member"
+                            >
+                              <UserX className="h-3 w-3" />
+                              <span>Deactivate</span>
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs gap-1 text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 dark:border-emerald-900/50 dark:text-emerald-400 dark:hover:bg-emerald-950/40 cursor-pointer"
+                              onClick={() => handleOpenStatusModal(user, "ACTIVE")}
+                              title="Reactivate Tenant Member"
+                            >
+                              <UserCheck className="h-3 w-3" />
+                              <span>Activate</span>
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     );
@@ -1099,6 +1183,42 @@ export default function FieldForcePage() {
                               >
                                 <MapPin className="h-3 w-3 text-sky-600" />
                                 <span>Territories</span>
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className={`h-7 text-xs gap-1 cursor-pointer ${
+                                  (mr.accountStatus === "INACTIVE" || (mr as any).user?.status === "INACTIVE")
+                                    ? "text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 dark:border-emerald-900/50 dark:text-emerald-400"
+                                    : "text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 dark:border-rose-900/50 dark:text-rose-400"
+                                }`}
+                                onClick={() => {
+                                  const isCurrentlyActive = !(mr.accountStatus === "INACTIVE" || (mr as any).user?.status === "INACTIVE");
+                                  const targetUserId = mr.userId || (mr as any).user?.id || mr.id;
+                                  handleOpenStatusModal(
+                                    {
+                                      id: targetUserId,
+                                      name: mr.name,
+                                      email: mr.email || (mr as any).user?.email || mr.name,
+                                      role: mr.role,
+                                      status: isCurrentlyActive ? "ACTIVE" : "INACTIVE",
+                                    },
+                                    isCurrentlyActive ? "INACTIVE" : "ACTIVE"
+                                  );
+                                }}
+                                title={(mr.accountStatus === "INACTIVE" || (mr as any).user?.status === "INACTIVE") ? "Reactivate Representative" : "Deactivate Representative"}
+                              >
+                                {(mr.accountStatus === "INACTIVE" || (mr as any).user?.status === "INACTIVE") ? (
+                                  <>
+                                    <UserCheck className="h-3 w-3" />
+                                    <span>Activate</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <UserX className="h-3 w-3" />
+                                    <span>Deactivate</span>
+                                  </>
+                                )}
                               </Button>
                             </>
                           )}
@@ -1859,6 +1979,128 @@ export default function FieldForcePage() {
                     : selectedRepForRole.targetRole === "MANAGER"
                     ? "Confirm Promotion to Manager"
                     : "Confirm Demotion to MR"}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </Modal>
+
+      {/* DEACTIVATE / REACTIVATE MEMBER MODAL */}
+      <Modal
+        isOpen={isStatusModalOpen}
+        onClose={() => setIsStatusModalOpen(false)}
+        title={
+          selectedUserForStatus?.targetStatus === "INACTIVE"
+            ? "Deactivate Tenant Member Account"
+            : "Reactivate Tenant Member Account"
+        }
+        description={
+          selectedUserForStatus?.targetStatus === "INACTIVE"
+            ? `Are you sure you want to deactivate ${selectedUserForStatus?.name}? Their access to the mobile application and administrative portal will be revoked immediately.`
+            : `Reactivate ${selectedUserForStatus?.name} to restore their operational access and ability to sign into Mediqbyte.`
+        }
+        maxWidth="md"
+      >
+        <div className="space-y-4">
+          {statusModalError && (
+            <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-400 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{statusModalError}</span>
+            </div>
+          )}
+
+          {statusModalSuccess && (
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              <span>{statusModalSuccess}</span>
+            </div>
+          )}
+
+          {selectedUserForStatus && (
+            <>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/60 space-y-2.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-500">Member:</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">
+                    {selectedUserForStatus.name}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-500">Email:</span>
+                  <span className="font-mono text-slate-700 dark:text-slate-300">
+                    {selectedUserForStatus.email}
+                  </span>
+                </div>
+                {selectedUserForStatus.organizationName && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-500">Tenant Company:</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                      {selectedUserForStatus.organizationName}
+                    </span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-500">Target Account Status:</span>
+                  <Badge
+                    variant={selectedUserForStatus.targetStatus === "ACTIVE" ? "success" : "default"}
+                    className={
+                      selectedUserForStatus.targetStatus === "INACTIVE"
+                        ? "bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950/60 dark:text-rose-300"
+                        : ""
+                    }
+                  >
+                    {selectedUserForStatus.targetStatus === "ACTIVE" ? "ACTIVE" : "INACTIVE (SUSPENDED)"}
+                  </Badge>
+                </div>
+              </div>
+
+              {selectedUserForStatus.targetStatus === "INACTIVE" ? (
+                <div className="rounded-xl border border-rose-200 bg-rose-50/60 p-3 text-xs text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300 flex items-start gap-2.5">
+                  <AlertCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold">Security & Access Revocation Notice:</p>
+                    <p className="mt-1 text-[11px] leading-relaxed">
+                      Deactivating this member will instantly invalidate their active authentication session across mobile devices and the web portal. The user will be blocked from logging in until reactivated.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 text-xs text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300 flex items-start gap-2.5">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold">Account Reactivation Notice:</p>
+                    <p className="mt-1 text-[11px] leading-relaxed">
+                      Reactivating this member restores their login privileges, allowing them to sign into their assigned tenant company and resume fieldwork operations.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsStatusModalOpen(false)}
+                  disabled={updateUserStatusMutation.isPending}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmStatusChange}
+                  disabled={updateUserStatusMutation.isPending}
+                  className={`rounded-xl px-4 py-2 text-xs font-semibold text-white shadow-xs cursor-pointer flex items-center gap-1.5 ${
+                    selectedUserForStatus.targetStatus === "INACTIVE"
+                      ? "bg-rose-600 hover:bg-rose-700"
+                      : "bg-emerald-600 hover:bg-emerald-700"
+                  } disabled:opacity-50`}
+                >
+                  {updateUserStatusMutation.isPending
+                    ? "Updating Status..."
+                    : selectedUserForStatus.targetStatus === "INACTIVE"
+                    ? "Confirm Deactivation"
+                    : "Confirm Reactivation"}
                 </button>
               </div>
             </>

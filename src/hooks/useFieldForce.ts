@@ -147,3 +147,18 @@ export function useChangeRole() {
     },
   });
 }
+
+export function useUpdateUserStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, status }: { userId: string; status: "ACTIVE" | "INACTIVE" | "SUSPENDED" }) =>
+      fieldForceService.updateUserStatus(userId, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["mr-list"] });
+      queryClient.invalidateQueries({ queryKey: ["field-force"] });
+      queryClient.invalidateQueries({ queryKey: ["managers"] });
+      queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+    },
+  });
+}
