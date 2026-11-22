@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
   MessageSquare,
@@ -67,6 +68,11 @@ export default function ChatPage() {
   const [announcementTargetOrgId, setAnnouncementTargetOrgId] = useState<string>("all");
   const [announcementNotify, setAnnouncementNotify] = useState<boolean>(true);
   const [isPostingAnnouncement, setIsPostingAnnouncement] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
@@ -1093,7 +1099,7 @@ export default function ChatPage() {
       )}
 
       {/* NEW CHAT / START CONVERSATION MODAL */}
-      {isNewChatModalOpen && (
+      {isClient && isNewChatModalOpen && createPortal(
         <div
           role="dialog"
           aria-modal="true"
@@ -1101,7 +1107,7 @@ export default function ChatPage() {
             setIsNewChatModalOpen(false);
             setIsGroupMode(false);
           }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/15 backdrop-blur-sm dark:bg-black/40 p-4 animate-in fade-in"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/15 backdrop-blur-sm dark:bg-black/40 p-4 animate-in fade-in"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -1291,16 +1297,17 @@ export default function ChatPage() {
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* POST ANNOUNCEMENT MODAL */}
-      {isAnnouncementModalOpen && (
+      {isClient && isAnnouncementModalOpen && createPortal(
         <div
           role="dialog"
           aria-modal="true"
           onClick={() => setIsAnnouncementModalOpen(false)}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/15 backdrop-blur-sm dark:bg-black/40 p-4 animate-in fade-in"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/15 backdrop-blur-sm dark:bg-black/40 p-4 animate-in fade-in"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -1451,7 +1458,8 @@ export default function ChatPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
