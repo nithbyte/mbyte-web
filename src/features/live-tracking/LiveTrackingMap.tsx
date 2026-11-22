@@ -171,6 +171,12 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
   const geofenceCircleRef = useRef<L.Circle | null>(null);
   const playbackMarkerRef = useRef<L.Marker | null>(null);
   const hasInitialFitRef = useRef(false);
+  const lastCenteredVisitIdRef = useRef<string | null>(null);
+
+  const onSelectMrRef = useRef(onSelectMr);
+  onSelectMrRef.current = onSelectMr;
+  const onSelectVisitRef = useRef(onSelectVisit);
+  onSelectVisitRef.current = onSelectVisit;
 
   // Default to STREET (OpenStreetMap) so it loads immediately without watermarks or payment gates
   const [layerKey, setLayerKey] = useState<MapLayerKey>("STREET");
@@ -261,7 +267,7 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
           zIndexOffset: isSelected ? 1000 : 200,
         }).addTo(map);
 
-        marker.on("click", () => onSelectMr(mr.mrId));
+        marker.on("click", () => onSelectMrRef.current(mr.mrId));
 
         const accuracyCircle =
           isSelected && mr.accuracy && mr.accuracy > 0
@@ -361,19 +367,19 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
         map.fitBounds(L.latLngBounds(validBounds), { padding: [55, 55], maxZoom: 15 });
       }
     }
-  }, [mrs, selectedMrId, onSelectMr]);
+  }, [mrs, selectedMrId]);
 
-  // Smooth Follow Camera when selected MR moves
+  // Smooth Follow Camera when selected MR moves (pause follow if user is spotlighting a specific doctor stop)
   const selectedMr = mrs.find((m) => m.mrId === selectedMrId) || null;
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !followSelected || !selectedMr) return;
+    if (!map || !followSelected || !selectedMr || Boolean(selectedVisitId)) return;
     if (selectedMr.latitude === null || selectedMr.longitude === null) return;
     map.panTo([selectedMr.latitude, selectedMr.longitude], {
       animate: true,
       duration: 0.65,
     });
-  }, [followSelected, selectedMr?.mrId, selectedMr?.latitude, selectedMr?.longitude]);
+  }, [followSelected, selectedMr?.mrId, selectedMr?.latitude, selectedMr?.longitude, selectedVisitId]);
 
   // Fit All MRs trigger
   useEffect(() => {
@@ -442,6 +448,7 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
     if (!layer || !map) return;
     layer.clearLayers();
     visitMarkersMapRef.current.clear();
+    lastCenteredVisitIdRef.current = null;
 
     if (geofenceCircleRef.current) {
       geofenceCircleRef.current.remove();
@@ -498,37 +505,80 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
       );
 
       marker.on("click", () => {
-        onSelectVisit?.(pin.id);
+        onSelectVisitRef.current?.(pin.id);
       });
 
       visitMarkersMapRef.current.set(pin.id, marker);
     });
+  }, [showVisits, selectedMr?.mrId, selectedMr?.visitPins]);
 
-    // If a visit is currently selected, center map on it and draw a 200m PostGIS geofence circle
-    if (selectedVisitId) {
-      const activePin = selectedMr.visitPins.find((p) => p.id === selectedVisitId);
-      if (activePin) {
-        const marker = visitMarkersMapRef.current.get(activePin.id);
-        if (marker) {
-          marker.openPopup();
-        }
+  // Spotlight selected visit stop with 200m geofence circle & single smooth camera focus
+  useEffect(() => {
+    const map = mapRef.current;
+    const layer = visitsLayerRef.current;
+    if (!map || !layer) return;
 
-        const clinicLat = activePin.clinicLatitude ?? activePin.latitude;
-        const clinicLng = activePin.clinicLongitude ?? activePin.longitude;
-
-        geofenceCircleRef.current = L.circle([clinicLat, clinicLng], {
-          radius: 200,
-          color: "#10b981",
-          fillColor: "#10b981",
-          fillOpacity: 0.16,
-          weight: 2,
-          dashArray: "4, 4",
-        }).addTo(layer);
-
-        map.flyTo([activePin.latitude, activePin.longitude], 16, { animate: true, duration: 0.7 });
-      }
+    if (geofenceCircleRef.current) {
+      geofenceCircleRef.current.remove();
+      geofenceCircleRef.current = null;
     }
-  }, [showVisits, selectedMr?.mrId, selectedMr?.visitPins, selectedVisitId, onSelectVisit]);
+
+    if (!selectedVisitId || !selectedMr || !selectedMr.visitPins) {
+      lastCenteredVisitIdRef.current = null;
+      return;
+    }
+
+    const activePin = selectedMr.visitPins.find((p) => p.id === selectedVisitId);
+    if (!activePin) {
+      lastCenteredVisitIdRef.current = null;
+      return;
+    }
+
+    // Update pin icon highlights without tearing down the layer
+    selectedMr.visitPins.forEach((pin, idx) => {
+      const marker = visitMarkersMapRef.current.get(pin.id);
+      if (marker) {
+        const isSel = pin.id === selectedVisitId;
+        const seq = pin.sequence || idx + 1;
+        marker.setIcon(
+          L.divIcon({
+            className: "mbyte-visit-pin",
+            html: buildVisitPinHtml(pin, isSel, seq),
+            iconSize: [0, 0],
+          }),
+        );
+        marker.setZIndexOffset(isSel ? 800 : 350);
+      }
+    });
+
+    // Draw 200m geofence circle
+    const clinicLat = activePin.clinicLatitude ?? activePin.latitude;
+    const clinicLng = activePin.clinicLongitude ?? activePin.longitude;
+
+    geofenceCircleRef.current = L.circle([clinicLat, clinicLng], {
+      radius: 200,
+      color: "#10b981",
+      fillColor: "#10b981",
+      fillOpacity: 0.16,
+      weight: 2,
+      dashArray: "4, 4",
+    }).addTo(layer);
+
+    // Open popup if not already opened
+    const activeMarker = visitMarkersMapRef.current.get(activePin.id);
+    if (activeMarker && !activeMarker.isPopupOpen()) {
+      activeMarker.openPopup();
+    }
+
+    // Fly to active pin ONLY ONCE when selection changes to this pin
+    if (lastCenteredVisitIdRef.current !== selectedVisitId) {
+      lastCenteredVisitIdRef.current = selectedVisitId;
+      map.flyTo([activePin.latitude, activePin.longitude], 16, {
+        animate: true,
+        duration: 0.65,
+      });
+    }
+  }, [selectedVisitId, selectedMr?.mrId, selectedMr?.visitPins]);
 
   // Render animated route playback scrubber marker
   useEffect(() => {

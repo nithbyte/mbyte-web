@@ -101,13 +101,23 @@ export default function LiveTrackingPage() {
   const [playbackIdx, setPlaybackIdx] = useState(0);
   const [playbackSpeed, setPlaybackSpeed] = useState<1 | 2 | 5 | 10>(2);
 
-  // Live relative clock (updates every second so "3s ago" ticks smoothly with zero lag)
+  // Live relative clock (updates every 5s so relative timestamps stay fresh without causing high-frequency layout thrashing)
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
   const isToday = operatingDate === getLocalTodayDate();
 
   useEffect(() => {
-    const timer = setInterval(() => setNowMs(Date.now()), 1000);
+    const timer = setInterval(() => setNowMs(Date.now()), 5000);
     return () => clearInterval(timer);
+  }, []);
+
+  const handleSelectMr = useCallback((id: string) => {
+    setSelectedMrId(id);
+    setSelectedVisitId(null);
+  }, []);
+
+  const handleSelectVisit = useCallback((id: string) => {
+    setSelectedVisitId(id);
+    setShowVisits(true);
   }, []);
 
   // Read optional ?mr=<id> query param
@@ -676,15 +686,9 @@ export default function LiveTrackingPage() {
             <LiveTrackingMap
               mrs={filteredMrs}
               selectedMrId={selectedMrId}
-              onSelectMr={(id) => {
-                setSelectedMrId(id);
-                setSelectedVisitId(null);
-              }}
+              onSelectMr={handleSelectMr}
               selectedVisitId={selectedVisitId}
-              onSelectVisit={(id) => {
-                setSelectedVisitId(id);
-                setShowVisits(true);
-              }}
+              onSelectVisit={handleSelectVisit}
               followSelected={followSelected && !isPlaybackMode}
               showTrail={showTrail}
               showVisits={showVisits}
@@ -928,7 +932,7 @@ export default function LiveTrackingPage() {
                         <div
                           key={pin.id}
                           onClick={() => {
-                            setSelectedVisitId(pin.id);
+                            setSelectedVisitId((prev) => (prev === pin.id ? null : pin.id));
                             setShowVisits(true);
                           }}
                           className={cn(
