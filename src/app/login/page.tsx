@@ -376,9 +376,16 @@ export default function LoginPage() {
 
       {/* Subtle, Professional Footer */}
       <footer className="w-full py-5 text-center text-xs text-slate-400 dark:text-slate-500 border-t border-slate-200/60 dark:border-slate-800/60 z-10">
-        <div className="flex items-center justify-center gap-2">
-          <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-500" />
-          <span>Enterprise Pharmaceutical Field Intelligence · Mediqbyte</span>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-4">
+          <div className="flex items-center gap-1.5">
+            <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-500" />
+            <span>Enterprise Pharmaceutical Field Intelligence</span>
+          </div>
+          <span className="hidden sm:inline text-slate-300 dark:text-slate-700">•</span>
+          <div className="flex items-center gap-1 font-medium text-slate-500 dark:text-slate-400">
+            <span>Powered by</span>
+            <span className="font-semibold text-slate-700 dark:text-slate-300">Nithbyte</span>
+          </div>
         </div>
       </footer>
     </div>

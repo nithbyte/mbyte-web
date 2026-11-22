@@ -674,6 +674,14 @@ export function Sidebar() {
           <LogOut className="h-4 w-4 shrink-0" />
           {!isCollapsed && <span>Sign Out</span>}
         </button>
+
+        {!isCollapsed && (
+          <div className="mt-2.5 text-center">
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+              Powered by <span className="font-semibold text-slate-600 dark:text-slate-300">Nithbyte</span>
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
