@@ -448,9 +448,12 @@ export default function CompaniesPage() {
                           {org.code.slice(0, 3)}
                         </div>
                         <div>
-                          <div className="font-bold text-slate-900 dark:text-slate-100 text-sm">
+                          <Link
+                            href={`/companies/${org.id}`}
+                            className="font-bold text-slate-900 dark:text-slate-100 text-sm hover:text-sky-600 dark:hover:text-sky-400 transition-colors"
+                          >
                             {org.name}
-                          </div>
+                          </Link>
                           <div className="flex items-center gap-2 mt-0.5">
                             <span className="font-mono text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
                               {org.code}
@@ -538,8 +541,8 @@ export default function CompaniesPage() {
                         </button>
 
                         <Link
-                          href={`/field-force?orgId=${org.id}`}
-                          title="Manage company users"
+                          href={`/companies/${org.id}`}
+                          title="Manage Tenant, Users & App Features"
                           className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-sky-600 dark:text-slate-400 dark:hover:bg-slate-800"
                         >
                           <Users className="h-4 w-4" />

@@ -76,3 +76,51 @@ export function useRetryProvisioning() {
     },
   });
 }
+
+export function useTenantFeatures(orgId?: string) {
+  return useQuery({
+    queryKey: ["tenantFeatures", orgId],
+    queryFn: () => organizationService.getTenantFeatures(orgId!),
+    enabled: Boolean(orgId),
+  });
+}
+
+export function useUpdateTenantFeatures() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, features }: { orgId: string; features: any }) =>
+      organizationService.updateTenantFeatures(orgId, features),
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["tenantFeatures", vars.orgId] });
+      queryClient.invalidateQueries({ queryKey: ["organization", vars.orgId] });
+    },
+  });
+}
+
+export function useTenantUsers(orgId?: string, params?: { search?: string; status?: string; role?: string }) {
+  return useQuery({
+    queryKey: ["tenantUsers", orgId, params],
+    queryFn: () => organizationService.getTenantUsers(orgId!, params),
+    enabled: Boolean(orgId),
+  });
+}
+
+export function useUserFeatures(userId?: string) {
+  return useQuery({
+    queryKey: ["userFeatures", userId],
+    queryFn: () => organizationService.getUserFeatures(userId!),
+    enabled: Boolean(userId),
+  });
+}
+
+export function useUpdateUserFeatures() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, features }: { userId: string; features: any }) =>
+      organizationService.updateUserFeatures(userId, features),
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["userFeatures", vars.userId] });
+      queryClient.invalidateQueries({ queryKey: ["tenantUsers"] });
+    },
+  });
+}
