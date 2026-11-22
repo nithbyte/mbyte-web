@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Building,
   Lock,
   Mail,
   Eye,
@@ -11,39 +10,17 @@ import {
   AlertCircle,
   ArrowRight,
   ShieldCheck,
-  ChevronDown,
-  Search,
-  Check,
-  X,
 } from "lucide-react";
-import { useLogin, useSelectCompany, usePublicOrganizations } from "@/hooks";
+import { useLogin, useSelectCompany } from "@/hooks";
 import { normalizeRole } from "@/types";
 import { MByteLogo } from "@/components/ui/mbyte-logo";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { getTenantSubdomain, buildTenantSubdomainUrl, getRootDomain } from "@/lib/subdomain";
-import { cn } from "@/lib/utils";
-
-interface PublicOrganization {
-  id: string;
-  name: string;
-  slug: string;
-  code: string;
-  logoUrl?: string;
-}
 
 export default function LoginPage() {
   const router = useRouter();
   const loginMutation = useLogin();
   const selectCompanyMutation = useSelectCompany();
-
-  // Fetch active tenant companies for the selection dropdown
-  const { data: publicOrganizations, isLoading: isOrgsLoading } = usePublicOrganizations();
-
-  // Selected Tenant Organization
-  const [selectedOrg, setSelectedOrg] = useState<PublicOrganization | null>(null);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Form Fields
   const [email, setEmail] = useState("");
@@ -79,90 +56,9 @@ export default function LoginPage() {
     }
   }, []);
 
-  // Close dropdown on click outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsDropdownOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // Auto-detect or pre-select organization from URL query param, subdomain, localStorage, or default if only 1 exists
-  useEffect(() => {
-    if (!publicOrganizations || publicOrganizations.length === 0) return;
-    if (selectedOrg) return;
-
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const targetParam = (params.get("tenant") || params.get("org") || params.get("company") || "").trim().toLowerCase();
-      if (targetParam) {
-        const match = publicOrganizations.find(
-          (o) =>
-            o.slug.toLowerCase() === targetParam ||
-            o.code.toLowerCase() === targetParam ||
-            o.id === targetParam
-        );
-        if (match) {
-          setSelectedOrg(match);
-          return;
-        }
-      }
-
-      // Check last used tenant company from localStorage
-      try {
-        const lastTenant = localStorage.getItem("mbyte_last_tenant");
-        if (lastTenant) {
-          const match = publicOrganizations.find(
-            (o) => o.slug.toLowerCase() === lastTenant.toLowerCase() || o.id === lastTenant
-          );
-          if (match) {
-            setSelectedOrg(match);
-            return;
-          }
-        }
-      } catch {}
-
-      // Default: If only 1 tenant organization exists, pre-select it automatically
-      if (publicOrganizations.length === 1) {
-        setSelectedOrg(publicOrganizations[0]);
-      }
-    }
-  }, [publicOrganizations, selectedOrg]);
-
-  const handleSelectOrg = (org: PublicOrganization) => {
-    setSelectedOrg(org);
-    setIsDropdownOpen(false);
-    setSearchQuery("");
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem("mbyte_last_tenant", org.slug);
-      } catch {}
-    }
-  };
-
-  const filteredOrgs = (publicOrganizations || []).filter((org) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase().trim();
-    return (
-      org.name.toLowerCase().includes(q) ||
-      org.code.toLowerCase().includes(q) ||
-      org.slug.toLowerCase().includes(q)
-    );
-  });
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
-
-    const isPlatformAdmin = email.trim().toLowerCase().includes("superadmin");
-
-    if (!selectedOrg && !isPlatformAdmin) {
-      setErrorMsg("Please choose your Tenant Company from the dropdown to continue.");
-      return;
-    }
 
     if (!email.trim()) {
       setErrorMsg("Please enter your work email address.");
@@ -177,9 +73,6 @@ export default function LoginPage() {
       const result = await loginMutation.mutateAsync({
         email: email.trim(),
         password,
-        tenantSlug: selectedOrg?.slug,
-        companyCode: selectedOrg?.code,
-        organizationId: selectedOrg?.id,
       });
 
       if (result.requiresCompanySelection && result.selectionToken && result.availableCompanies) {
@@ -201,10 +94,10 @@ export default function LoginPage() {
           targetPath = "/field-force";
         }
 
-        const orgSlug = result.user?.organization?.slug || selectedOrg?.slug;
+        const orgSlug = result.user?.organization?.slug;
         const currentSubdomain = getTenantSubdomain();
 
-        // Redirect tenant users to their dedicated tenant subdomain portal
+        // Redirect tenant users to their dedicated tenant subdomain portal if applicable
         if (orgSlug && canonicalRole !== "SUPER_ADMIN" && currentSubdomain !== orgSlug) {
           if (typeof window !== "undefined") {
             try {
@@ -285,12 +178,10 @@ export default function LoginPage() {
               <MByteLogo variant="full" width={220} height={60} priority />
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-              {selectedOrg ? `Sign in to ${selectedOrg.name}` : "Sign in to your account"}
+              Sign in to FieldOps
             </h1>
             <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-              {selectedOrg
-                ? `Enter your corporate credentials to access the ${selectedOrg.name} portal`
-                : "Welcome back! Choose your company and enter your credentials"}
+              Enter your corporate email and password to access your portal
             </p>
           </div>
 
@@ -354,149 +245,7 @@ export default function LoginPage() {
             ) : (
               /* Standard Credentials Form */
               <form onSubmit={handleSubmit} autoComplete="off" className="space-y-4">
-                {/* 1. First Field: Select Tenant Company (Searchable Dropdown) */}
-                <div className="space-y-1.5" ref={dropdownRef}>
-                  <label
-                    htmlFor="tenant-select-button"
-                    className="block text-xs font-semibold text-slate-700 dark:text-slate-300"
-                  >
-                    Tenant Organization / Company *
-                  </label>
-
-                  <div className="relative">
-                    <button
-                      id="tenant-select-button"
-                      type="button"
-                      onClick={() => setIsDropdownOpen((prev) => !prev)}
-                      className={cn(
-                        "w-full flex items-center justify-between rounded-xl border bg-white dark:bg-slate-950 px-3.5 py-2.5 text-xs text-left transition-all cursor-pointer",
-                        isDropdownOpen
-                          ? "border-[#FF6B00] ring-4 ring-orange-500/10"
-                          : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
-                      )}
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <Building className="h-4 w-4 shrink-0 text-orange-600 dark:text-orange-400" />
-                        {selectedOrg ? (
-                          <div className="flex items-center gap-2 truncate">
-                            <span className="font-semibold text-slate-900 dark:text-white truncate">
-                              {selectedOrg.name}
-                            </span>
-                            <span className="shrink-0 text-[10px] font-mono font-medium px-1.5 py-0.5 rounded bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800/60">
-                              {selectedOrg.code}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-slate-400">
-                            {isOrgsLoading ? "Loading companies..." : "Select or search company workspace..."}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0 ml-2">
-                        {selectedOrg && (
-                          <span
-                            role="button"
-                            tabIndex={0}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedOrg(null);
-                              setSearchQuery("");
-                              setIsDropdownOpen(true);
-                            }}
-                            className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                            title="Clear selection"
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </span>
-                        )}
-                        <ChevronDown
-                          className={cn(
-                            "h-4 w-4 text-slate-400 transition-transform duration-200",
-                            isDropdownOpen && "rotate-180"
-                          )}
-                        />
-                      </div>
-                    </button>
-
-                    {/* Dropdown Menu with Search */}
-                    {isDropdownOpen && (
-                      <>
-                        <div
-                          className="fixed inset-0 z-20 bg-slate-900/30 backdrop-blur-[1px]"
-                          onClick={() => setIsDropdownOpen(false)}
-                        />
-                        <div className="absolute left-0 right-0 z-30 mt-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden animate-fadeIn">
-                          {/* Search Input */}
-                          <div className="p-2 border-b border-slate-100 dark:border-slate-800">
-                            <div className="relative">
-                              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
-                              <input
-                                type="text"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder="Search company name or code..."
-                                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-2.5 py-1.5 pl-8 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#FF6B00]"
-                              />
-                            </div>
-                          </div>
-
-                          {/* Company List */}
-                          <div className="max-h-56 overflow-y-auto p-1.5 space-y-1">
-                            {filteredOrgs.length > 0 ? (
-                              filteredOrgs.map((org) => {
-                                const isSelected = selectedOrg?.id === org.id;
-                                return (
-                                  <button
-                                    key={org.id}
-                                    type="button"
-                                    onPointerDown={(e) => {
-                                      e.preventDefault();
-                                      handleSelectOrg(org);
-                                    }}
-                                    onTouchEnd={(e) => {
-                                      e.preventDefault();
-                                      handleSelectOrg(org);
-                                    }}
-                                    onClick={() => handleSelectOrg(org)}
-                                    className={cn(
-                                      "w-full flex items-center justify-between p-2.5 rounded-lg text-xs transition-colors cursor-pointer text-left",
-                                      isSelected
-                                        ? "bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 font-semibold border border-orange-200 dark:border-orange-800/60"
-                                        : "hover:bg-slate-50 dark:hover:bg-slate-800/70 text-slate-700 dark:text-slate-200"
-                                    )}
-                                  >
-                                    <div className="flex items-center gap-2.5 truncate">
-                                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400 font-bold text-[10px] uppercase">
-                                        {org.code.slice(0, 3)}
-                                      </div>
-                                      <div className="truncate">
-                                        <div className="font-semibold text-slate-900 dark:text-white truncate">
-                                          {org.name}
-                                        </div>
-                                        <div className="text-[10px] text-slate-400 font-mono">
-                                          Code: {org.code}
-                                        </div>
-                                      </div>
-                                    </div>
-                                    {isSelected && (
-                                      <Check className="h-4 w-4 shrink-0 text-orange-600 dark:text-orange-400 ml-2" />
-                                    )}
-                                  </button>
-                                );
-                              })
-                            ) : (
-                              <div className="p-3 text-center text-xs text-slate-400">
-                                No company found matching &quot;{searchQuery}&quot;
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* 2. Email Field */}
+                {/* 1. Email Field */}
                 <div className="space-y-1.5">
                   <label
                     htmlFor="login-email"
@@ -532,11 +281,7 @@ export default function LoginPage() {
                       href="#forgot-password"
                       onClick={(e) => {
                         e.preventDefault();
-                        alert(
-                          selectedOrg
-                            ? `Please contact your ${selectedOrg.name} administrator to reset your credentials.`
-                            : "Please contact your company administrator or IT helpdesk to reset your password."
-                        );
+                        alert("Please contact your company administrator or IT helpdesk to reset your password.");
                       }}
                       className="text-xs font-medium text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-colors"
                     >
