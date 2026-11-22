@@ -1322,7 +1322,7 @@ export function DoctorsRegistryPage({
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800 sticky bottom-0 bg-white/95 dark:bg-[#121620]/95 backdrop-blur-sm -mb-4 -mx-6 px-6 py-3.5 z-10">
             <Button variant="outline" size="sm" type="button" onClick={() => setIsCreateOpen(false)}>
               Cancel
             </Button>
@@ -1491,7 +1491,7 @@ export function DoctorsRegistryPage({
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800 sticky bottom-0 bg-white/95 dark:bg-[#121620]/95 backdrop-blur-sm -mb-4 -mx-6 px-6 py-3.5 z-10">
             <Button variant="outline" size="sm" type="button" onClick={() => setEditingDoctor(null)}>
               Cancel
             </Button>

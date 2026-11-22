@@ -420,68 +420,78 @@ export default function LoginPage() {
 
                     {/* Dropdown Menu with Search */}
                     {isDropdownOpen && (
-                      <div className="absolute left-0 right-0 z-30 mt-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl shadow-slate-300/40 dark:shadow-none overflow-hidden animate-fadeIn">
-                        {/* Search Input */}
-                        <div className="p-2 border-b border-slate-100 dark:border-slate-800">
-                          <div className="relative">
-                            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
-                            <input
-                              type="text"
-                              value={searchQuery}
-                              onChange={(e) => setSearchQuery(e.target.value)}
-                              placeholder="Search company name or code..."
-                              className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-2.5 py-1.5 pl-8 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#FF6B00]"
-                            />
+                      <>
+                        <div
+                          className="fixed inset-0 z-20 bg-slate-900/30 backdrop-blur-[1px]"
+                          onClick={() => setIsDropdownOpen(false)}
+                        />
+                        <div className="absolute left-0 right-0 z-30 mt-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden animate-fadeIn">
+                          {/* Search Input */}
+                          <div className="p-2 border-b border-slate-100 dark:border-slate-800">
+                            <div className="relative">
+                              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                              <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="Search company name or code..."
+                                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-2.5 py-1.5 pl-8 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#FF6B00]"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Company List */}
+                          <div className="max-h-56 overflow-y-auto p-1.5 space-y-1">
+                            {filteredOrgs.length > 0 ? (
+                              filteredOrgs.map((org) => {
+                                const isSelected = selectedOrg?.id === org.id;
+                                return (
+                                  <button
+                                    key={org.id}
+                                    type="button"
+                                    onPointerDown={(e) => {
+                                      e.preventDefault();
+                                      handleSelectOrg(org);
+                                    }}
+                                    onTouchEnd={(e) => {
+                                      e.preventDefault();
+                                      handleSelectOrg(org);
+                                    }}
+                                    onClick={() => handleSelectOrg(org)}
+                                    className={cn(
+                                      "w-full flex items-center justify-between p-2.5 rounded-lg text-xs transition-colors cursor-pointer text-left",
+                                      isSelected
+                                        ? "bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 font-semibold border border-orange-200 dark:border-orange-800/60"
+                                        : "hover:bg-slate-50 dark:hover:bg-slate-800/70 text-slate-700 dark:text-slate-200"
+                                    )}
+                                  >
+                                    <div className="flex items-center gap-2.5 truncate">
+                                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400 font-bold text-[10px] uppercase">
+                                        {org.code.slice(0, 3)}
+                                      </div>
+                                      <div className="truncate">
+                                        <div className="font-semibold text-slate-900 dark:text-white truncate">
+                                          {org.name}
+                                        </div>
+                                        <div className="text-[10px] text-slate-400 font-mono">
+                                          Code: {org.code}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    {isSelected && (
+                                      <Check className="h-4 w-4 shrink-0 text-orange-600 dark:text-orange-400 ml-2" />
+                                    )}
+                                  </button>
+                                );
+                              })
+                            ) : (
+                              <div className="p-3 text-center text-xs text-slate-400">
+                                No company found matching &quot;{searchQuery}&quot;
+                              </div>
+                            )}
                           </div>
                         </div>
-
-                        {/* Company List */}
-                        <div className="max-h-56 overflow-y-auto p-1.5 space-y-1">
-                          {filteredOrgs.length > 0 ? (
-                            filteredOrgs.map((org) => {
-                              const isSelected = selectedOrg?.id === org.id;
-                              return (
-                                <button
-                                  key={org.id}
-                                  type="button"
-                                  onPointerDown={(e) => {
-                                    e.preventDefault();
-                                    handleSelectOrg(org);
-                                  }}
-                                  onClick={() => handleSelectOrg(org)}
-                                  className={cn(
-                                    "w-full flex items-center justify-between p-2.5 rounded-lg text-xs transition-colors cursor-pointer text-left",
-                                    isSelected
-                                      ? "bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 font-semibold border border-orange-200 dark:border-orange-800/60"
-                                      : "hover:bg-slate-50 dark:hover:bg-slate-800/70 text-slate-700 dark:text-slate-200"
-                                  )}
-                                >
-                                  <div className="flex items-center gap-2.5 truncate">
-                                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400 font-bold text-[10px] uppercase">
-                                      {org.code.slice(0, 3)}
-                                    </div>
-                                    <div className="truncate">
-                                      <div className="font-semibold text-slate-900 dark:text-white truncate">
-                                        {org.name}
-                                      </div>
-                                      <div className="text-[10px] text-slate-400 font-mono">
-                                        Code: {org.code}
-                                      </div>
-                                    </div>
-                                  </div>
-                                  {isSelected && (
-                                    <Check className="h-4 w-4 shrink-0 text-orange-600 dark:text-orange-400 ml-2" />
-                                  )}
-                                </button>
-                              );
-                            })
-                          ) : (
-                            <div className="p-3 text-center text-xs text-slate-400">
-                              No company found matching &quot;{searchQuery}&quot;
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                      </>
                     )}
                   </div>
                 </div>
