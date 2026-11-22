@@ -390,7 +390,7 @@ export function GlobalSearch({ role }: { role: CanonicalRole }) {
         onKeyDown={handleKeyDown}
         aria-label="Search portal records"
         placeholder="Search portal records..."
-        className="h-9 w-full rounded-xl border border-white/80 bg-white/60 pl-8.5 pr-8 text-xs text-slate-900 placeholder:text-slate-400 backdrop-blur-xl transition-all focus:border-[#FF6B00]/60 focus:bg-white/90 focus:ring-2 focus:ring-[#FF6B00]/20 focus:outline-none dark:border-white/10 dark:bg-white/5 dark:text-slate-100 shadow-[0_2px_10px_rgba(0,0,0,0.03),inset_0_1px_1px_rgba(255,255,255,0.9)]"
+        className="h-9 w-full rounded-xl border border-white/80 bg-white/60 pl-8.5 pr-8 text-xs text-slate-900 placeholder:text-slate-400 backdrop-blur-xl transition-all focus:border-[#FF6B00]/60 focus:bg-white/90 focus:ring-2 focus:ring-[#FF6B00]/20 focus:outline-none dark:border-white/10 dark:bg-white/5 dark:text-slate-100 shadow-[0_2px_10px_rgba(0,0,0,0.03),inset_0_1px_1px_rgba(255,255,255,0.9)] dark:shadow-none"
       />
 
       {isSearching ? (
@@ -417,7 +417,7 @@ export function GlobalSearch({ role }: { role: CanonicalRole }) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -6 }}
             transition={{ type: "spring", damping: 26, stiffness: 360 }}
-            className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-50 w-[92vw] sm:w-[480px] max-w-[520px] rounded-2xl border border-white/90 bg-white/90 backdrop-blur-3xl shadow-[0_20px_50px_rgba(0,0,0,0.15),inset_0_1px_1px_rgba(255,255,255,0.95)] dark:border-white/15 dark:bg-[#121620]/95 overflow-hidden max-h-[440px] flex flex-col"
+            className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-50 w-[92vw] sm:w-[480px] max-w-[520px] rounded-2xl border border-white/90 bg-white/90 backdrop-blur-3xl shadow-[0_20px_50px_rgba(0,0,0,0.15),inset_0_1px_1px_rgba(255,255,255,0.95)] dark:border-white/15 dark:bg-[#121620]/95 dark:shadow-[0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden max-h-[440px] flex flex-col"
           >
             <div className="px-4 py-2.5 border-b border-white/80 dark:border-white/10 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-slate-400">
               <span>

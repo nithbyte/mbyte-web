@@ -18,7 +18,7 @@ export function ThemeToggle({ className, showLabel = false }: ThemeToggleProps) 
       onClick={toggleTheme}
       type="button"
       className={cn(
-        "relative inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/70 bg-white/60 backdrop-blur-xl text-slate-600 hover:bg-white/90 hover:border-white shadow-[0_2px_8px_rgba(0,0,0,0.03),inset_0_1px_1px_rgba(255,255,255,0.9)] dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] transition-all cursor-pointer",
+        "relative inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/70 bg-white/60 backdrop-blur-xl text-slate-600 hover:bg-white/90 hover:border-white shadow-[0_2px_8px_rgba(0,0,0,0.03),inset_0_1px_1px_rgba(255,255,255,0.9)] dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 dark:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] transition-all cursor-pointer",
         className
       )}
       title={resolvedTheme === "dark" ? "Switch to Light Theme" : "Switch to Dark Theme"}

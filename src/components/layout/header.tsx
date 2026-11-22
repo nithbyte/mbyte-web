@@ -198,7 +198,7 @@ export function Header() {
           </button>
 
           {/* Territory Selector */}
-          <div className="hidden sm:flex items-center gap-1 sm:gap-1.5 rounded-xl border border-white/80 bg-white/60 px-2 sm:px-2.5 py-1 text-xs shadow-[0_2px_12px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,0.95)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5 shrink">
+          <div className="hidden sm:flex items-center gap-1 sm:gap-1.5 rounded-xl border border-white/80 bg-white/60 px-2 sm:px-2.5 py-1 text-xs shadow-[0_2px_12px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,0.95)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5 dark:shadow-none shrink">
             <MapPin className="h-3.5 w-3.5 text-[#FF6B00] shrink-0" aria-hidden="true" />
             <label htmlFor="header-territory-select" className="font-semibold text-slate-500 dark:text-slate-400 shrink-0 hidden xl:inline">
               Territory:
@@ -224,7 +224,7 @@ export function Header() {
           </div>
 
           {/* Operating Date Selector & Context Controls */}
-          <div className="hidden sm:flex items-center gap-1 rounded-xl border border-white/80 bg-white/60 p-1 text-xs shadow-[0_2px_12px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,0.95)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5 shrink">
+          <div className="hidden sm:flex items-center gap-1 rounded-xl border border-white/80 bg-white/60 p-1 text-xs shadow-[0_2px_12px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,0.95)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5 dark:shadow-none shrink">
             <div className="flex items-center gap-1 px-1 text-slate-500 dark:text-slate-400">
               <Calendar className="h-3.5 w-3.5 text-[#FF6B00] shrink-0" aria-hidden="true" />
               <label htmlFor="header-operating-date" className="font-semibold hidden 2xl:inline text-slate-600 dark:text-slate-300">
@@ -301,7 +301,7 @@ export function Header() {
             type="button"
             onClick={handleToggleChat}
             className={cn(
-              "relative flex h-9 w-9 items-center justify-center rounded-xl border border-white/70 bg-white/60 backdrop-blur-xl text-slate-600 hover:bg-white/90 hover:border-white shadow-[0_2px_8px_rgba(0,0,0,0.03),inset_0_1px_1px_rgba(255,255,255,0.9)] dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] shrink-0 transition-all cursor-pointer",
+              "relative flex h-9 w-9 items-center justify-center rounded-xl border border-white/70 bg-white/60 backdrop-blur-xl text-slate-600 hover:bg-white/90 hover:border-white shadow-[0_2px_8px_rgba(0,0,0,0.03),inset_0_1px_1px_rgba(255,255,255,0.9)] dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 dark:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] shrink-0 transition-all cursor-pointer",
               isChatOpen && "bg-orange-50 border-orange-200 text-[#FF6B00] dark:bg-[#FF6B00]/20 dark:text-[#FF6B00] dark:border-orange-900/60"
             )}
             title={isChatOpen ? "Close Team Chat & Calls" : "Team Chat & Calls"}
@@ -317,7 +317,7 @@ export function Header() {
               ref={notificationButtonRef}
               onClick={() => setIsNotificationOpen((prev) => !prev)}
               className={cn(
-                "relative flex h-9 w-9 items-center justify-center rounded-xl border border-white/70 bg-white/60 backdrop-blur-xl text-slate-600 hover:bg-white/90 hover:border-white shadow-[0_2px_8px_rgba(0,0,0,0.03),inset_0_1px_1px_rgba(255,255,255,0.9)] dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] shrink-0 transition-all cursor-pointer",
+                "relative flex h-9 w-9 items-center justify-center rounded-xl border border-white/70 bg-white/60 backdrop-blur-xl text-slate-600 hover:bg-white/90 hover:border-white shadow-[0_2px_8px_rgba(0,0,0,0.03),inset_0_1px_1px_rgba(255,255,255,0.9)] dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 dark:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] shrink-0 transition-all cursor-pointer",
                 isNotificationOpen && "bg-gradient-to-r from-orange-500/20 to-amber-500/15 border-orange-500/35 text-[#FF6B00]"
               )}
               aria-label="View notifications"
@@ -346,7 +346,7 @@ export function Header() {
             }}
             aria-label="User Profile and Account Details"
             suppressHydrationWarning
-            className="flex h-9 items-center gap-1.5 sm:gap-2 rounded-xl border border-white/80 bg-white/60 backdrop-blur-xl px-2 sm:px-2.5 text-left shadow-[0_2px_12px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,0.95)] hover:bg-white/90 hover:border-white dark:border-white/10 dark:bg-white/5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] shrink-0 cursor-pointer"
+            className="flex h-9 items-center gap-1.5 sm:gap-2 rounded-xl border border-white/80 bg-white/60 backdrop-blur-xl px-2 sm:px-2.5 text-left shadow-[0_2px_12px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,0.95)] hover:bg-white/90 hover:border-white dark:border-white/10 dark:bg-white/5 dark:shadow-none transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] shrink-0 cursor-pointer"
           >
             <div suppressHydrationWarning className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-tr from-[#FF6B00] to-[#F45100] text-xs font-bold text-white shadow-xs shrink-0">
               {initials}

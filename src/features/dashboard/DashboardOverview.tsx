@@ -43,6 +43,7 @@ import {
 import { DonutChart } from "@/components/ui/charts/DonutChart";
 import { HorizontalBarChart } from "@/components/ui/charts/BarChart";
 import { TargetGauge } from "@/components/ui/charts/TargetGauge";
+import { cn } from "@/lib/utils";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 export function DashboardOverview() {
@@ -245,7 +246,7 @@ export function DashboardOverview() {
       {/* ============================================================ */}
       {/* 0. Live Telemetry Status Banner & Action Toolbar            */}
       {/* ============================================================ */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-2xl border border-white/80 bg-white/65 backdrop-blur-2xl shadow-[0_8px_30px_rgba(0,0,0,0.04),inset_0_1.5px_1px_rgba(255,255,255,0.9)] dark:border-white/10 dark:bg-[#161D2F]/70">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-2xl border border-white/80 bg-white/65 backdrop-blur-2xl shadow-[0_8px_30px_rgba(0,0,0,0.04),inset_0_1.5px_1px_rgba(255,255,255,0.9)] dark:border-white/10 dark:bg-[#161D2F]/70 dark:shadow-none">
         <div className="flex items-center gap-3">
           <div className="flex h-3 w-3 relative">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
@@ -358,7 +359,7 @@ export function DashboardOverview() {
       {/* ============================================================ */}
       {/* 2. "WHAT NEEDS ATTENTION?" (Critical Alerts Matrix)          */}
       {/* ============================================================ */}
-      <Card className="border-rose-200/90 bg-rose-50/50 backdrop-blur-2xl shadow-[0_8px_32px_rgba(244,63,94,0.06),inset_0_1.5px_1px_rgba(255,255,255,0.95)] dark:border-rose-900/40 dark:bg-rose-950/20">
+      <Card className="border-rose-200/90 bg-rose-50/50 backdrop-blur-2xl shadow-[0_8px_32px_rgba(244,63,94,0.06),inset_0_1.5px_1px_rgba(255,255,255,0.95)] dark:border-rose-900/40 dark:bg-rose-950/20 dark:shadow-none">
         <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-3">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
@@ -381,7 +382,12 @@ export function DashboardOverview() {
             <Button
               variant={activeAttentionTab === "ALL" ? "default" : "outline"}
               size="sm"
-              className="text-xs h-7 px-2.5"
+              className={cn(
+                "text-xs h-7 px-2.5",
+                activeAttentionTab === "ALL"
+                  ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 font-semibold"
+                  : "dark:bg-[#202020] dark:border-white/10 dark:text-slate-200 dark:hover:bg-[#2C2C2C] dark:hover:text-white"
+              )}
               onClick={() => setActiveAttentionTab("ALL")}
             >
               All ({attentionCenter.totalAlertsCount})
@@ -389,7 +395,12 @@ export function DashboardOverview() {
             <Button
               variant={activeAttentionTab === "BELOW_TARGET" ? "destructive" : "outline"}
               size="sm"
-              className="text-xs h-7 px-2.5"
+              className={cn(
+                "text-xs h-7 px-2.5",
+                activeAttentionTab === "BELOW_TARGET"
+                  ? "bg-red-600 text-white dark:bg-red-600 dark:text-white font-semibold"
+                  : "dark:bg-[#202020] dark:border-white/10 dark:text-slate-200 dark:hover:bg-[#2C2C2C] dark:hover:text-white"
+              )}
               onClick={() => setActiveAttentionTab("BELOW_TARGET")}
             >
               Below-Target MRs ({attentionCenter.belowTargetMRs.length})
@@ -397,7 +408,12 @@ export function DashboardOverview() {
             <Button
               variant={activeAttentionTab === "MISSED_VISITS" ? "destructive" : "outline"}
               size="sm"
-              className="text-xs h-7 px-2.5"
+              className={cn(
+                "text-xs h-7 px-2.5",
+                activeAttentionTab === "MISSED_VISITS"
+                  ? "bg-red-600 text-white dark:bg-red-600 dark:text-white font-semibold"
+                  : "dark:bg-[#202020] dark:border-white/10 dark:text-slate-200 dark:hover:bg-[#2C2C2C] dark:hover:text-white"
+              )}
               onClick={() => setActiveAttentionTab("MISSED_VISITS")}
             >
               Missed Visits ({attentionCenter.missedVisits.length})
@@ -405,7 +421,12 @@ export function DashboardOverview() {
             <Button
               variant={activeAttentionTab === "STOCKOUTS" ? "destructive" : "outline"}
               size="sm"
-              className="text-xs h-7 px-2.5"
+              className={cn(
+                "text-xs h-7 px-2.5",
+                activeAttentionTab === "STOCKOUTS"
+                  ? "bg-red-600 text-white dark:bg-red-600 dark:text-white font-semibold"
+                  : "dark:bg-[#202020] dark:border-white/10 dark:text-slate-200 dark:hover:bg-[#2C2C2C] dark:hover:text-white"
+              )}
               onClick={() => setActiveAttentionTab("STOCKOUTS")}
             >
               Stockouts ({attentionCenter.criticalStockouts.length})
@@ -413,7 +434,12 @@ export function DashboardOverview() {
             <Button
               variant={activeAttentionTab === "PENDING_COMMERCIAL" ? "destructive" : "outline"}
               size="sm"
-              className="text-xs h-7 px-2.5"
+              className={cn(
+                "text-xs h-7 px-2.5",
+                activeAttentionTab === "PENDING_COMMERCIAL"
+                  ? "bg-red-600 text-white dark:bg-red-600 dark:text-white font-semibold"
+                  : "dark:bg-[#202020] dark:border-white/10 dark:text-slate-200 dark:hover:bg-[#2C2C2C] dark:hover:text-white"
+              )}
               onClick={() => setActiveAttentionTab("PENDING_COMMERCIAL")}
             >
               Pending Commercial ({attentionCenter.pendingCommercial.length})
@@ -421,7 +447,12 @@ export function DashboardOverview() {
             <Button
               variant={activeAttentionTab === "GEOFENCE_EXCEPTIONS" ? "destructive" : "outline"}
               size="sm"
-              className="text-xs h-7 px-2.5"
+              className={cn(
+                "text-xs h-7 px-2.5",
+                activeAttentionTab === "GEOFENCE_EXCEPTIONS"
+                  ? "bg-red-600 text-white dark:bg-red-600 dark:text-white font-semibold"
+                  : "dark:bg-[#202020] dark:border-white/10 dark:text-slate-200 dark:hover:bg-[#2C2C2C] dark:hover:text-white"
+              )}
               onClick={() => setActiveAttentionTab("GEOFENCE_EXCEPTIONS")}
             >
               GPS Exceptions ({attentionCenter.geofenceExceptions?.filter((e) => !handledExceptionIds.includes(e.id)).length || 0})
