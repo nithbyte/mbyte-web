@@ -105,10 +105,10 @@ export function useTenantUsers(orgId?: string, params?: { search?: string; statu
   });
 }
 
-export function useUserFeatures(userId?: string) {
+export function useUserFeatures(userId?: string, organizationId?: string) {
   return useQuery({
-    queryKey: ["userFeatures", userId],
-    queryFn: () => organizationService.getUserFeatures(userId!),
+    queryKey: ["userFeatures", userId, organizationId],
+    queryFn: () => organizationService.getUserFeatures(userId!, organizationId),
     enabled: Boolean(userId),
   });
 }
@@ -116,8 +116,8 @@ export function useUserFeatures(userId?: string) {
 export function useUpdateUserFeatures() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ userId, features }: { userId: string; features: any }) =>
-      organizationService.updateUserFeatures(userId, features),
+    mutationFn: ({ userId, features, organizationId }: { userId: string; features: any; organizationId?: string }) =>
+      organizationService.updateUserFeatures(userId, features, organizationId),
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ["userFeatures", vars.userId] });
       queryClient.invalidateQueries({ queryKey: ["tenantUsers"] });

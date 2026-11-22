@@ -62,6 +62,7 @@ import {
 import { Modal } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { organizationService } from "@/services/organizationService";
 
 const FEATURE_ICONS: Record<string, React.ReactNode> = {
   Stethoscope: <Stethoscope className="h-4 w-4" />,
@@ -292,19 +293,8 @@ export default function TenantDetailsPage() {
     setUserFeaturesSuccess(null);
     setUserFeaturesLoading(true);
     try {
-      const res = await (useOrganization as any);
-      // Fetch user's individual feature overrides
-      const response = await fetch(`/api/users/${user.id}/features`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("mbyte_access_token") || ""}`,
-        },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setUserFeatureOverrides(data.overrides || {});
-      } else {
-        setUserFeatureOverrides({});
-      }
+      const data = await organizationService.getUserFeatures(user.id, orgId || user.organizationId);
+      setUserFeatureOverrides(data?.overrides || {});
     } catch {
       setUserFeatureOverrides({});
     } finally {
@@ -336,6 +326,7 @@ export default function TenantDetailsPage() {
       await updateUserFeaturesMutation.mutateAsync({
         userId: featureModalUser.id,
         features: userFeatureOverrides,
+        organizationId: orgId || featureModalUser.organizationId,
       });
       setUserFeaturesSuccess("User feature capabilities updated successfully.");
       refetchUsers();
@@ -344,7 +335,7 @@ export default function TenantDetailsPage() {
         setUserFeaturesSuccess(null);
       }, 1400);
     } catch (err: any) {
-      alert(err?.message || "Failed to save user feature capabilities");
+      alert(err?.response?.data?.message || err?.message || "Failed to save user feature capabilities");
     }
   };
 

@@ -95,9 +95,14 @@ export const organizationService = {
   /**
    * Get specific user feature capability overrides.
    */
-  async getUserFeatures(userId: string): Promise<{ effectiveFeatures: AppFeatures; overrides: Partial<AppFeatures> }> {
+  async getUserFeatures(userId: string, organizationId?: string): Promise<{ effectiveFeatures: AppFeatures; overrides: Partial<AppFeatures> }> {
     try {
-      const res = await apiClient.get<any>(`/users/${userId}/features`);
+      const config: any = {};
+      if (organizationId) {
+        config.params = { organizationId };
+        config.headers = { "x-tenant-id": organizationId, "x-organization-id": organizationId };
+      }
+      const res = await apiClient.get<any>(`/users/${userId}/features`, config);
       return res;
     } catch (err) {
       console.warn("Failed to fetch user features:", err);
@@ -108,8 +113,18 @@ export const organizationService = {
   /**
    * Update specific user feature capability overrides.
    */
-  async updateUserFeatures(userId: string, features: Partial<AppFeatures>): Promise<{ effectiveFeatures: AppFeatures; overrides: Partial<AppFeatures> }> {
-    const res = await apiClient.put<any>(`/users/${userId}/features`, features);
+  async updateUserFeatures(
+    userId: string,
+    features: Partial<AppFeatures>,
+    organizationId?: string,
+  ): Promise<{ effectiveFeatures: AppFeatures; overrides: Partial<AppFeatures> }> {
+    const config: any = {};
+    if (organizationId) {
+      config.params = { organizationId };
+      config.headers = { "x-tenant-id": organizationId, "x-organization-id": organizationId };
+    }
+    const payload = organizationId ? { ...features, organizationId } : features;
+    const res = await apiClient.put<any>(`/users/${userId}/features`, payload, config);
     return res;
   },
 
