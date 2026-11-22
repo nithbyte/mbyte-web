@@ -224,14 +224,8 @@ export default function LiveTrackingPage() {
       (status) => setStreamStatus(status),
     );
 
-    // Lightweight 30s reconciliation sync (for visits count & connection-age recalculation)
-    const reconcileTimer = setInterval(() => {
-      if (isTodayRef.current) loadSnapshot(true);
-    }, 30000);
-
     return () => {
       unsubscribe();
-      clearInterval(reconcileTimer);
     };
   }, [isMounted, loadSnapshot]);
 

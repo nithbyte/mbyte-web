@@ -70,12 +70,12 @@ export function Modal({
             exit={{ opacity: 0, scale: 0.94, y: 14 }}
             transition={{ type: "spring", damping: 25, stiffness: 350 }}
             className={cn(
-              "relative w-full rounded-2xl border border-white/80 bg-white/90 p-6 shadow-2xl backdrop-blur-3xl max-h-[90vh] overflow-y-auto dark:border-white/10 dark:bg-[#121620]/95 text-slate-900 dark:text-[#F5F3EE]",
+              "relative flex flex-col w-full rounded-2xl border border-white/80 bg-white/95 shadow-2xl backdrop-blur-3xl max-h-[85vh] my-auto dark:border-white/10 dark:bg-[#121620]/95 text-slate-900 dark:text-[#F5F3EE] overflow-hidden",
               widthClasses[maxWidth],
               className
             )}
           >
-            <div className="flex items-start justify-between pb-4 border-b border-white/80 dark:border-white/10">
+            <div className="flex items-start justify-between px-6 py-4 border-b border-slate-100 dark:border-white/10 shrink-0">
               <div>
                 <h2
                   id="modal-dialog-title"
@@ -98,7 +98,7 @@ export function Modal({
               </button>
             </div>
 
-            <div className="pt-4">{children}</div>
+            <div className="px-6 py-4 overflow-y-auto flex-1">{children}</div>
           </motion.div>
         </div>
       )}

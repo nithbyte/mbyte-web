@@ -827,13 +827,21 @@ export function useWebRTCCall(currentUserId?: string, enabled: boolean = true) {
   }, [isScreenSharing, activeCall, acquireMedia, selectedAudioDeviceId]);
 
   // Periodic check for incoming calls and remote hangup while ringing
+  // Poll backend for incoming calls (5s idle, pauses when tab is hidden)
   useEffect(() => {
     if (!currentUserId || !enabled) return;
 
+    let isPolling = false;
     incomingCheckTimerRef.current = setInterval(async () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        return; // Pause poll while browser tab is hidden/minimized
+      }
+      if (isPolling) return;
+      isPolling = true;
+
       const current = activeCallRef.current;
-      if (!current) {
-        try {
+      try {
+        if (!current) {
           const incoming = await chatService.getActiveCall();
           const incomingId = incoming?.id || (incoming as any)?.callId;
           if (
@@ -869,13 +877,9 @@ export function useWebRTCCall(currentUserId?: string, enabled: boolean = true) {
               }
             }
           }
-        } catch {
-          // suppress transient poll errors
-        }
-      } else if (current.status === "RINGING") {
-        const callId = current.id || (current as any).callId;
-        if (callId) {
-          try {
+        } else if (current.status === "RINGING") {
+          const callId = current.id || (current as any).callId;
+          if (callId) {
             const remote = await chatService.getCallSession(callId);
             if (
               !remote ||
@@ -887,12 +891,14 @@ export function useWebRTCCall(currentUserId?: string, enabled: boolean = true) {
               cleanUpStreamsAndPC();
               setActiveCall(null);
             }
-          } catch {
-            // ignore
           }
         }
+      } catch {
+        // suppress transient poll errors
+      } finally {
+        isPolling = false;
       }
-    }, 1200);
+    }, 5000);
 
     return () => {
       if (incomingCheckTimerRef.current) clearInterval(incomingCheckTimerRef.current);

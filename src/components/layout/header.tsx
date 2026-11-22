@@ -291,14 +291,8 @@ export function Header() {
           <GlobalSearch role={canonicalRole} />
         </div>
 
-        {/* Right: Tenant Badge, Notifications & User Info */}
+        {/* Right: Notifications, Theme & User Info */}
         <div className="flex items-center gap-1 sm:gap-1.5 xl:gap-2 shrink-0">
-          {/* Tenant Organization Tag */}
-          <div className="hidden 2xl:flex h-9 items-center gap-1.5 rounded-xl border border-orange-200 bg-orange-50/80 px-2.5 text-xs font-semibold text-[#FF6B00] dark:border-orange-900/60 dark:bg-[#FF6B00]/15 dark:text-[#FF6B00] shrink-0 max-w-[140px]">
-            <Building className="h-3.5 w-3.5 text-[#FF6B00] shrink-0" aria-hidden="true" />
-            <span suppressHydrationWarning className="truncate">{tenantCompanyName}</span>
-          </div>
-
           {/* Light / Dark Theme Mode Toggle */}
           <ThemeToggle />
 

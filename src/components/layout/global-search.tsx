@@ -389,7 +389,7 @@ export function GlobalSearch({ role }: { role: CanonicalRole }) {
         }}
         onKeyDown={handleKeyDown}
         aria-label="Search portal records"
-        placeholder="Search records, doctors, orders..."
+        placeholder="Search portal records..."
         className="h-9 w-full rounded-xl border border-white/80 bg-white/60 pl-8.5 pr-8 text-xs text-slate-900 placeholder:text-slate-400 backdrop-blur-xl transition-all focus:border-[#FF6B00]/60 focus:bg-white/90 focus:ring-2 focus:ring-[#FF6B00]/20 focus:outline-none dark:border-white/10 dark:bg-white/5 dark:text-slate-100 shadow-[0_2px_10px_rgba(0,0,0,0.03),inset_0_1px_1px_rgba(255,255,255,0.9)]"
       />
 
