@@ -620,7 +620,7 @@ export function Sidebar() {
                         "group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all duration-200 relative",
                         isActive
                           ? "bg-orange-50/90 font-bold text-[#FF6B00] border border-orange-200/90 shadow-none dark:bg-[#FF6B00]/15 dark:border-orange-500/30 dark:text-[#FF6B00]"
-                          : "text-slate-600 hover:bg-white/80 hover:text-slate-900 hover:border hover:border-slate-200/60 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-slate-100 dark:hover:border-white/10",
+                          : "border border-transparent text-slate-600 hover:bg-slate-100/70 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white",
                         isCollapsed && "justify-center px-2"
                       )}
                     >
