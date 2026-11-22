@@ -95,10 +95,19 @@ export default function LoginPage() {
         }
 
         const orgSlug = result.user?.organization?.slug;
+        const currentSubdomain = getTenantSubdomain();
+
         if (typeof window !== "undefined" && orgSlug) {
           try {
             window.localStorage.setItem("mbyte_tenant_slug", orgSlug);
           } catch {}
+        }
+
+        // Redirect tenant users to their dedicated tenant subdomain portal
+        if (orgSlug && canonicalRole !== "SUPER_ADMIN" && currentSubdomain !== orgSlug) {
+          const destinationUrl = buildTenantSubdomainUrl(orgSlug, targetPath);
+          window.location.href = destinationUrl;
+          return;
         }
 
         router.push(targetPath);
@@ -132,10 +141,19 @@ export default function LoginPage() {
       }
 
       const orgSlug = user.organization?.slug;
+      const currentSubdomain = getTenantSubdomain();
+
       if (typeof window !== "undefined" && orgSlug) {
         try {
           window.localStorage.setItem("mbyte_tenant_slug", orgSlug);
         } catch {}
+      }
+
+      // Redirect tenant users to their dedicated tenant subdomain portal
+      if (orgSlug && canonicalRole !== "SUPER_ADMIN" && currentSubdomain !== orgSlug) {
+        const destinationUrl = buildTenantSubdomainUrl(orgSlug, targetPath);
+        window.location.href = destinationUrl;
+        return;
       }
 
       router.push(targetPath);

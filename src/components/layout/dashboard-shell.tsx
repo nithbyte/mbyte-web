@@ -108,6 +108,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }, [canonicalRole, pathname, router]);
 
   const currentSubdomain = typeof window !== "undefined" ? getTenantSubdomain() : null;
+  const userOrgSlug =
+    currentUser?.organization?.slug ||
+    (canonicalRole !== "SUPER_ADMIN" && typeof window !== "undefined" ? window.localStorage.getItem("mbyte_tenant_slug") : null);
 
   useEffect(() => {
     if (canonicalRole === "SUPER_ADMIN" && typeof window !== "undefined") {
@@ -120,6 +123,24 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       } catch {}
     }
   }, [canonicalRole, currentUser?.organization?.slug]);
+
+  useEffect(() => {
+    // Forward tenant users to their dedicated tenant subdomain portal if on root platform domain
+    if (
+      currentUser &&
+      canonicalRole !== "SUPER_ADMIN" &&
+      userOrgSlug &&
+      currentSubdomain !== userOrgSlug &&
+      typeof window !== "undefined"
+    ) {
+      // Never carry super admin paths (/companies, /admin) into the tenant subdomain!
+      const safePath = pathname.startsWith("/companies") || pathname.startsWith("/admin") ? "/" : pathname;
+      const destination = buildTenantSubdomainUrl(userOrgSlug, safePath);
+      if (window.location.href !== destination) {
+        window.location.href = destination;
+      }
+    }
+  }, [currentUser, canonicalRole, userOrgSlug, currentSubdomain, pathname]);
 
   useEffect(() => {
     // Route Super Admin back to central platform if they are on a tenant subdomain
