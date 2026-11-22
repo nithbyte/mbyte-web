@@ -252,7 +252,14 @@ export default function AdminLoginPage() {
           <span className="hidden sm:inline text-slate-300 dark:text-slate-700">•</span>
           <div className="flex items-center gap-1 font-medium text-slate-500 dark:text-slate-400">
             <span>Powered by</span>
-            <span className="font-semibold text-slate-700 dark:text-slate-300">Nithbyte</span>
+            <a
+              href="https://nithbyte.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-slate-700 dark:text-slate-300 hover:text-[#FF6B00] dark:hover:text-[#FF6B00] transition-colors"
+            >
+              Nithbyte
+            </a>
           </div>
         </div>
       </footer>

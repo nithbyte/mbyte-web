@@ -678,7 +678,15 @@ export function Sidebar() {
         {!isCollapsed && (
           <div className="mt-2.5 text-center">
             <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
-              Powered by <span className="font-semibold text-slate-600 dark:text-slate-300">Nithbyte</span>
+              Powered by{" "}
+              <a
+                href="https://nithbyte.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-slate-600 dark:text-slate-300 hover:text-[#FF6B00] dark:hover:text-[#FF6B00] transition-colors"
+              >
+                Nithbyte
+              </a>
             </span>
           </div>
         )}
