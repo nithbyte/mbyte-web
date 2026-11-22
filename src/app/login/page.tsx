@@ -165,7 +165,18 @@ export default function LoginPage() {
 
       {/* Top Bar */}
       <header className="relative w-full px-6 py-4 flex items-center justify-between z-10">
-        <div />
+        <div className="flex items-center gap-3">
+          <img
+            src="/brand/kovelbyte-logo.png"
+            alt="Kövelbyte"
+            className="h-8 sm:h-9 w-auto dark:hidden object-contain"
+          />
+          <img
+            src="/brand/kovelbyte-logo-dark.png"
+            alt="Kövelbyte"
+            className="h-8 sm:h-9 w-auto hidden dark:block object-contain"
+          />
+        </div>
         <ThemeToggle className="border border-white/60 dark:border-white/10 bg-white/70 dark:bg-slate-900/70 shadow-sm backdrop-blur-xl" />
       </header>
 
