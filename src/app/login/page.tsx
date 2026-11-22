@@ -376,22 +376,27 @@ export default function LoginPage() {
 
       {/* Subtle, Professional Footer */}
       <footer className="w-full py-5 text-center text-xs text-slate-400 dark:text-slate-500 border-t border-slate-200/60 dark:border-slate-800/60 z-10">
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-4">
-          <div className="flex items-center gap-1.5">
+        <div className="flex flex-col items-center justify-center gap-1.5 sm:gap-2">
+          <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-3 text-xs text-slate-600 dark:text-slate-400 font-medium">
+            <span className="font-semibold text-slate-800 dark:text-slate-200">Mediqbyte</span>
+            <span className="text-slate-300 dark:text-slate-700">•</span>
+            <span>A Product of <strong className="font-semibold text-slate-800 dark:text-slate-200">Kövelbyte</strong></span>
+            <span className="text-slate-300 dark:text-slate-700">•</span>
+            <span>
+              Powered by{" "}
+              <a
+                href="https://nithbyte.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-slate-800 dark:text-slate-200 hover:text-[#FF6B00] dark:hover:text-[#FF6B00] transition-colors underline-offset-2 hover:underline"
+              >
+                Nithbyte
+              </a>
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-slate-500">
             <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-500" />
             <span>Enterprise Pharmaceutical Field Intelligence</span>
-          </div>
-          <span className="hidden sm:inline text-slate-300 dark:text-slate-700">•</span>
-          <div className="flex items-center gap-1 font-medium text-slate-500 dark:text-slate-400">
-            <span>Powered by</span>
-            <a
-              href="https://nithbyte.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-semibold text-slate-700 dark:text-slate-300 hover:text-[#FF6B00] dark:hover:text-[#FF6B00] transition-colors"
-            >
-              Nithbyte
-            </a>
           </div>
         </div>
       </footer>
