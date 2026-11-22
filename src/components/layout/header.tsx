@@ -296,20 +296,22 @@ export function Header() {
           {/* Light / Dark Theme Mode Toggle */}
           <ThemeToggle />
 
-          {/* Team Chat Quick Access Toggle */}
-          <button
-            type="button"
-            onClick={handleToggleChat}
-            className={cn(
-              "relative flex h-9 w-9 items-center justify-center rounded-xl border border-white/70 bg-white/60 backdrop-blur-xl text-slate-600 hover:bg-white/90 hover:border-white shadow-[0_2px_8px_rgba(0,0,0,0.03),inset_0_1px_1px_rgba(255,255,255,0.9)] dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 dark:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] shrink-0 transition-all cursor-pointer",
-              isChatOpen && "bg-orange-50 border-orange-200 text-[#FF6B00] dark:bg-[#FF6B00]/20 dark:text-[#FF6B00] dark:border-orange-900/60"
-            )}
-            title={isChatOpen ? "Close Team Chat & Calls" : "Team Chat & Calls"}
-            aria-label={isChatOpen ? "Close Team Chat & Calls" : "Open Team Chat & Calls"}
-            aria-pressed={isChatOpen}
-          >
-            <MessageSquare className="h-4.5 w-4.5" />
-          </button>
+          {/* Team Chat Quick Access Toggle (hidden when deactivated) */}
+          {(canonicalRole === "SUPER_ADMIN" || currentUser?.features?.chatAndCalling !== false) && (
+            <button
+              type="button"
+              onClick={handleToggleChat}
+              className={cn(
+                "relative flex h-9 w-9 items-center justify-center rounded-xl border border-white/70 bg-white/60 backdrop-blur-xl text-slate-600 hover:bg-white/90 hover:border-white shadow-[0_2px_8px_rgba(0,0,0,0.03),inset_0_1px_1px_rgba(255,255,255,0.9)] dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 dark:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] shrink-0 transition-all cursor-pointer",
+                isChatOpen && "bg-orange-50 border-orange-200 text-[#FF6B00] dark:bg-[#FF6B00]/20 dark:text-[#FF6B00] dark:border-orange-900/60"
+              )}
+              title={isChatOpen ? "Close Team Chat & Calls" : "Team Chat & Calls"}
+              aria-label={isChatOpen ? "Close Team Chat & Calls" : "Open Team Chat & Calls"}
+              aria-pressed={isChatOpen}
+            >
+              <MessageSquare className="h-4.5 w-4.5" />
+            </button>
+          )}
 
           {/* Notification Bell with Popover Dropdown */}
           <div className="relative shrink-0">

@@ -93,6 +93,7 @@ function formatUser(rawUser: any): User {
     territoryName: rawUser.medicalRepresentative?.territory?.name || rawUser.territoryName,
     status: rawUser.status === "ACTIVE" ? "ACTIVE" : "INACTIVE",
     createdAt: rawUser.createdAt,
+    features: rawUser.features,
   };
 }
 

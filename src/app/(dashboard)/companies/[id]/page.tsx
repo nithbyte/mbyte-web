@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Building2,
@@ -85,6 +86,7 @@ export default function TenantDetailsPage() {
   const params = useParams();
   const orgId = typeof params?.id === "string" ? params.id : Array.isArray(params?.id) ? params.id[0] : "";
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const [activeTab, setActiveTab] = useState<ActiveTab>("USERS");
   const [userSearch, setUserSearch] = useState("");
@@ -210,6 +212,8 @@ export default function TenantDetailsPage() {
         orgId,
         features: localFeatures,
       });
+      queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+      queryClient.invalidateQueries({ queryKey: ["tenantFeatures", orgId] });
       setFeaturesDirty(false);
       setFeaturesSaveSuccess(true);
       setTimeout(() => setFeaturesSaveSuccess(false), 3000);
@@ -328,6 +332,9 @@ export default function TenantDetailsPage() {
         features: userFeatureOverrides,
         organizationId: orgId || featureModalUser.organizationId,
       });
+      queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+      queryClient.invalidateQueries({ queryKey: ["userFeatures", featureModalUser.id] });
+      queryClient.invalidateQueries({ queryKey: ["tenantUsers", orgId] });
       setUserFeaturesSuccess("User feature capabilities updated successfully.");
       refetchUsers();
       setTimeout(() => {
