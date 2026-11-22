@@ -10,7 +10,7 @@ import { useSidebarStore } from "@/store";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useCurrentUser } from "@/hooks";
 import { tokenStorage } from "@/lib/api-client";
-import { normalizeRole } from "@/types";
+import { normalizeRole, type AppFeatures } from "@/types";
 import { getTenantSubdomain, getRootDomain, buildTenantSubdomainUrl } from "@/lib/subdomain";
 import { cn } from "@/lib/utils";
 import { useWebRTCCall } from "@/features/chat/useWebRTCCall";
@@ -43,6 +43,24 @@ const SUPER_ADMIN_RESTRICTED_PREFIXES = [
   "/product-presence",
   "/commercial",
   "/reports",
+];
+
+const FEATURE_ROUTE_MAPPING: Array<{ prefix: string; featureKey: keyof AppFeatures; label: string }> = [
+  { prefix: "/doctors", featureKey: "doctorManagement", label: "Doctor Management" },
+  { prefix: "/purchasing-doctors", featureKey: "doctorManagement", label: "Doctor Management" },
+  { prefix: "/pharmacies", featureKey: "chemistManagement", label: "Chemist & Pharmacy Master" },
+  { prefix: "/live-tracking", featureKey: "geomapping", label: "Live MR Tracking & Geomapping" },
+  { prefix: "/orders", featureKey: "orderBooking", label: "Commercial Order Taking" },
+  { prefix: "/commercial", featureKey: "orderBooking", label: "Commercial Order Taking" },
+  { prefix: "/collections", featureKey: "collections", label: "Payment Collections & Credit" },
+  { prefix: "/receivables", featureKey: "collections", label: "Payment Collections & Credit" },
+  { prefix: "/dcr", featureKey: "dcrFiling", label: "Daily Call Reports (DCR)" },
+  { prefix: "/tour-plans", featureKey: "tourPlanning", label: "Monthly Tour Planning (MTP)" },
+  { prefix: "/products/presence", featureKey: "productPresence", label: "Retail Shelf & Presence Audits" },
+  { prefix: "/samples", featureKey: "sampleTracking", label: "Drug Samples & Promo Tracking" },
+  { prefix: "/chat", featureKey: "chatAndCalling", label: "In-App Audio Calling & Team Chat" },
+  { prefix: "/expenses", featureKey: "expenseManagement", label: "Field Expense Claims (TA/DA)" },
+  { prefix: "/attendance", featureKey: "leaveManagement", label: "Attendance & Leave Requests" },
 ];
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
@@ -150,6 +168,15 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     canonicalRole === "MR" &&
     MR_RESTRICTED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 
+  const blockedFeature =
+    Boolean(currentUser) &&
+    canonicalRole !== "SUPER_ADMIN" &&
+    currentUser?.features
+      ? FEATURE_ROUTE_MAPPING.find(
+          (m) => pathname.startsWith(m.prefix) && currentUser.features?.[m.featureKey] === false,
+        )
+      : null;
+
   if (!authChecked || (isLoading && !currentUser)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#FCF7F2] dark:bg-[#171717]">
@@ -232,6 +259,25 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   >
                     <CalendarCheck className="h-3.5 w-3.5" />
                     <span>Go to My Field Visits</span>
+                  </Link>
+                </div>
+              </div>
+            ) : blockedFeature ? (
+              <div className="rounded-2xl border border-red-200 bg-red-50/50 p-8 text-center dark:border-red-900/50 dark:bg-red-950/20 shadow-xs">
+                <ShieldAlert className="mx-auto h-12 w-12 text-red-600 dark:text-red-400 mb-3" />
+                <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                  Feature Deactivated: {blockedFeature.label}
+                </h2>
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-400 max-w-md mx-auto">
+                  This module has been deactivated for your organization or user account by platform governance. Contact your company administrator to request access.
+                </p>
+                <div className="mt-4">
+                  <Link
+                    href="/"
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-orange-600 px-4 py-2 text-xs font-semibold text-white hover:bg-orange-500 transition-colors"
+                  >
+                    <ArrowLeft className="h-3.5 w-3.5" />
+                    <span>Return to Dashboard</span>
                   </Link>
                 </div>
               </div>

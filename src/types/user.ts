@@ -1,5 +1,6 @@
 import { Visit } from "./visit";
 import { Order, Collection } from "./order";
+import type { AppFeatures } from "./organization";
 
 export type CanonicalRole = "SUPER_ADMIN" | "ADMIN" | "TERRITORY_MANAGER" | "MR";
 export type UserRole = "SUPER_ADMIN" | "COMPANY_ADMIN" | "ADMIN" | "MANAGER" | "TERRITORY_MANAGER" | "MR";
@@ -86,6 +87,7 @@ export interface User {
   avatarUrl?: string;
   status: "ACTIVE" | "INACTIVE" | "SUSPENDED" | "ON_LEAVE";
   designation?: string;
+  features?: AppFeatures;
   createdAt?: string;
 }
 

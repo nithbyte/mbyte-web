@@ -38,7 +38,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useSidebarStore, useAuthStore } from "@/store";
 import { useCurrentUser, useLogout } from "@/hooks";
-import { normalizeRole, type CanonicalRole } from "@/types";
+import { normalizeRole, type CanonicalRole, type AppFeatures } from "@/types";
 import { APP_CONFIG } from "@/lib/constants";
 import { MByteLogo } from "@/components/ui/mbyte-logo";
 import { getRootDomain } from "@/lib/subdomain";
@@ -49,6 +49,7 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   badge?: string;
   badgeVariant?: "live" | "count";
+  featureKey?: keyof AppFeatures;
 }
 
 interface NavSection {
@@ -56,7 +57,7 @@ interface NavSection {
   items: NavItem[];
 }
 
-function getNavSections(role: CanonicalRole): NavSection[] {
+function getRawNavSections(role: CanonicalRole): NavSection[] {
   switch (role) {
     case "SUPER_ADMIN":
       return [
@@ -110,6 +111,7 @@ function getNavSections(role: CanonicalRole): NavSection[] {
               icon: CalendarCheck,
               badge: "LIVE",
               badgeVariant: "live",
+              featureKey: "geomapping",
             },
             {
               title: "Live MR Tracking",
@@ -117,16 +119,19 @@ function getNavSections(role: CanonicalRole): NavSection[] {
               icon: Radio,
               badge: "LIVE",
               badgeVariant: "live",
+              featureKey: "geomapping",
             },
             {
               title: "Tour Plans (MTP)",
               href: "/tour-plans",
               icon: CalendarDays,
+              featureKey: "tourPlanning",
             },
             {
               title: "Daily Call Reports (DCR)",
               href: "/dcr",
               icon: FileCheck,
+              featureKey: "dcrFiling",
             },
           ],
         },
@@ -152,16 +157,19 @@ function getNavSections(role: CanonicalRole): NavSection[] {
               title: "Doctors & Clinics",
               href: "/doctors",
               icon: Stethoscope,
+              featureKey: "doctorManagement",
             },
             {
               title: "Purchasing Doctors",
               href: "/purchasing-doctors",
               icon: Stethoscope,
+              featureKey: "doctorManagement",
             },
             {
               title: "Pharmacies & Retail",
               href: "/pharmacies",
               icon: Building2,
+              featureKey: "chemistManagement",
             },
             {
               title: "Distributors & Stockists",
@@ -177,26 +185,31 @@ function getNavSections(role: CanonicalRole): NavSection[] {
               title: "Commercial Overview",
               href: "/commercial",
               icon: TrendingUp,
+              featureKey: "orderBooking",
             },
             {
               title: "Orders Booking",
               href: "/orders",
               icon: ShoppingCart,
+              featureKey: "orderBooking",
             },
             {
               title: "Collections & Receipts",
               href: "/collections",
               icon: Receipt,
+              featureKey: "collections",
             },
             {
               title: "Expense Claims",
               href: "/expenses",
               icon: Wallet,
+              featureKey: "expenseManagement",
             },
             {
               title: "Accounts Receivable",
               href: "/receivables",
               icon: FileSpreadsheet,
+              featureKey: "collections",
             },
           ],
         },
@@ -212,6 +225,7 @@ function getNavSections(role: CanonicalRole): NavSection[] {
               title: "Sample Inventory & Ledger",
               href: "/samples",
               icon: FlaskConical,
+              featureKey: "sampleTracking",
             },
             {
               title: "Product Presence Intel",
@@ -219,6 +233,7 @@ function getNavSections(role: CanonicalRole): NavSection[] {
               icon: MapPin,
               badge: "LIVE",
               badgeVariant: "live",
+              featureKey: "productPresence",
             },
           ],
         },
@@ -231,11 +246,13 @@ function getNavSections(role: CanonicalRole): NavSection[] {
               icon: MessageSquare,
               badge: "LIVE",
               badgeVariant: "live",
+              featureKey: "chatAndCalling",
             },
             {
               title: "Shift Attendance",
               href: "/attendance",
               icon: Clock,
+              featureKey: "leaveManagement",
             },
             {
               title: "Company Campaigns",
@@ -287,6 +304,7 @@ function getNavSections(role: CanonicalRole): NavSection[] {
               icon: CalendarCheck,
               badge: "LIVE",
               badgeVariant: "live",
+              featureKey: "geomapping",
             },
             {
               title: "Live MR Tracking",
@@ -294,16 +312,19 @@ function getNavSections(role: CanonicalRole): NavSection[] {
               icon: Radio,
               badge: "LIVE",
               badgeVariant: "live",
+              featureKey: "geomapping",
             },
             {
               title: "Tour Plans (MTP)",
               href: "/tour-plans",
               icon: CalendarDays,
+              featureKey: "tourPlanning",
             },
             {
               title: "Daily Call Reports (DCR)",
               href: "/dcr",
               icon: FileCheck,
+              featureKey: "dcrFiling",
             },
           ],
         },
@@ -324,16 +345,19 @@ function getNavSections(role: CanonicalRole): NavSection[] {
               title: "Doctors & Clinics",
               href: "/doctors",
               icon: Stethoscope,
+              featureKey: "doctorManagement",
             },
             {
               title: "Purchasing Doctors",
               href: "/purchasing-doctors",
               icon: Stethoscope,
+              featureKey: "doctorManagement",
             },
             {
               title: "Pharmacies & Retail",
               href: "/pharmacies",
               icon: Building2,
+              featureKey: "chemistManagement",
             },
             {
               title: "Distributors & Stockists",
@@ -349,21 +373,25 @@ function getNavSections(role: CanonicalRole): NavSection[] {
               title: "Territory Orders",
               href: "/orders",
               icon: ShoppingCart,
+              featureKey: "orderBooking",
             },
             {
               title: "Collections & Receipts",
               href: "/collections",
               icon: Receipt,
+              featureKey: "collections",
             },
             {
               title: "Expense Claims",
               href: "/expenses",
               icon: Wallet,
+              featureKey: "expenseManagement",
             },
             {
               title: "Accounts Receivable",
               href: "/receivables",
               icon: FileSpreadsheet,
+              featureKey: "collections",
             },
           ],
         },
@@ -379,6 +407,7 @@ function getNavSections(role: CanonicalRole): NavSection[] {
               title: "Sample Inventory & Ledger",
               href: "/samples",
               icon: FlaskConical,
+              featureKey: "sampleTracking",
             },
             {
               title: "Product Presence",
@@ -386,6 +415,7 @@ function getNavSections(role: CanonicalRole): NavSection[] {
               icon: MapPin,
               badge: "LIVE",
               badgeVariant: "live",
+              featureKey: "productPresence",
             },
           ],
         },
@@ -398,11 +428,13 @@ function getNavSections(role: CanonicalRole): NavSection[] {
               icon: MessageSquare,
               badge: "LIVE",
               badgeVariant: "live",
+              featureKey: "chatAndCalling",
             },
             {
               title: "Shift Attendance",
               href: "/attendance",
               icon: Clock,
+              featureKey: "leaveManagement",
             },
             {
               title: "Company Campaigns",
@@ -449,6 +481,7 @@ function getNavSections(role: CanonicalRole): NavSection[] {
               icon: MessageSquare,
               badge: "LIVE",
               badgeVariant: "live",
+              featureKey: "chatAndCalling",
             },
             {
               title: "My Call Schedule & Visits",
@@ -478,6 +511,19 @@ function getNavSections(role: CanonicalRole): NavSection[] {
   }
 }
 
+function getNavSections(role: CanonicalRole, features?: AppFeatures): NavSection[] {
+  const sections = getRawNavSections(role);
+  if (role === "SUPER_ADMIN" || !features) {
+    return sections;
+  }
+  return sections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => !item.featureKey || features[item.featureKey] !== false),
+    }))
+    .filter((section) => section.items.length > 0);
+}
+
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -489,7 +535,7 @@ export function Sidebar() {
   const currentUser = fetchedUser ?? storeUser;
 
   const canonicalRole = normalizeRole(currentUser?.role);
-  const navSections = getNavSections(canonicalRole);
+  const navSections = getNavSections(canonicalRole, currentUser?.features);
 
   const handleLogout = async () => {
     try {
