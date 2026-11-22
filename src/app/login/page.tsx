@@ -74,7 +74,7 @@ export default function LoginPage() {
         const rootHost = rootDomain.split(":")[0];
         const isLocal = rootHost.includes("localhost") || rootHost.startsWith("127.");
         const protocol = isLocal ? "http:" : "https:";
-        window.location.href = `${protocol}//${rootDomain}/login`;
+        window.location.href = `${protocol}//${rootDomain}/login?tenant=${encodeURIComponent(subdomain)}`;
       }
     }
   }, []);
@@ -90,12 +90,11 @@ export default function LoginPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Auto-detect or pre-select organization from URL query param, subdomain, or default if only 1 exists
+  // Auto-detect or pre-select organization from URL query param, subdomain, localStorage, or default if only 1 exists
   useEffect(() => {
     if (!publicOrganizations || publicOrganizations.length === 0) return;
     if (selectedOrg) return;
 
-    // Only pre-select if explicitly passed in URL query param e.g. /login?tenant=kovelbyte
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const targetParam = (params.get("tenant") || params.get("org") || params.get("company") || "").trim().toLowerCase();
@@ -108,10 +107,41 @@ export default function LoginPage() {
         );
         if (match) {
           setSelectedOrg(match);
+          return;
         }
+      }
+
+      // Check last used tenant company from localStorage
+      try {
+        const lastTenant = localStorage.getItem("mbyte_last_tenant");
+        if (lastTenant) {
+          const match = publicOrganizations.find(
+            (o) => o.slug.toLowerCase() === lastTenant.toLowerCase() || o.id === lastTenant
+          );
+          if (match) {
+            setSelectedOrg(match);
+            return;
+          }
+        }
+      } catch {}
+
+      // Default: If only 1 tenant organization exists, pre-select it automatically
+      if (publicOrganizations.length === 1) {
+        setSelectedOrg(publicOrganizations[0]);
       }
     }
   }, [publicOrganizations, selectedOrg]);
+
+  const handleSelectOrg = (org: PublicOrganization) => {
+    setSelectedOrg(org);
+    setIsDropdownOpen(false);
+    setSearchQuery("");
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("mbyte_last_tenant", org.slug);
+      } catch {}
+    }
+  };
 
   const filteredOrgs = (publicOrganizations || []).filter((org) => {
     if (!searchQuery.trim()) return true;
@@ -401,7 +431,6 @@ export default function LoginPage() {
                               onChange={(e) => setSearchQuery(e.target.value)}
                               placeholder="Search company name or code..."
                               className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-2.5 py-1.5 pl-8 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#FF6B00]"
-                              autoFocus
                             />
                           </div>
                         </div>
@@ -415,11 +444,11 @@ export default function LoginPage() {
                                 <button
                                   key={org.id}
                                   type="button"
-                                  onClick={() => {
-                                    setSelectedOrg(org);
-                                    setIsDropdownOpen(false);
-                                    setSearchQuery("");
+                                  onPointerDown={(e) => {
+                                    e.preventDefault();
+                                    handleSelectOrg(org);
                                   }}
+                                  onClick={() => handleSelectOrg(org)}
                                   className={cn(
                                     "w-full flex items-center justify-between p-2.5 rounded-lg text-xs transition-colors cursor-pointer text-left",
                                     isSelected
