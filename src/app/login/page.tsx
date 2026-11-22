@@ -164,43 +164,43 @@ export default function LoginPage() {
       </div>
 
       {/* Top Bar */}
-      <header className="relative w-full px-6 py-4 flex items-center justify-between z-10">
+      <header className="relative w-full px-5 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between z-10">
         <div className="flex items-center gap-3">
           <img
             src="/brand/kovelbyte-logo.png"
             alt="Kövelbyte"
-            className="h-8 sm:h-9 w-auto dark:hidden object-contain"
+            className="h-7 sm:h-8 w-auto dark:hidden object-contain"
           />
           <img
             src="/brand/kovelbyte-logo-dark.png"
             alt="Kövelbyte"
-            className="h-8 sm:h-9 w-auto hidden dark:block object-contain"
+            className="h-7 sm:h-8 w-auto hidden dark:block object-contain"
           />
         </div>
-        <ThemeToggle className="border border-white/60 dark:border-white/10 bg-white/70 dark:bg-slate-900/70 shadow-sm backdrop-blur-xl" />
+        <ThemeToggle className="border border-white/60 dark:border-white/10 bg-white/70 dark:bg-slate-900/70 shadow-sm backdrop-blur-xl scale-90 sm:scale-100 origin-right" />
       </header>
 
       {/* Main Content Area */}
-      <main className="relative z-10 flex-1 flex items-center justify-center px-4 py-8 sm:px-6">
-        <div className="w-full max-w-md">
+      <main className="relative z-10 flex-1 flex items-center justify-center px-4 py-1.5 sm:py-3">
+        <div className="w-full max-w-[420px]">
           {/* Brand Logo & Header */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center mb-5 filter drop-shadow-[0_8px_20px_rgba(255,107,0,0.15)]">
-              <MByteLogo variant="full" width={220} height={60} priority />
+          <div className="text-center mb-3 sm:mb-4">
+            <div className="inline-flex items-center justify-center mb-2 sm:mb-2.5 filter drop-shadow-[0_6px_16px_rgba(255,107,0,0.12)]">
+              <MByteLogo variant="full" width={180} height={48} priority />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
               Sign in to FieldOps
             </h1>
-            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               Enter your corporate email and password to access your portal
             </p>
           </div>
 
           {/* Liquid Glass Form Card */}
-          <div className="rounded-3xl border border-white/70 dark:border-white/10 bg-white/75 dark:bg-slate-900/75 backdrop-blur-2xl p-7 sm:p-8 shadow-[0_16px_40px_rgba(0,0,0,0.08)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.4)] transition-all">
+          <div className="rounded-2xl sm:rounded-3xl border border-white/70 dark:border-white/10 bg-white/75 dark:bg-slate-900/75 backdrop-blur-2xl p-5 sm:p-6 shadow-[0_12px_32px_rgba(0,0,0,0.06)] dark:shadow-[0_12px_32px_rgba(0,0,0,0.35)] transition-all">
             {/* Error Message */}
             {errorMsg && (
-              <div className="mb-5 flex items-start gap-2.5 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/30 p-3 text-xs text-rose-700 dark:text-rose-300 animate-fadeIn">
+              <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/30 p-2.5 text-xs text-rose-700 dark:text-rose-300 animate-fadeIn">
                 <AlertCircle className="h-4 w-4 shrink-0 text-rose-600 dark:text-rose-400 mt-0.5" />
                 <div className="flex-1 font-medium">{errorMsg}</div>
               </div>
@@ -208,8 +208,8 @@ export default function LoginPage() {
 
             {/* Multi-Company Selection Mode (if user has access to multiple tenants) */}
             {multiCompanyData ? (
-              <div className="space-y-4">
-                <div className="mb-3">
+              <div className="space-y-3">
+                <div className="mb-2">
                   <h2 className="text-sm font-bold text-slate-900 dark:text-white">
                     Select Your Organization
                   </h2>
@@ -218,17 +218,17 @@ export default function LoginPage() {
                   </p>
                 </div>
 
-                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                   {multiCompanyData.availableCompanies.map((comp) => (
                     <button
                       key={comp.id}
                       type="button"
                       onClick={() => handleSelectCompany(comp.id)}
                       disabled={selectCompanyMutation.isPending}
-                      className="w-full flex items-center justify-between p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40 hover:bg-orange-50/50 dark:hover:bg-slate-800/70 hover:border-orange-300 dark:hover:border-orange-500/50 transition-all text-left cursor-pointer group"
+                      className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40 hover:bg-orange-50/50 dark:hover:bg-slate-800/70 hover:border-orange-300 dark:hover:border-orange-500/50 transition-all text-left cursor-pointer group"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-orange-600 font-bold text-xs uppercase shadow-xs">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-orange-600 font-bold text-xs uppercase shadow-xs">
                           {comp.code?.slice(0, 3) || "ORG"}
                         </div>
                         <div>
@@ -248,16 +248,16 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setMultiCompanyData(null)}
-                  className="w-full text-center text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 pt-2 transition-colors cursor-pointer"
+                  className="w-full text-center text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 pt-1 transition-colors cursor-pointer"
                 >
                   &larr; Back to login
                 </button>
               </div>
             ) : (
               /* Standard Credentials Form */
-              <form onSubmit={handleSubmit} autoComplete="off" className="space-y-4">
+              <form onSubmit={handleSubmit} autoComplete="off" className="space-y-3 sm:space-y-3.5">
                 {/* 1. Email Field */}
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <label
                     htmlFor="login-email"
                     className="block text-xs font-medium text-slate-700 dark:text-slate-300"
@@ -265,7 +265,7 @@ export default function LoginPage() {
                     Email address
                   </label>
                   <div className="relative">
-                    <Mail className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+                    <Mail className="absolute left-3.5 top-2.5 h-4 w-4 text-slate-400" />
                     <input
                       id="login-email"
                       type="email"
@@ -274,13 +274,13 @@ export default function LoginPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="name@company.com"
-                      className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3.5 py-2.5 pl-10 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-[#FF6B00] focus:outline-none focus:ring-4 focus:ring-orange-500/10 transition-all"
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3.5 py-2 pl-10 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-[#FF6B00] focus:outline-none focus:ring-4 focus:ring-orange-500/10 transition-all"
                     />
                   </div>
                 </div>
 
-                {/* 3. Password Field */}
-                <div className="space-y-1.5">
+                {/* 2. Password Field */}
+                <div className="space-y-1">
                   <div className="flex items-center justify-between">
                     <label
                       htmlFor="login-password"
@@ -300,7 +300,7 @@ export default function LoginPage() {
                     </a>
                   </div>
                   <div className="relative">
-                    <Lock className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+                    <Lock className="absolute left-3.5 top-2.5 h-4 w-4 text-slate-400" />
                     <input
                       id="login-password"
                       type={showPassword ? "text" : "password"}
@@ -309,12 +309,12 @@ export default function LoginPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••••••"
-                      className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3.5 py-2.5 pl-10 pr-10 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-[#FF6B00] focus:outline-none focus:ring-4 focus:ring-orange-500/10 transition-all"
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3.5 py-2 pl-10 pr-10 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-[#FF6B00] focus:outline-none focus:ring-4 focus:ring-orange-500/10 transition-all"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-2.5 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none cursor-pointer"
+                      className="absolute right-3 top-2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none cursor-pointer"
                       aria-label={showPassword ? "Hide password" : "Show password"}
                     >
                       {showPassword ? (
@@ -326,8 +326,8 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                {/* 4. Remember Me */}
-                <div className="flex items-center pt-1">
+                {/* 3. Remember Me */}
+                <div className="flex items-center pt-0.5">
                   <label className="flex items-center gap-2 cursor-pointer select-none">
                     <input
                       type="checkbox"
@@ -341,11 +341,11 @@ export default function LoginPage() {
                   </label>
                 </div>
 
-                {/* 5. Submit Button */}
+                {/* 4. Submit Button */}
                 <button
                   type="submit"
                   disabled={loginMutation.isPending}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#FF6B00] hover:bg-[#E85E00] active:scale-[0.99] px-4 py-3 text-xs font-semibold text-white shadow-md shadow-orange-500/20 hover:shadow-lg hover:shadow-orange-500/25 focus:outline-none focus:ring-4 focus:ring-orange-500/20 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#FF6B00] hover:bg-[#E85E00] active:scale-[0.99] px-4 py-2.5 text-xs font-semibold text-white shadow-md shadow-orange-500/20 hover:shadow-lg hover:shadow-orange-500/25 focus:outline-none focus:ring-4 focus:ring-orange-500/20 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
                 >
                   {loginMutation.isPending ? (
                     <>
@@ -360,7 +360,7 @@ export default function LoginPage() {
                   )}
                 </button>
 
-                <div className="pt-2 text-center">
+                <div className="pt-1 text-center">
                   <a
                     href="/admin/login"
                     className="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
@@ -375,9 +375,9 @@ export default function LoginPage() {
       </main>
 
       {/* Subtle, Professional Footer */}
-      <footer className="w-full py-5 text-center text-xs text-slate-400 dark:text-slate-500 border-t border-slate-200/60 dark:border-slate-800/60 z-10">
-        <div className="flex flex-col items-center justify-center gap-1.5 sm:gap-2">
-          <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-3 text-xs text-slate-600 dark:text-slate-400 font-medium">
+      <footer className="w-full py-3.5 pb-4 sm:pb-5 text-center text-xs text-slate-400 dark:text-slate-500 border-t border-slate-200/60 dark:border-slate-800/60 z-10">
+        <div className="flex flex-col items-center justify-center gap-1 sm:gap-1.5">
+          <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2.5 text-xs text-slate-600 dark:text-slate-400 font-medium">
             <span className="font-semibold text-slate-800 dark:text-slate-200">Mediqbyte</span>
             <span className="text-slate-300 dark:text-slate-700">•</span>
             <span>A Product of <strong className="font-semibold text-slate-800 dark:text-slate-200">Kövelbyte</strong></span>
