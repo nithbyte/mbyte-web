@@ -102,13 +102,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (canonicalRole === "SUPER_ADMIN" && pathname === "/") {
       router.replace("/companies");
+    } else if (canonicalRole && canonicalRole !== "SUPER_ADMIN" && pathname.startsWith("/companies")) {
+      router.replace("/");
     }
   }, [canonicalRole, pathname, router]);
 
   const currentSubdomain = typeof window !== "undefined" ? getTenantSubdomain() : null;
-  const userOrgSlug =
-    currentUser?.organization?.slug ||
-    (canonicalRole !== "SUPER_ADMIN" && typeof window !== "undefined" ? window.localStorage.getItem("mbyte_tenant_slug") : null);
 
   useEffect(() => {
     if (canonicalRole === "SUPER_ADMIN" && typeof window !== "undefined") {
@@ -121,22 +120,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       } catch {}
     }
   }, [canonicalRole, currentUser?.organization?.slug]);
-
-  useEffect(() => {
-    // Forward tenant users to their dedicated tenant subdomain portal
-    if (
-      currentUser &&
-      canonicalRole !== "SUPER_ADMIN" &&
-      userOrgSlug &&
-      currentSubdomain !== userOrgSlug &&
-      typeof window !== "undefined"
-    ) {
-      const destination = buildTenantSubdomainUrl(userOrgSlug, pathname);
-      if (window.location.href !== destination) {
-        window.location.href = destination;
-      }
-    }
-  }, [currentUser, canonicalRole, userOrgSlug, currentSubdomain, pathname]);
 
   useEffect(() => {
     // Route Super Admin back to central platform if they are on a tenant subdomain

@@ -91,22 +91,14 @@ export default function LoginPage() {
         } else if (canonicalRole === "MR") {
           targetPath = "/visits";
         } else if (canonicalRole === "ADMIN" || canonicalRole === "TERRITORY_MANAGER") {
-          targetPath = "/field-force";
+          targetPath = "/";
         }
 
         const orgSlug = result.user?.organization?.slug;
-        const currentSubdomain = getTenantSubdomain();
-
-        // Redirect tenant users to their dedicated tenant subdomain portal if applicable
-        if (orgSlug && canonicalRole !== "SUPER_ADMIN" && currentSubdomain !== orgSlug) {
-          if (typeof window !== "undefined") {
-            try {
-              window.localStorage.setItem("mbyte_tenant_slug", orgSlug);
-            } catch {}
-          }
-          const destinationUrl = buildTenantSubdomainUrl(orgSlug, targetPath);
-          window.location.href = destinationUrl;
-          return;
+        if (typeof window !== "undefined" && orgSlug) {
+          try {
+            window.localStorage.setItem("mbyte_tenant_slug", orgSlug);
+          } catch {}
         }
 
         router.push(targetPath);
@@ -136,16 +128,14 @@ export default function LoginPage() {
       } else if (canonicalRole === "MR") {
         targetPath = "/visits";
       } else if (canonicalRole === "ADMIN" || canonicalRole === "TERRITORY_MANAGER") {
-        targetPath = "/field-force";
+        targetPath = "/";
       }
 
       const orgSlug = user.organization?.slug;
-      const currentSubdomain = getTenantSubdomain();
-
-      if (orgSlug && canonicalRole !== "SUPER_ADMIN" && currentSubdomain !== orgSlug) {
-        const destinationUrl = buildTenantSubdomainUrl(orgSlug, targetPath);
-        window.location.href = destinationUrl;
-        return;
+      if (typeof window !== "undefined" && orgSlug) {
+        try {
+          window.localStorage.setItem("mbyte_tenant_slug", orgSlug);
+        } catch {}
       }
 
       router.push(targetPath);

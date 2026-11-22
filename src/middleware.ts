@@ -32,12 +32,11 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // If someone visits /admin, /companies, or /login while on a tenant subdomain, redirect to central platform
+  // If someone visits /admin or /companies while on a tenant subdomain, redirect to central platform
   if (
     subdomain &&
     (request.nextUrl.pathname.startsWith("/admin") ||
-      request.nextUrl.pathname.startsWith("/companies") ||
-      request.nextUrl.pathname === "/login")
+      request.nextUrl.pathname.startsWith("/companies"))
   ) {
     const isLocal = rootHost.includes("localhost") || rootHost.startsWith("127.");
     const protocol = isLocal ? "http:" : "https:";
