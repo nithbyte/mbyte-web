@@ -17,7 +17,7 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
-import { useMRDetails, useCurrentUser, useChangeRole } from "@/hooks";
+import { useMRDetails, useCurrentUser, useChangeRole, useResetPassword } from "@/hooks";
 import { useFilterStore } from "@/store";
 import { analysisService, MrAnalysisData } from "@/services/analysisService";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -53,6 +53,11 @@ import {
   Clock,
   ExternalLink,
   Calendar,
+  KeyRound,
+  Eye,
+  EyeOff,
+  Copy,
+  Check,
 } from "lucide-react";
 
 type DatePreset = "ALL_TIME" | "TODAY" | "7D" | "THIS_MONTH" | "30D" | "CUSTOM";
@@ -106,6 +111,7 @@ export function MRDetailsView({ id }: { id: string }) {
   const canonicalRole = normalizeRole(currentUser?.role);
   const { data, isLoading, refetch: refetchMRDetails } = useMRDetails(id);
   const changeRoleMutation = useChangeRole();
+  const resetPasswordMutation = useResetPassword();
 
   // Role Modal State
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
@@ -113,6 +119,86 @@ export function MRDetailsView({ id }: { id: string }) {
   const [roleModalDesignation, setRoleModalDesignation] = useState("");
   const [roleModalError, setRoleModalError] = useState<string | null>(null);
   const [roleModalSuccess, setRoleModalSuccess] = useState<string | null>(null);
+
+  // Password Reset Modal State
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordModalError, setPasswordModalError] = useState<string | null>(null);
+  const [passwordModalSuccess, setPasswordModalSuccess] = useState<string | null>(null);
+  const [isCopied, setIsCopied] = useState(false);
+
+  const handleOpenPasswordModal = () => {
+    setNewPassword("");
+    setConfirmPassword("");
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
+    setPasswordModalError(null);
+    setPasswordModalSuccess(null);
+    setIsCopied(false);
+    setIsPasswordModalOpen(true);
+  };
+
+  const handleGenerateRandomPassword = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%&*";
+    let pwd = "";
+    for (let i = 0; i < 10; i++) {
+      pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    pwd = pwd + "9!";
+    setNewPassword(pwd);
+    setConfirmPassword(pwd);
+    setShowNewPassword(true);
+    setShowConfirmPassword(true);
+    setPasswordModalError(null);
+  };
+
+  const handleCopyPassword = () => {
+    if (!newPassword) return;
+    navigator.clipboard.writeText(newPassword);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
+  };
+
+  const handleConfirmPasswordReset = async () => {
+    if (!data?.mr) return;
+    setPasswordModalError(null);
+    setPasswordModalSuccess(null);
+
+    if (!newPassword) {
+      setPasswordModalError("Please enter a new password.");
+      return;
+    }
+    if (newPassword.length < 6) {
+      setPasswordModalError("Password must be at least 6 characters long.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordModalError("Passwords do not match. Please verify and try again.");
+      return;
+    }
+
+    try {
+      await resetPasswordMutation.mutateAsync({
+        mrId: data.mr.id,
+        userId: data.mr.userId,
+        password: newPassword,
+      });
+      setPasswordModalSuccess(
+        `Password for ${data.mr.name} has been updated successfully. The user must sign in with this new password.`
+      );
+      setTimeout(() => {
+        setIsPasswordModalOpen(false);
+        setPasswordModalSuccess(null);
+        setNewPassword("");
+        setConfirmPassword("");
+      }, 1600);
+    } catch (err: any) {
+      setPasswordModalError(err?.message || "Failed to reset password. Please try again.");
+    }
+  };
 
   const isCurrentManager = Boolean(
     data?.mr?.role === "MANAGER" ||
@@ -368,27 +454,38 @@ export function MRDetailsView({ id }: { id: string }) {
           actions={
             <div className="flex gap-2">
               {canonicalRole === "ADMIN" && (
-                isCurrentManager ? (
+                <>
+                  {isCurrentManager ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs gap-1.5 border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                      onClick={() => handleOpenRoleModal("MR")}
+                    >
+                      <UserMinus className="h-3.5 w-3.5 text-amber-600" />
+                      <span>Demote to MR</span>
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs gap-1.5 border-amber-300 bg-amber-50/60 text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
+                      onClick={() => handleOpenRoleModal("MANAGER")}
+                    >
+                      <ShieldCheck className="h-3.5 w-3.5 text-amber-600" />
+                      <span>Promote to Manager</span>
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"
                     className="text-xs gap-1.5 border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                    onClick={() => handleOpenRoleModal("MR")}
+                    onClick={handleOpenPasswordModal}
                   >
-                    <UserMinus className="h-3.5 w-3.5 text-amber-600" />
-                    <span>Demote to MR</span>
+                    <KeyRound className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
+                    <span>Change Password</span>
                   </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs gap-1.5 border-amber-300 bg-amber-50/60 text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
-                    onClick={() => handleOpenRoleModal("MANAGER")}
-                  >
-                    <ShieldCheck className="h-3.5 w-3.5 text-amber-600" />
-                    <span>Promote to Manager</span>
-                  </Button>
-                )
+                </>
               )}
               <Button
                 variant="outline"
@@ -1642,6 +1739,175 @@ export function MRDetailsView({ id }: { id: string }) {
                 : targetRole === "MANAGER"
                 ? "Confirm Promotion to Manager"
                 : "Confirm Demotion to MR"}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Password Reset Modal */}
+      <Modal
+        isOpen={isPasswordModalOpen}
+        onClose={() => setIsPasswordModalOpen(false)}
+        title={`Change Password for ${mr.name}`}
+        description={`Set a new account password for this representative (${mr.email}).`}
+        maxWidth="md"
+      >
+        <div className="space-y-4">
+          {passwordModalError && (
+            <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-400 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{passwordModalError}</span>
+            </div>
+          )}
+
+          {passwordModalSuccess && (
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              <span>{passwordModalSuccess}</span>
+            </div>
+          )}
+
+          {/* User info card */}
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/60 space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-500">Representative:</span>
+              <span className="font-bold text-slate-800 dark:text-slate-200">
+                {mr.name} ({mr.employeeId})
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-500">Work Email:</span>
+              <span className="font-mono text-slate-700 dark:text-slate-300 font-medium">
+                {mr.email}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-500">Designation:</span>
+              <span className="font-semibold text-slate-700 dark:text-slate-300">
+                {mr.designation}
+              </span>
+            </div>
+          </div>
+
+          {/* New Password */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                New Password
+              </label>
+              <button
+                type="button"
+                onClick={handleGenerateRandomPassword}
+                className="text-[11px] font-medium text-orange-600 dark:text-orange-400 hover:underline cursor-pointer"
+              >
+                Generate Strong Password
+              </button>
+            </div>
+            <div className="relative">
+              <input
+                type={showNewPassword ? "text" : "password"}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter at least 6 characters"
+                className="h-10 w-full rounded-xl border border-slate-200 px-3 pr-20 text-xs text-slate-900 focus:border-[#FF6B00] focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 font-mono"
+              />
+              <div className="absolute right-2 top-2 flex items-center gap-1">
+                {newPassword && (
+                  <button
+                    type="button"
+                    onClick={handleCopyPassword}
+                    title="Copy password"
+                    className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
+                  >
+                    {isCopied ? (
+                      <Check className="h-4 w-4 text-emerald-500" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
+                >
+                  {showNewPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Confirm Password */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Confirm New Password
+            </label>
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Re-enter new password"
+                className="h-10 w-full rounded-xl border border-slate-200 px-3 pr-10 text-xs text-slate-900 focus:border-[#FF6B00] focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 font-mono"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-2.5 p-0.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
+              >
+                {showConfirmPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
+            </div>
+            {newPassword && confirmPassword && newPassword !== confirmPassword && (
+              <p className="text-[11px] text-rose-500 mt-1">
+                Passwords do not match.
+              </p>
+            )}
+          </div>
+
+          {/* Security Notice */}
+          <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300 space-y-1">
+            <p className="font-semibold">Security Notice:</p>
+            <p className="text-[11px] leading-relaxed">
+              Updating this user&apos;s password will immediately invalidate any active mobile app or web sessions for this account. The representative must use this new password on their next login.
+            </p>
+          </div>
+
+          {/* Modal Actions */}
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setIsPasswordModalOpen(false)}
+              disabled={resetPasswordMutation.isPending}
+              className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirmPasswordReset}
+              disabled={resetPasswordMutation.isPending}
+              className="rounded-xl bg-[#FF6B00] hover:bg-[#E85E00] px-4 py-2 text-xs font-semibold text-white transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shadow-sm"
+            >
+              {resetPasswordMutation.isPending ? (
+                <>
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  <span>Updating Password...</span>
+                </>
+              ) : (
+                <>
+                  <KeyRound className="h-3.5 w-3.5" />
+                  <span>Update Password</span>
+                </>
+              )}
             </button>
           </div>
         </div>

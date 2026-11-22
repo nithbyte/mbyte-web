@@ -162,3 +162,18 @@ export function useUpdateUserStatus() {
     },
   });
 }
+
+export function useResetPassword() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { mrId?: string; userId?: string; password: string }) =>
+      fieldForceService.resetPassword(params),
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["mr-list"] });
+      if (vars.mrId) {
+        queryClient.invalidateQueries({ queryKey: ["mr-details", vars.mrId] });
+      }
+    },
+  });
+}

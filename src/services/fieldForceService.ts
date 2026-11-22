@@ -1020,4 +1020,29 @@ export const fieldForceService = {
       return { success: true, status };
     }
   },
+
+  async resetPassword(params: { mrId?: string; userId?: string; password: string }): Promise<any> {
+    const payload = { password: params.password };
+    const targetId = params.userId || params.mrId;
+    if (!targetId) throw new Error("Target user ID or MR ID is required");
+
+    try {
+      if (params.userId) {
+        return await apiClient.patch<any>(`/users/${params.userId}/reset-password`, payload);
+      } else {
+        return await apiClient.patch<any>(`/mrs/${params.mrId}/reset-password`, payload);
+      }
+    } catch (err: any) {
+      if (params.mrId && params.userId) {
+        try {
+          return await apiClient.patch<any>(`/mrs/${params.mrId}/reset-password`, payload);
+        } catch {}
+      }
+      if (!isMockFallbackAllowed()) {
+        throw err;
+      }
+      console.warn("Backend resetPassword failed, mock mode:", err);
+      return { success: true, message: "Password updated successfully" };
+    }
+  },
 };
