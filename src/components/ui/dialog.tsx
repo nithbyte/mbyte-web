@@ -50,13 +50,13 @@ export function Modal({
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Backdrop */}
+          {/* Backdrop: plain subtle background with slight blur */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"
+            className="fixed inset-0 bg-slate-900/15 backdrop-blur-sm dark:bg-black/40"
             onClick={onClose}
           />
 
@@ -70,7 +70,7 @@ export function Modal({
             exit={{ opacity: 0, scale: 0.94, y: 14 }}
             transition={{ type: "spring", damping: 25, stiffness: 350 }}
             className={cn(
-              "relative flex flex-col w-full rounded-2xl border border-white/80 bg-white/95 shadow-2xl backdrop-blur-3xl max-h-[85vh] my-auto dark:border-white/10 dark:bg-[#121620]/95 text-slate-900 dark:text-[#F5F3EE] overflow-hidden",
+              "relative flex flex-col w-full rounded-2xl border border-slate-200/80 bg-white shadow-2xl backdrop-blur-md max-h-[85vh] my-auto dark:border-white/10 dark:bg-[#121620] text-slate-900 dark:text-[#F5F3EE] overflow-hidden",
               widthClasses[maxWidth],
               className
             )}

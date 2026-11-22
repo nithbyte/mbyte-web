@@ -1101,7 +1101,7 @@ export default function ChatPage() {
             setIsNewChatModalOpen(false);
             setIsGroupMode(false);
           }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/15 backdrop-blur-sm dark:bg-black/40 p-4 animate-in fade-in"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -1300,7 +1300,7 @@ export default function ChatPage() {
           role="dialog"
           aria-modal="true"
           onClick={() => setIsAnnouncementModalOpen(false)}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/15 backdrop-blur-sm dark:bg-black/40 p-4 animate-in fade-in"
         >
           <div
             onClick={(e) => e.stopPropagation()}
