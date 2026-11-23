@@ -46,7 +46,7 @@ import {
   ShieldCheck,
   AlertTriangle,
   Clock,
-  DollarSign,
+  IndianRupee,
   PlusCircle,
   FileText,
   Building,
@@ -279,7 +279,7 @@ export default function ReceivablesPage() {
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Total Outstanding AR
               </span>
-              <DollarSign className="h-4 w-4 text-blue-500" />
+              <IndianRupee className="h-4 w-4 text-blue-500" />
             </div>
             <CardTitle className="text-2xl font-bold">
               {loading ? (
