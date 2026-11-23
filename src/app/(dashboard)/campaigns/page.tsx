@@ -538,11 +538,11 @@ export default function CampaignsPage() {
                 )}
               </div>
               {mrList.length > 0 && (
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-2 mb-3 w-full">
                   <select
                     value={enrollMrId}
                     onChange={(e) => setEnrollMrId(e.target.value)}
-                    className="flex-1 text-xs bg-background border border-input rounded-md px-2.5 py-1.5"
+                    className="flex-1 min-w-0 text-xs bg-background border border-input rounded-md px-2.5 py-1.5 truncate"
                   >
                     <option value="">Select an MR to enroll...</option>
                     {mrList.map((m) => (
@@ -556,7 +556,7 @@ export default function CampaignsPage() {
                     size="sm"
                     disabled={!enrollMrId || isEnrolling}
                     onClick={() => handleEnrollParticipants([enrollMrId])}
-                    className="h-8 text-xs"
+                    className="h-8 text-xs shrink-0 whitespace-nowrap"
                   >
                     Enroll
                   </Button>

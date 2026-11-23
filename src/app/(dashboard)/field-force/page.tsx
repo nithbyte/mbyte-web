@@ -1463,7 +1463,7 @@ export default function FieldForcePage() {
         onClose={() => setIsAssignTerritoryOpen(false)}
         title="Multi-Territory Assignment & Governance"
         description={`Manage primary and secondary authorized operational sales territories for ${selectedRepForTerritory?.name}.`}
-        maxWidth="lg"
+        maxWidth="xl"
       >
         <div className="space-y-4">
           {territoryAssignError && (
@@ -1598,15 +1598,15 @@ export default function FieldForcePage() {
           </div>
 
           {/* Add Additional Territory Section */}
-          <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-3 bg-slate-50/50 dark:bg-slate-900/40">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-3 bg-slate-50/50 dark:bg-slate-900/40 overflow-hidden">
             <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-2">
               Add Authorized Territory
             </label>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full">
               <select
                 value={additionalTerritoryId}
                 onChange={(e) => setAdditionalTerritoryId(e.target.value)}
-                className="h-9 flex-1 rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 font-semibold"
+                className="h-9 flex-1 min-w-0 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 font-semibold truncate"
               >
                 <option value="">Select territory to add…</option>
                 {territories
@@ -1626,7 +1626,7 @@ export default function FieldForcePage() {
                 type="button"
                 onClick={handleAddAdditionalTerritory}
                 disabled={!additionalTerritoryId || assignTerritoriesMutation.isPending}
-                className="h-9 bg-sky-600 hover:bg-sky-500 text-white text-xs gap-1 cursor-pointer"
+                className="h-9 shrink-0 whitespace-nowrap bg-sky-600 hover:bg-sky-500 text-white text-xs gap-1 cursor-pointer px-3.5"
               >
                 <Plus className="h-3.5 w-3.5" />
                 <span>{assignTerritoriesMutation.isPending ? "Adding..." : "Add Territory"}</span>
@@ -1640,11 +1640,11 @@ export default function FieldForcePage() {
               <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-1.5">
                 Reporting Manager
               </label>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full">
                 <select
                   value={targetManagerId}
                   onChange={(e) => setTargetManagerId(e.target.value)}
-                  className="h-9 flex-1 rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 font-semibold"
+                  className="h-9 flex-1 min-w-0 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 font-semibold truncate"
                 >
                   <option value="">None / Direct Company Reporting</option>
                   {managers?.map((m: any) => (
@@ -1658,7 +1658,7 @@ export default function FieldForcePage() {
                   variant="outline"
                   onClick={handleUpdateManager}
                   disabled={updateTerritoryMutation.isPending}
-                  className="h-9 text-xs cursor-pointer"
+                  className="h-9 shrink-0 whitespace-nowrap text-xs cursor-pointer px-3.5"
                 >
                   <span>{updateTerritoryMutation.isPending ? "Updating..." : "Update Manager"}</span>
                 </Button>
