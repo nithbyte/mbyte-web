@@ -94,7 +94,11 @@ export default function LoginPage() {
           targetPath = "/";
         }
 
-        const orgSlug = result.user?.organization?.slug;
+        const orgSlug =
+          result.user?.organization?.slug ||
+          (result.user?.organizationName
+            ? result.user.organizationName.toLowerCase().replace(/[^a-z0-9]/g, "")
+            : null);
         const currentSubdomain = getTenantSubdomain();
 
         if (typeof window !== "undefined" && orgSlug) {
@@ -140,7 +144,13 @@ export default function LoginPage() {
         targetPath = "/";
       }
 
-      const orgSlug = user.organization?.slug;
+      const selectedCompany = multiCompanyData.availableCompanies.find((c) => c.id === companyId);
+      const orgSlug =
+        user.organization?.slug ||
+        selectedCompany?.slug ||
+        (user.organizationName
+          ? user.organizationName.toLowerCase().replace(/[^a-z0-9]/g, "")
+          : null);
       const currentSubdomain = getTenantSubdomain();
 
       if (typeof window !== "undefined" && orgSlug) {

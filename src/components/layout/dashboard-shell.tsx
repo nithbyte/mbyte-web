@@ -110,6 +110,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const currentSubdomain = typeof window !== "undefined" ? getTenantSubdomain() : null;
   const userOrgSlug =
     currentUser?.organization?.slug ||
+    (currentUser?.organizationName
+      ? currentUser.organizationName.toLowerCase().replace(/[^a-z0-9]/g, "")
+      : null) ||
     (canonicalRole !== "SUPER_ADMIN" && typeof window !== "undefined" ? window.localStorage.getItem("mbyte_tenant_slug") : null);
 
   useEffect(() => {
@@ -117,12 +120,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       try {
         window.localStorage.removeItem("mbyte_tenant_slug");
       } catch {}
-    } else if (currentUser?.organization?.slug && typeof window !== "undefined") {
+    } else if ((currentUser?.organization?.slug || userOrgSlug) && typeof window !== "undefined") {
       try {
-        window.localStorage.setItem("mbyte_tenant_slug", currentUser.organization.slug);
+        window.localStorage.setItem("mbyte_tenant_slug", currentUser?.organization?.slug || userOrgSlug || "");
       } catch {}
     }
-  }, [canonicalRole, currentUser?.organization?.slug]);
+  }, [canonicalRole, currentUser?.organization?.slug, userOrgSlug]);
 
   useEffect(() => {
     // Forward tenant users to their dedicated tenant subdomain portal if on root platform domain
@@ -220,7 +223,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 </p>
                 <div className="mt-4">
                   <Link
-                    href="/"
+                    href={userOrgSlug ? buildTenantSubdomainUrl(userOrgSlug, "/") : "/"}
                     className="inline-flex items-center gap-1.5 rounded-xl bg-purple-600 px-4 py-2 text-xs font-semibold text-white hover:bg-purple-500 transition-colors"
                   >
                     <ArrowLeft className="h-3.5 w-3.5" />

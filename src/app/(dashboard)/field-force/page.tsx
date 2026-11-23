@@ -1598,30 +1598,32 @@ export default function FieldForcePage() {
           </div>
 
           {/* Add Additional Territory Section */}
-          <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-3 bg-slate-50/50 dark:bg-slate-900/40 overflow-hidden">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-3 bg-slate-50/50 dark:bg-slate-900/40">
             <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-2">
               Add Authorized Territory
             </label>
-            <div className="flex items-center gap-2 w-full">
-              <select
-                value={additionalTerritoryId}
-                onChange={(e) => setAdditionalTerritoryId(e.target.value)}
-                className="h-9 flex-1 min-w-0 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 font-semibold truncate"
-              >
-                <option value="">Select territory to add…</option>
-                {territories
-                  ?.filter(
-                    (t: any) =>
-                      !repTerritories?.some(
-                        (a: any) => a.territoryId === t.id && a.status === "ACTIVE"
-                      )
-                  )
-                  .map((t: any) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name} ({t.code}) {t.region ? `— ${t.region}` : ""}
-                    </option>
-                  ))}
-              </select>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 min-w-0">
+                <select
+                  value={additionalTerritoryId}
+                  onChange={(e) => setAdditionalTerritoryId(e.target.value)}
+                  className="h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 font-semibold truncate"
+                >
+                  <option value="">Select territory to add…</option>
+                  {territories
+                    ?.filter(
+                      (t: any) =>
+                        !repTerritories?.some(
+                          (a: any) => a.territoryId === t.id && a.status === "ACTIVE"
+                        )
+                    )
+                    .map((t: any) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name} ({t.code}) {t.region ? `— ${t.region}` : ""}
+                      </option>
+                    ))}
+                </select>
+              </div>
               <Button
                 type="button"
                 onClick={handleAddAdditionalTerritory}
@@ -1640,19 +1642,21 @@ export default function FieldForcePage() {
               <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-1.5">
                 Reporting Manager
               </label>
-              <div className="flex items-center gap-2 w-full">
-                <select
-                  value={targetManagerId}
-                  onChange={(e) => setTargetManagerId(e.target.value)}
-                  className="h-9 flex-1 min-w-0 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 font-semibold truncate"
-                >
-                  <option value="">None / Direct Company Reporting</option>
-                  {managers?.map((m: any) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
-                  ))}
-                </select>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 min-w-0">
+                  <select
+                    value={targetManagerId}
+                    onChange={(e) => setTargetManagerId(e.target.value)}
+                    className="h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 font-semibold truncate"
+                  >
+                    <option value="">None / Direct Company Reporting</option>
+                    {managers?.map((m: any) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <Button
                   type="button"
                   variant="outline"
