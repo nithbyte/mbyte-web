@@ -18,6 +18,7 @@ import { useLogin } from "@/hooks";
 import { normalizeRole } from "@/types";
 import { MByteLogo } from "@/components/ui/mbyte-logo";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { tokenStorage } from "@/lib/api-client";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -29,19 +30,26 @@ export default function AdminLoginPage() {
   const [rememberMe, setRememberMe] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Automatically enforce canonical mediqbyte.com domain if accessed via a tenant subdomain
+  // If already authenticated as super admin or admin, redirect to platform console
   useEffect(() => {
-    if (
-      typeof window !== "undefined" &&
-      window.location.hostname !== "localhost" &&
-      !window.location.hostname.startsWith("127.") &&
-      window.location.hostname !== "mediqbyte.com" &&
-      window.location.hostname !== "www.mediqbyte.com" &&
-      window.location.hostname.endsWith("mediqbyte.com")
-    ) {
-      window.location.href = `https://mediqbyte.com/admin/login`;
+    if (typeof window !== "undefined") {
+      const token = tokenStorage.getAccessToken();
+      if (token) {
+        router.replace("/companies");
+        return;
+      }
+
+      if (
+        window.location.hostname !== "localhost" &&
+        !window.location.hostname.startsWith("127.") &&
+        window.location.hostname !== "mediqbyte.com" &&
+        window.location.hostname !== "www.mediqbyte.com" &&
+        window.location.hostname.endsWith("mediqbyte.com")
+      ) {
+        window.location.replace(`https://mediqbyte.com/admin/login`);
+      }
     }
-  }, []);
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,7 +79,7 @@ export default function AdminLoginPage() {
           return;
         }
 
-        router.push("/companies");
+        router.replace("/companies");
       }
     } catch (err: any) {
       setErrorMsg(

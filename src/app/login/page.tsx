@@ -16,6 +16,7 @@ import { normalizeRole } from "@/types";
 import { MByteLogo } from "@/components/ui/mbyte-logo";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { getTenantSubdomain, buildTenantSubdomainUrl, getRootDomain } from "@/lib/subdomain";
+import { tokenStorage } from "@/lib/api-client";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -42,19 +43,32 @@ export default function LoginPage() {
     }>;
   } | null>(null);
 
-  // Redirect to canonical root domain if accessed directly on a tenant subdomain
+  // Redirect to canonical root domain if accessed directly on a tenant subdomain, or redirect to dashboard if already authenticated
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const subdomain = getTenantSubdomain();
-      if (subdomain) {
+      const token = tokenStorage.getAccessToken();
+      const currentSubdomain = getTenantSubdomain();
+
+      // If user is already authenticated, immediately route them to dashboard instead of showing login
+      if (token) {
+        const storedSlug = window.localStorage.getItem("mbyte_tenant_slug");
+        if (storedSlug && !currentSubdomain) {
+          window.location.replace(buildTenantSubdomainUrl(storedSlug, "/"));
+        } else {
+          router.replace("/");
+        }
+        return;
+      }
+
+      if (currentSubdomain) {
         const rootDomain = getRootDomain();
         const rootHost = rootDomain.split(":")[0];
         const isLocal = rootHost.includes("localhost") || rootHost.startsWith("127.");
         const protocol = isLocal ? "http:" : "https:";
-        window.location.href = `${protocol}//${rootDomain}/login?tenant=${encodeURIComponent(subdomain)}`;
+        window.location.replace(`${protocol}//${rootDomain}/login?tenant=${encodeURIComponent(currentSubdomain)}`);
       }
     }
-  }, []);
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,11 +124,11 @@ export default function LoginPage() {
         // Redirect tenant users to their dedicated tenant subdomain portal
         if (orgSlug && canonicalRole !== "SUPER_ADMIN" && currentSubdomain !== orgSlug) {
           const destinationUrl = buildTenantSubdomainUrl(orgSlug, targetPath);
-          window.location.href = destinationUrl;
+          window.location.replace(destinationUrl);
           return;
         }
 
-        router.push(targetPath);
+        router.replace(targetPath);
       }
     } catch (err: any) {
       setErrorMsg(
@@ -162,11 +176,11 @@ export default function LoginPage() {
       // Redirect tenant users to their dedicated tenant subdomain portal
       if (orgSlug && canonicalRole !== "SUPER_ADMIN" && currentSubdomain !== orgSlug) {
         const destinationUrl = buildTenantSubdomainUrl(orgSlug, targetPath);
-        window.location.href = destinationUrl;
+        window.location.replace(destinationUrl);
         return;
       }
 
-      router.push(targetPath);
+      router.replace(targetPath);
     } catch (err: any) {
       setErrorMsg(err?.message || "Failed to establish tenant session.");
     }

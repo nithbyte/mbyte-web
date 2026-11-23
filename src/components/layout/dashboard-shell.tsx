@@ -90,9 +90,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     // If no token exists, redirect to appropriate portal login
     if (!token && !isLoading) {
       if (pathname.startsWith("/companies") || pathname.startsWith("/admin")) {
-        router.push("/admin/login");
+        router.replace("/admin/login");
       } else {
-        router.push("/login");
+        router.replace("/login");
       }
     } else {
       setAuthChecked(true);
