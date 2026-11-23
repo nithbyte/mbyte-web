@@ -1598,16 +1598,16 @@ export default function FieldForcePage() {
           </div>
 
           {/* Add Additional Territory Section */}
-          <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-3 bg-slate-50/50 dark:bg-slate-900/40">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-3 bg-slate-50/50 dark:bg-slate-900/40 overflow-hidden">
             <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-2">
               Add Authorized Territory
             </label>
-            <div className="flex items-center gap-2">
-              <div className="flex-1 min-w-0">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+              <div className="flex-1 min-w-0 w-full">
                 <select
                   value={additionalTerritoryId}
                   onChange={(e) => setAdditionalTerritoryId(e.target.value)}
-                  className="h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 font-semibold truncate"
+                  className="h-9 w-full max-w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-900 focus:border-sky-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 font-semibold truncate"
                 >
                   <option value="">Select territory to add…</option>
                   {territories
@@ -1628,7 +1628,7 @@ export default function FieldForcePage() {
                 type="button"
                 onClick={handleAddAdditionalTerritory}
                 disabled={!additionalTerritoryId || assignTerritoriesMutation.isPending}
-                className="h-9 shrink-0 whitespace-nowrap bg-sky-600 hover:bg-sky-500 text-white text-xs gap-1 cursor-pointer px-3.5"
+                className="h-9 shrink-0 whitespace-nowrap bg-sky-600 hover:bg-sky-500 text-white text-xs gap-1 cursor-pointer px-4 font-semibold"
               >
                 <Plus className="h-3.5 w-3.5" />
                 <span>{assignTerritoriesMutation.isPending ? "Adding..." : "Add Territory"}</span>
