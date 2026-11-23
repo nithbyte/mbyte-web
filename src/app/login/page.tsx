@@ -49,10 +49,24 @@ export default function LoginPage() {
       const token = tokenStorage.getAccessToken();
       const currentSubdomain = getTenantSubdomain();
 
-      // If user is already authenticated, immediately route them to dashboard instead of showing login
+      // If user is already authenticated, route them to dashboard
       if (token) {
         const storedSlug = window.localStorage.getItem("mbyte_tenant_slug");
+        // Only auto-redirect to tenant subdomain if we're ALREADY on the root domain
+        // AND the stored slug doesn't match a super-admin session (super admins have no slug)
         if (storedSlug && !currentSubdomain) {
+          // Safety: don't redirect if slug looks like a superadmin session leftover
+          // Check the Zustand-persisted user role before blindly redirecting
+          try {
+            const authStore = window.localStorage.getItem("mbyte_auth_user");
+            const parsed = authStore ? JSON.parse(authStore) : null;
+            const persistedRole = parsed?.state?.user?.role;
+            if (persistedRole === "SUPER_ADMIN") {
+              // Superadmin has no tenant subdomain — just go to dashboard
+              router.replace("/");
+              return;
+            }
+          } catch {}
           window.location.replace(buildTenantSubdomainUrl(storedSlug, "/"));
         } else {
           router.replace("/");
@@ -60,6 +74,7 @@ export default function LoginPage() {
         return;
       }
 
+      // If landed on a tenant subdomain without auth, redirect to root login with tenant hint
       if (currentSubdomain) {
         const rootDomain = getRootDomain();
         const rootHost = rootDomain.split(":")[0];

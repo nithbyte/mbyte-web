@@ -395,7 +395,16 @@ export const authService = {
     } catch {}
     if (typeof window !== "undefined") {
       try {
-        window.localStorage.clear();
+        // Surgically remove only auth-related keys — do NOT call localStorage.clear()
+        // which would nuke Zustand persist and cause stale-read redirect loops
+        const authKeys = [
+          "mbyte_auth_user",
+          "mbyte_tenant_slug",
+          "mbyte_selected_org_id",
+        ];
+        authKeys.forEach((k) => {
+          try { window.localStorage.removeItem(k); } catch {}
+        });
         window.sessionStorage.clear();
         const rootDomain = getRootDomain();
         const rootHost = rootDomain.split(":")[0];

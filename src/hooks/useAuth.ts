@@ -120,21 +120,23 @@ export function useLogout() {
   return useMutation({
     mutationFn: () => authService.logout(),
     onMutate: async () => {
-      // Stop in-flight queries before tokens are cleared to prevent post-logout 401s
-      logout();
+      // Cancel in-flight queries before tokens are cleared to prevent post-logout 401s
       await queryClient.cancelQueries();
     },
     onSettled: () => {
       // Clear all cached data and territory filters on logout
       queryClient.clear();
       useFilterStore.getState().setSelectedTerritoryId("ALL");
+      // Logout store once (authService.logout already did it too, deduplicate)
       logout();
       if (typeof window !== "undefined") {
+        // Always redirect to root domain login — never to a tenant subdomain
         const rootDomain = getRootDomain();
         const rootHost = rootDomain.split(":")[0];
         const isLocal = rootHost.includes("localhost") || rootHost.startsWith("127.");
         const protocol = isLocal ? "http:" : "https:";
-        window.location.href = `${protocol}//${rootDomain}/login`;
+        // Use the root host directly, not whatever getRootDomain() returns when on a subdomain
+        window.location.replace(`${protocol}//${rootHost}${isLocal ? `:${rootDomain.split(":")[1] || "3000"}` : ""}/login`);
       }
     },
   });
