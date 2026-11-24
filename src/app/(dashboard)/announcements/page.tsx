@@ -64,12 +64,15 @@ export default function AnnouncementsPage() {
   const fetchAnnouncements = async () => {
     setIsLoading(true);
     try {
+      const orgId = (user as any)?.organizationId;
       const res = await chatService.getAnnouncements({
         search: searchQuery.trim() || undefined,
         limit: 50,
+        ...(orgId ? { organizationId: orgId } : {}),
       });
-      setAnnouncements(res?.items || []);
-      setTotalCount(res?.total || 0);
+      const items = res?.items || (Array.isArray(res) ? res : []);
+      setAnnouncements(items);
+      setTotalCount(typeof res?.total === "number" ? res.total : items.length);
     } catch (err: any) {
       console.error("Failed to load announcements:", err);
     } finally {
@@ -79,7 +82,7 @@ export default function AnnouncementsPage() {
 
   useEffect(() => {
     fetchAnnouncements();
-  }, [searchQuery]);
+  }, [searchQuery, user?.id, (user as any)?.organizationId]);
 
   // Handle Create Announcement
   const handleCreateAnnouncement = async (e: React.FormEvent) => {
@@ -93,12 +96,14 @@ export default function AnnouncementsPage() {
     setStatusMessage(null);
 
     try {
+      const orgId = (user as any)?.organizationId;
       await chatService.postAnnouncement({
         title: formTitle.trim(),
         content: formContent.trim(),
         priority: formPriority,
         targetRole: formTargetRole,
         sendNotification: formSendPush,
+        ...(orgId ? { organizationId: orgId } : {}),
       });
 
       setStatusMessage({

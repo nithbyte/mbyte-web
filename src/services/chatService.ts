@@ -332,7 +332,14 @@ export const chatService = {
   }): Promise<AnnouncementsResponse> {
     try {
       const res = await apiClient.get<any>("/chat/announcements", { params });
-      return res?.data || res || { items: [], total: 0, limit: 50, offset: 0 };
+      const payload = res?.data?.items ? res.data : (res?.items ? res : (res?.data ?? res));
+      if (payload && Array.isArray(payload.items)) {
+        return payload;
+      }
+      if (Array.isArray(payload)) {
+        return { items: payload, total: payload.length, limit: params?.limit || 50, offset: params?.offset || 0 };
+      }
+      return { items: [], total: 0, limit: 50, offset: 0 };
     } catch (err: any) {
       console.warn("getAnnouncements error:", err);
       return { items: [], total: 0, limit: 50, offset: 0 };
