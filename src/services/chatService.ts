@@ -8,6 +8,8 @@ import {
   CallType,
   CallStatus,
   CreateAnnouncementInput,
+  AnnouncementItem,
+  AnnouncementsResponse,
 } from "@/types/chat";
 
 // Live directory cache
@@ -316,6 +318,32 @@ export const chatService = {
    */
   async postAnnouncement(payload: CreateAnnouncementInput): Promise<any> {
     const res = await apiClient.post<any>("/chat/announcements", payload);
+    return res?.data || res;
+  },
+
+  /**
+   * Get list of historical announcements
+   */
+  async getAnnouncements(params?: {
+    search?: string;
+    limit?: number;
+    offset?: number;
+    organizationId?: string;
+  }): Promise<AnnouncementsResponse> {
+    try {
+      const res = await apiClient.get<any>("/chat/announcements", { params });
+      return res?.data || res || { items: [], total: 0, limit: 50, offset: 0 };
+    } catch (err: any) {
+      console.warn("getAnnouncements error:", err);
+      return { items: [], total: 0, limit: 50, offset: 0 };
+    }
+  },
+
+  /**
+   * Delete or archive an announcement
+   */
+  async deleteAnnouncement(id: string): Promise<any> {
+    const res = await apiClient.delete<any>(`/chat/announcements/${id}`);
     return res?.data || res;
   },
 

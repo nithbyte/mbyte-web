@@ -98,11 +98,40 @@ export interface ColleagueContact {
   organizationName?: string | null;
 }
 
+export type AnnouncementPriority = 'NORMAL' | 'HIGH' | 'URGENT' | 'POLICY';
+export type AnnouncementTargetRole = 'ALL' | 'MR' | 'MANAGER';
+
 export interface CreateAnnouncementInput {
   title: string;
   content: string;
   organizationId?: string;
-  priority?: 'NORMAL' | 'HIGH' | 'URGENT' | 'POLICY';
+  priority?: AnnouncementPriority;
+  targetRole?: AnnouncementTargetRole;
   sendNotification?: boolean;
+}
+
+export interface AnnouncementItem {
+  id: string;
+  conversationId: string;
+  organizationId?: string;
+  title: string;
+  body: string;
+  priority: AnnouncementPriority;
+  rawContent: string;
+  sender?: {
+    id: string;
+    name: string;
+    email: string;
+    avatarUrl?: string;
+  } | null;
+  recipientsCount: number;
+  createdAt: string;
+}
+
+export interface AnnouncementsResponse {
+  items: AnnouncementItem[];
+  total: number;
+  limit: number;
+  offset: number;
 }
 

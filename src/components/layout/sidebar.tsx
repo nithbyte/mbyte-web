@@ -34,6 +34,7 @@ import {
   GraduationCap,
   ClipboardList,
   MessageSquare,
+  Megaphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebarStore, useAuthStore } from "@/store";
@@ -80,6 +81,11 @@ function getRawNavSections(role: CanonicalRole): NavSection[] {
               title: "Team Chat & Calls",
               href: "/chat",
               icon: MessageSquare,
+            },
+            {
+              title: "Announcements",
+              href: "/announcements",
+              icon: Megaphone,
             },
           ],
         },
@@ -246,6 +252,12 @@ function getRawNavSections(role: CanonicalRole): NavSection[] {
               icon: MessageSquare,
               badge: "LIVE",
               badgeVariant: "live",
+              featureKey: "chatAndCalling",
+            },
+            {
+              title: "Announcements",
+              href: "/announcements",
+              icon: Megaphone,
               featureKey: "chatAndCalling",
             },
             {
@@ -431,6 +443,12 @@ function getRawNavSections(role: CanonicalRole): NavSection[] {
               featureKey: "chatAndCalling",
             },
             {
+              title: "Announcements",
+              href: "/announcements",
+              icon: Megaphone,
+              featureKey: "chatAndCalling",
+            },
+            {
               title: "Shift Attendance",
               href: "/attendance",
               icon: Clock,
@@ -481,6 +499,12 @@ function getRawNavSections(role: CanonicalRole): NavSection[] {
               icon: MessageSquare,
               badge: "LIVE",
               badgeVariant: "live",
+              featureKey: "chatAndCalling",
+            },
+            {
+              title: "Announcements",
+              href: "/announcements",
+              icon: Megaphone,
               featureKey: "chatAndCalling",
             },
             {
