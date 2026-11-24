@@ -125,7 +125,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDemo }) => {
         <a
           href="#"
           onClick={(e) => handleLinkClick(e, "top")}
-          className="flex items-center gap-3.5 group cursor-pointer"
+          className="flex items-center group cursor-pointer"
         >
           <div className="relative flex items-center justify-center">
             <img
@@ -134,9 +134,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDemo }) => {
               className="h-11 sm:h-12 md:h-14 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
             />
           </div>
-          <span className="hidden sm:inline-block text-[11px] font-semibold tracking-wider text-[#FF6B00] uppercase bg-[#FF6B00]/10 px-2.5 py-1 rounded-full border border-[#FF6B00]/20 leading-none">
-            FieldOps 2.0
-          </span>
         </a>
 
         {/* Desktop Navigation Links */}
