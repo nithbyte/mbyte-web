@@ -110,28 +110,28 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDemo }) => {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled
-        ? "!bg-[#05070B]/85 backdrop-blur-2xl !border-b !border-white/[0.08] py-3 shadow-2xl shadow-black/60"
-        : "!bg-transparent !border-b-0 py-5"
+      className={`fixed top-0 left-0 right-0 w-full max-w-[100vw] z-50 transition-all duration-300 overflow-x-hidden ${isScrolled
+        ? "!bg-[#05070B]/85 backdrop-blur-2xl !border-b !border-white/[0.08] py-2.5 sm:py-3 shadow-2xl shadow-black/60"
+        : "!bg-[#05070B]/40 lg:!bg-transparent backdrop-blur-md lg:backdrop-blur-none !border-b !border-white/[0.04] lg:!border-b-0 py-3 sm:py-5"
         }`}
       style={{
-        backgroundColor: isScrolled ? "rgba(5, 7, 11, 0.85)" : "transparent",
-        borderBottom: isScrolled ? "1px solid rgba(255, 255, 255, 0.08)" : "none",
+        backgroundColor: isScrolled ? "rgba(5, 7, 11, 0.85)" : undefined,
+        borderBottom: isScrolled ? "1px solid rgba(255, 255, 255, 0.08)" : undefined,
         boxShadow: isScrolled ? "0 25px 50px -12px rgba(0, 0, 0, 0.6)" : "none",
       }}
     >
-      <div className="max-w-7xl mx-auto px-6 sm:px-8 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between w-full">
         {/* Brand Logo */}
         <a
           href="#"
           onClick={(e) => handleLinkClick(e, "top")}
-          className="flex items-center group cursor-pointer"
+          className="flex items-center group cursor-pointer shrink-0"
         >
           <div className="relative flex items-center justify-center">
             <img
               src="/logo-dark.png"
               alt="Mediqbyte Logo"
-              className="h-11 sm:h-12 md:h-14 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+              className="h-9 sm:h-12 md:h-14 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
             />
           </div>
         </a>
@@ -160,7 +160,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDemo }) => {
         </nav>
 
         {/* Right Actions & Kovelbyte Brand */}
-        <div className="flex items-center gap-2.5 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
           {/* Desktop CTA Actions */}
           <div className="hidden lg:flex items-center gap-2.5">
             {onOpenDemo && (
@@ -188,13 +188,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDemo }) => {
             href="https://kovelbyte.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center pl-2 sm:pl-3.5 lg:border-l lg:border-white/10 group cursor-pointer"
+            className="flex items-center pl-1.5 sm:pl-3.5 border-l border-white/10 group cursor-pointer"
             title="Kövelbyte"
           >
             <img
               src="/brand/kovelbyte-logo-dark.png"
               alt="Kövelbyte"
-              className="h-6 sm:h-7 md:h-8 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+              className="h-5 sm:h-7 md:h-8 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
               onError={(e) => {
                 (e.currentTarget as HTMLImageElement).src = "/kovelbyte-logo-dark.png";
               }}
@@ -205,9 +205,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDemo }) => {
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
-            className="lg:hidden p-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
+            className="lg:hidden p-1.5 sm:p-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
           >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            {mobileMenuOpen ? <X className="w-5 h-5 sm:w-6 sm:h-6" /> : <Menu className="w-5 h-5 sm:w-6 sm:h-6" />}
           </button>
         </div>
       </div>

@@ -8,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
-  return <LandingPage />;
+  return (
+    <div className="bg-[#05070B] min-h-screen w-full max-w-full overflow-x-hidden">
+      <LandingPage />
+    </div>
+  );
 }

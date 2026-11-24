@@ -45,7 +45,7 @@ export const Hero: React.FC<HeroProps> = ({ onExploreDevice, onRequestDemo }) =>
         <div className="absolute inset-0 bg-radial from-transparent via-[#050608]/60 to-[#050608] pointer-events-none z-0" />
 
         {/* LEFT FLANKING GLOWING ARC */}
-        <div className="absolute left-0 top-0 bottom-0 w-[35vw] max-w-[500px] min-w-[260px] pointer-events-none z-10 flex items-center select-none">
+        <div className="absolute left-0 top-0 bottom-0 w-[35vw] max-w-[500px] min-w-0 sm:min-w-[260px] pointer-events-none z-10 flex items-center select-none overflow-hidden">
           {/* Diffuse Atmospheric Back-Glow */}
           <div className="absolute -left-20 top-1/2 -translate-y-1/2 w-[300px] sm:w-[420px] h-[500px] sm:h-[700px] bg-gradient-to-r from-[#FF5500]/30 via-[#FF6B00]/15 to-transparent blur-[80px] rounded-full" />
           <svg
@@ -97,7 +97,7 @@ export const Hero: React.FC<HeroProps> = ({ onExploreDevice, onRequestDemo }) =>
         </div>
 
         {/* RIGHT FLANKING GLOWING ARC */}
-        <div className="absolute right-0 top-0 bottom-0 w-[35vw] max-w-[500px] min-w-[260px] pointer-events-none z-10 flex items-center justify-end select-none">
+        <div className="absolute right-0 top-0 bottom-0 w-[35vw] max-w-[500px] min-w-0 sm:min-w-[260px] pointer-events-none z-10 flex items-center justify-end select-none overflow-hidden">
           {/* Diffuse Atmospheric Back-Glow */}
           <div className="absolute -right-20 top-1/2 -translate-y-1/2 w-[300px] sm:w-[420px] h-[500px] sm:h-[700px] bg-gradient-to-l from-[#FF5500]/30 via-[#FF6B00]/15 to-transparent blur-[80px] rounded-full" />
           <svg

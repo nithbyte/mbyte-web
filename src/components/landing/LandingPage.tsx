@@ -21,7 +21,7 @@ export function LandingPage() {
   };
 
   return (
-    <div className="dark min-h-screen bg-[#05070B] text-slate-100 flex flex-col font-sans selection:bg-[#FF6B00] selection:text-white">
+    <div className="dark min-h-screen w-full max-w-full bg-[#05070B] text-slate-100 flex flex-col font-sans selection:bg-[#FF6B00] selection:text-white overflow-x-hidden">
       {/* Navbar */}
       <Navbar onOpenDemo={() => setDemoModalOpen(true)} />
 
