@@ -200,7 +200,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="relative min-h-screen bg-[#FCF7F2] dark:bg-[#171717] overflow-x-hidden selection:bg-orange-500 selection:text-white">
+    <div className="dashboard-shell relative min-h-screen bg-[#FCF7F2] dark:bg-[#171717] overflow-x-hidden selection:bg-orange-500 selection:text-white">
       <Suspense fallback={<div className="w-16 lg:w-64" />}>
         <Sidebar />
       </Suspense>

@@ -111,9 +111,14 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDemo }) => {
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled
-        ? "bg-[#05070B]/85 backdrop-blur-2xl border-b border-white/[0.08] py-3 shadow-2xl shadow-black/60"
-        : "bg-transparent py-5"
+        ? "!bg-[#05070B]/85 backdrop-blur-2xl !border-b !border-white/[0.08] py-3 shadow-2xl shadow-black/60"
+        : "!bg-transparent !border-b-0 py-5"
         }`}
+      style={{
+        backgroundColor: isScrolled ? "rgba(5, 7, 11, 0.85)" : "transparent",
+        borderBottom: isScrolled ? "1px solid rgba(255, 255, 255, 0.08)" : "none",
+        boxShadow: isScrolled ? "0 25px 50px -12px rgba(0, 0, 0, 0.6)" : "none",
+      }}
     >
       <div className="max-w-7xl mx-auto px-6 sm:px-8 flex items-center justify-between">
         {/* Brand Logo */}

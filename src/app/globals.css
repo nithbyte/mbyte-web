@@ -193,8 +193,8 @@ body {
   animation: liquid-pulse 9s ease-in-out infinite;
 }
 
-/* Global Glass Surfaces against Light Cream Canvas */
-aside {
+/* Dashboard Glass Surfaces against Light Cream Canvas */
+.dashboard-shell aside {
   background: rgba(255, 255, 255, 0.88) !important;
   backdrop-filter: blur(24px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
@@ -202,13 +202,13 @@ aside {
   box-shadow: 4px 0 24px 0 rgba(15, 23, 42, 0.03), inset -1px 0 1px 0 rgba(255, 255, 255, 0.95) !important;
 }
 
-.dark aside {
+.dark .dashboard-shell aside {
   background: rgba(23, 23, 23, 0.88) !important;
   border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
   box-shadow: 4px 0 30px 0 rgba(0, 0, 0, 0.4) !important;
 }
 
-header {
+.dashboard-shell header {
   background: rgba(255, 255, 255, 0.88) !important;
   backdrop-filter: blur(24px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
@@ -216,7 +216,7 @@ header {
   box-shadow: 0 4px 20px 0 rgba(15, 23, 42, 0.02), inset 0 -1px 1px 0 rgba(255, 255, 255, 0.95) !important;
 }
 
-.dark header {
+.dark .dashboard-shell header {
   background: rgba(23, 23, 23, 0.88) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
   box-shadow: 0 4px 24px 0 rgba(0, 0, 0, 0.3) !important;
@@ -224,6 +224,13 @@ header {
 
 /* Glass Card & Panels */
 .glass-card {
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dashboard-shell .glass-card {
   background: rgba(255, 255, 255, 0.88) !important;
   backdrop-filter: blur(20px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
@@ -233,18 +240,18 @@ header {
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
-.dark .glass-card {
+.dark .dashboard-shell .glass-card {
   background: rgba(28, 28, 28, 0.8) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
   box-shadow: 0 8px 28px 0 rgba(0, 0, 0, 0.35) !important;
 }
 
-.glass-card:hover {
+.dashboard-shell .glass-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 14px 36px 0 rgba(15, 23, 42, 0.07), inset 0 1px 1px 0 rgba(255, 255, 255, 1) !important;
 }
 
-.dark .glass-card:hover {
+.dark .dashboard-shell .glass-card:hover {
   box-shadow: 0 14px 36px 0 rgba(0, 0, 0, 0.45) !important;
 }
 
