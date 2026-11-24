@@ -42,7 +42,7 @@ import { useCurrentUser, useLogout } from "@/hooks";
 import { normalizeRole, type CanonicalRole, type AppFeatures } from "@/types";
 import { APP_CONFIG } from "@/lib/constants";
 import { MByteLogo } from "@/components/ui/mbyte-logo";
-import { buildRootLoginUrl } from "@/lib/subdomain";
+import { buildRootLoginUrl, getTenantSubdomain } from "@/lib/subdomain";
 
 interface NavItem {
   title: string;
@@ -564,9 +564,13 @@ export function Sidebar() {
   const handleLogout = async () => {
     try {
       await logoutMutation.mutateAsync();
-    } finally {
+    } catch {
       if (typeof window !== "undefined") {
-        window.location.href = buildRootLoginUrl();
+        const currentSubdomain = getTenantSubdomain();
+        const rootLoginUrl = buildRootLoginUrl(currentSubdomain);
+        const url = new URL(rootLoginUrl);
+        url.searchParams.set("logged_out", "1");
+        window.location.replace(url.toString());
       }
     }
   };

@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { authService } from "@/services/authService";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useFilterStore } from "@/store";
-import { getRootDomain, buildRootLoginUrl } from "@/lib/subdomain";
+import { getRootDomain, buildRootLoginUrl, getTenantSubdomain } from "@/lib/subdomain";
 import type { User } from "@/types";
 
 export function useCurrentUser() {
@@ -130,8 +130,11 @@ export function useLogout() {
       // Logout store once (authService.logout already did it too, deduplicate)
       logout();
       if (typeof window !== "undefined") {
-        // Always redirect to canonical root domain login — never to a tenant subdomain
-        window.location.replace(buildRootLoginUrl());
+        const currentSubdomain = getTenantSubdomain();
+        const rootLoginUrl = buildRootLoginUrl(currentSubdomain);
+        const url = new URL(rootLoginUrl);
+        url.searchParams.set("logged_out", "1");
+        window.location.replace(url.toString());
       }
     },
   });

@@ -71,8 +71,12 @@ function setCookie(name: string, value: string, days = 7) {
 function removeCookie(name: string) {
   if (typeof window === "undefined") return;
   const domain = getCookieDomain();
-  const domainAttr = domain ? `; domain=${domain}` : "";
-  document.cookie = `${name}=; path=/${domainAttr}; Max-Age=0; SameSite=Lax`;
+  if (domain) {
+    document.cookie = `${name}=; path=/; domain=${domain}; Max-Age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+    const noDot = domain.startsWith(".") ? domain.slice(1) : domain;
+    document.cookie = `${name}=; path=/; domain=${noDot}; Max-Age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+  }
+  document.cookie = `${name}=; path=/; Max-Age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
 }
 
 // Token storage abstraction (localStorage in browser, in-memory in Node/SSR/tests)
@@ -82,14 +86,40 @@ let memoryRefreshToken: string | null = null;
 export const tokenStorage = {
   getAccessToken: (): string | null => {
     if (typeof window !== "undefined" && window.localStorage) {
-      let token = window.localStorage.getItem("mbyte_admin_access_token");
-      if (!token) {
-        token = getCookie("mbyte_auth_token");
-        if (token) {
-          window.localStorage.setItem("mbyte_admin_access_token", token);
-        }
+      const cookieToken = getCookie("mbyte_auth_token");
+      let localToken = window.localStorage.getItem("mbyte_admin_access_token");
+
+      // In a shared-cookie multi-tenant environment (e.g. .mediqbyte.com),
+      // if the cross-subdomain auth cookie is absent, any surviving token in this origin's
+      // localStorage is orphaned (e.g. user logged out on another subdomain). Discard it.
+      const isDomainShared = !!getCookieDomain();
+      if (isDomainShared && !cookieToken && localToken) {
+        tokenStorage.clearTokens();
+        try {
+          window.localStorage.removeItem("mbyte_tenant_slug");
+          window.localStorage.removeItem("mbyte_auth_user");
+          window.localStorage.removeItem("mbyte_selected_org_id");
+        } catch {}
+        return null;
       }
-      return token || memoryAccessToken;
+
+      const candidateToken = cookieToken || localToken || memoryAccessToken;
+      if (candidateToken && isTokenExpired(candidateToken)) {
+        tokenStorage.clearTokens();
+        try {
+          window.localStorage.removeItem("mbyte_tenant_slug");
+          window.localStorage.removeItem("mbyte_auth_user");
+          window.localStorage.removeItem("mbyte_selected_org_id");
+        } catch {}
+        return null;
+      }
+
+      if (cookieToken && !localToken) {
+        try {
+          window.localStorage.setItem("mbyte_admin_access_token", cookieToken);
+        } catch {}
+      }
+      return candidateToken;
     }
     return memoryAccessToken;
   },
@@ -128,6 +158,9 @@ export const tokenStorage = {
       if (window.localStorage) {
         window.localStorage.removeItem("mbyte_admin_access_token");
         window.localStorage.removeItem("mbyte_admin_refresh_token");
+        window.localStorage.removeItem("mbyte_tenant_slug");
+        window.localStorage.removeItem("mbyte_auth_user");
+        window.localStorage.removeItem("mbyte_selected_org_id");
       }
       removeCookie("mbyte_auth_token");
       removeCookie("mbyte_refresh_token");
@@ -163,7 +196,7 @@ const axiosInstance: AxiosInstance = axios.create({
   },
 });
 
-function isTokenExpired(token: string | null): boolean {
+export function isTokenExpired(token: string | null): boolean {
   if (!token) return true;
   try {
     const parts = token.split(".");

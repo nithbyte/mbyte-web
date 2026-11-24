@@ -419,8 +419,12 @@ export const authService = {
           "mbyte_auth_user",
         ];
         cookieNames.forEach((name) => {
-          document.cookie = `${name}=; path=/; domain=.${rootHost}; Max-Age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
-          document.cookie = `${name}=; path=/; Max-Age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
+          // Clear wildcard domain (.mediqbyte.com)
+          document.cookie = `${name}=; path=/; domain=.${rootHost}; Max-Age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+          // Clear naked domain (mediqbyte.com)
+          document.cookie = `${name}=; path=/; domain=${rootHost}; Max-Age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+          // Clear host-only (current subdomain)
+          document.cookie = `${name}=; path=/; Max-Age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
         });
       } catch {}
     }

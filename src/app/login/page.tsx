@@ -46,12 +46,32 @@ export default function LoginPage() {
   // Redirect to canonical root domain if accessed directly on a tenant subdomain, or redirect to dashboard if already authenticated
   useEffect(() => {
     if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      const isLoggedOutParam = searchParams.has("logged_out") || searchParams.has("logout");
+      const tenantParam = searchParams.get("tenant");
+
+      // If arrived via logout redirect or explicit logged_out flag, strictly purge all tokens and stored tenant data
+      if (isLoggedOutParam) {
+        tokenStorage.clearTokens();
+        try {
+          window.localStorage.removeItem("mbyte_tenant_slug");
+          window.localStorage.removeItem("mbyte_auth_user");
+          window.localStorage.removeItem("mbyte_selected_org_id");
+        } catch {}
+      }
+
       const token = tokenStorage.getAccessToken();
       const currentSubdomain = getTenantSubdomain();
 
       // If user is already authenticated, route them to dashboard
-      if (token) {
+      // BUT NEVER auto-redirect if this was a logout action or if a tenant query param is specified
+      if (token && !isLoggedOutParam) {
         const storedSlug = window.localStorage.getItem("mbyte_tenant_slug");
+        // If the URL explicitly requests a specific tenant, ensure we don't bounce unless it matches
+        if (tenantParam && storedSlug && tenantParam.toLowerCase() !== storedSlug.toLowerCase()) {
+          return;
+        }
+
         // Only auto-redirect to tenant subdomain if we're ALREADY on the root domain
         // AND the stored slug doesn't match a super-admin session (super admins have no slug)
         if (storedSlug && !currentSubdomain) {
@@ -72,6 +92,17 @@ export default function LoginPage() {
           router.replace("/");
         }
         return;
+      }
+
+      // If there is no valid token, purge any orphaned tenant keys left behind on the root domain
+      if (!token) {
+        try {
+          window.localStorage.removeItem("mbyte_admin_access_token");
+          window.localStorage.removeItem("mbyte_admin_refresh_token");
+          window.localStorage.removeItem("mbyte_tenant_slug");
+          window.localStorage.removeItem("mbyte_auth_user");
+          window.localStorage.removeItem("mbyte_selected_org_id");
+        } catch {}
       }
 
       // If landed on a tenant subdomain without auth, redirect to root login with tenant hint
