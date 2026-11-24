@@ -225,15 +225,15 @@ export default function AnnouncementsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400">
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500">
               <Megaphone className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-white">
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
                 Organization Announcements
               </h1>
-              <p className="text-sm text-gray-400">
+              <p className="text-sm text-slate-500 dark:text-gray-400">
                 Broadcast official circulars, policy alerts, and field updates to all team members
               </p>
             </div>
@@ -253,57 +253,57 @@ export default function AnnouncementsPage() {
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-2xl bg-[#111622] border border-gray-800/80 shadow-sm">
-          <div className="flex items-center justify-between text-gray-400 mb-2">
+        <div className="p-5 rounded-2xl bg-white dark:bg-[#111622] border border-slate-200/80 dark:border-gray-800/80 shadow-xs">
+          <div className="flex items-center justify-between text-slate-500 dark:text-gray-400 mb-2">
             <span className="text-xs uppercase tracking-wider font-semibold">Total Broadcasts</span>
-            <Megaphone className="w-4 h-4 text-orange-400" />
+            <Megaphone className="w-4 h-4 text-orange-500" />
           </div>
-          <div className="text-2xl font-bold text-white">{totalCount}</div>
-          <p className="text-xs text-gray-500 mt-1">Official circulars published</p>
+          <div className="text-2xl font-bold text-slate-900 dark:text-white">{totalCount}</div>
+          <p className="text-xs text-slate-500 dark:text-gray-500 mt-1">Official circulars published</p>
         </div>
 
-        <div className="p-5 rounded-2xl bg-[#111622] border border-gray-800/80 shadow-sm">
-          <div className="flex items-center justify-between text-gray-400 mb-2">
+        <div className="p-5 rounded-2xl bg-white dark:bg-[#111622] border border-slate-200/80 dark:border-gray-800/80 shadow-xs">
+          <div className="flex items-center justify-between text-slate-500 dark:text-gray-400 mb-2">
             <span className="text-xs uppercase tracking-wider font-semibold">Priority Bulletins</span>
-            <ShieldAlert className="w-4 h-4 text-rose-400" />
+            <ShieldAlert className="w-4 h-4 text-rose-500" />
           </div>
-          <div className="text-2xl font-bold text-rose-400">{urgentCount}</div>
-          <p className="text-xs text-gray-500 mt-1">Urgent or high-impact notices</p>
+          <div className="text-2xl font-bold text-rose-600 dark:text-rose-400">{urgentCount}</div>
+          <p className="text-xs text-slate-500 dark:text-gray-500 mt-1">Urgent or high-impact notices</p>
         </div>
 
-        <div className="p-5 rounded-2xl bg-[#111622] border border-gray-800/80 shadow-sm">
-          <div className="flex items-center justify-between text-gray-400 mb-2">
+        <div className="p-5 rounded-2xl bg-white dark:bg-[#111622] border border-slate-200/80 dark:border-gray-800/80 shadow-xs">
+          <div className="flex items-center justify-between text-slate-500 dark:text-gray-400 mb-2">
             <span className="text-xs uppercase tracking-wider font-semibold">Max Field Reach</span>
-            <Users className="w-4 h-4 text-emerald-400" />
+            <Users className="w-4 h-4 text-emerald-500" />
           </div>
-          <div className="text-2xl font-bold text-emerald-400">{totalReach}</div>
-          <p className="text-xs text-gray-500 mt-1">Active users in audience</p>
+          <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{totalReach}</div>
+          <p className="text-xs text-slate-500 dark:text-gray-500 mt-1">Active users in audience</p>
         </div>
 
-        <div className="p-5 rounded-2xl bg-[#111622] border border-gray-800/80 shadow-sm">
-          <div className="flex items-center justify-between text-gray-400 mb-2">
+        <div className="p-5 rounded-2xl bg-white dark:bg-[#111622] border border-slate-200/80 dark:border-gray-800/80 shadow-xs">
+          <div className="flex items-center justify-between text-slate-500 dark:text-gray-400 mb-2">
             <span className="text-xs uppercase tracking-wider font-semibold">Push Gateway</span>
-            <Bell className="w-4 h-4 text-sky-400" />
+            <Bell className="w-4 h-4 text-sky-500" />
           </div>
           <div className="flex items-center gap-2 mt-1">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-base font-semibold text-white">FCM Active</span>
+            <span className="text-base font-semibold text-slate-900 dark:text-white">FCM Active</span>
           </div>
-          <p className="text-xs text-gray-500 mt-1">Instant mobile delivery enabled</p>
+          <p className="text-xs text-slate-500 dark:text-gray-500 mt-1">Instant mobile delivery enabled</p>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="p-4 rounded-2xl bg-[#111622] border border-gray-800/80 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="p-4 rounded-2xl bg-white dark:bg-[#111622] border border-slate-200/80 dark:border-gray-800/80 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
         {/* Search Input */}
         <div className="relative w-full md:w-80">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-gray-400" />
           <input
             type="text"
             placeholder="Search announcements..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-[#182030] border border-gray-700/60 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 transition-colors"
+            className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-[#182030] border border-slate-200 dark:border-gray-700/60 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-gray-500 focus:outline-none focus:border-orange-500 transition-colors"
           />
         </div>
 
@@ -316,7 +316,7 @@ export default function AnnouncementsPage() {
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
                 selectedPriority === pri
                   ? "bg-orange-600 text-white"
-                  : "bg-[#182030] text-gray-400 hover:text-white hover:bg-gray-800"
+                  : "bg-slate-100 dark:bg-[#182030] text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-gray-800"
               }`}
             >
               {pri === "ALL" ? "All Priorities" : pri}
@@ -325,7 +325,7 @@ export default function AnnouncementsPage() {
           <button
             onClick={() => fetchAnnouncements()}
             title="Refresh"
-            className="p-2 rounded-lg bg-[#182030] text-gray-400 hover:text-white hover:bg-gray-800 transition-colors ml-1"
+            className="p-2 rounded-lg bg-slate-100 dark:bg-[#182030] text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-gray-800 transition-colors ml-1"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
           </button>
@@ -335,15 +335,15 @@ export default function AnnouncementsPage() {
       {/* Announcements List */}
       <div className="space-y-4">
         {isLoading && announcements.length === 0 ? (
-          <div className="p-12 text-center rounded-2xl bg-[#111622] border border-gray-800/80">
-            <RefreshCw className="w-8 h-8 text-orange-400 animate-spin mx-auto mb-3" />
-            <p className="text-sm text-gray-400">Loading announcements...</p>
+          <div className="p-12 text-center rounded-2xl bg-white dark:bg-[#111622] border border-slate-200/80 dark:border-gray-800/80 shadow-xs">
+            <RefreshCw className="w-8 h-8 text-orange-500 animate-spin mx-auto mb-3" />
+            <p className="text-sm text-slate-500 dark:text-gray-400">Loading announcements...</p>
           </div>
         ) : filteredAnnouncements.length === 0 ? (
-          <div className="p-12 text-center rounded-2xl bg-[#111622] border border-gray-800/80">
-            <Megaphone className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-            <h3 className="text-lg font-semibold text-white mb-1">No Announcements Found</h3>
-            <p className="text-sm text-gray-400 max-w-md mx-auto mb-6">
+          <div className="p-12 text-center rounded-2xl bg-white dark:bg-[#111622] border border-slate-200/80 dark:border-gray-800/80 shadow-xs">
+            <Megaphone className="w-12 h-12 text-slate-400 dark:text-gray-600 mx-auto mb-3" />
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">No Announcements Found</h3>
+            <p className="text-sm text-slate-500 dark:text-gray-400 max-w-md mx-auto mb-6">
               {searchQuery
                 ? `No announcements match "${searchQuery}". Try a different keyword.`
                 : "No announcements have been broadcasted yet. Keep your field force aligned by sharing company circulars."}
@@ -362,24 +362,24 @@ export default function AnnouncementsPage() {
           filteredAnnouncements.map((item) => (
             <div
               key={item.id}
-              className="p-5 rounded-2xl bg-[#111622] border border-gray-800/80 hover:border-gray-700 transition-all shadow-sm"
+              className="p-5 rounded-2xl bg-white dark:bg-[#111622] border border-slate-200/80 dark:border-gray-800/80 hover:border-slate-300 dark:hover:border-gray-700 transition-all shadow-xs"
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
                 <div className="flex items-center gap-2.5 flex-wrap">
                   {getPriorityBadge(item.priority)}
-                  <h3 className="text-base font-bold text-white tracking-tight">
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">
                     {item.title}
                   </h3>
                 </div>
 
-                <div className="flex items-center gap-3 text-xs text-gray-400">
+                <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-gray-400">
                   <div className="flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5 text-gray-500" />
+                    <Clock className="w-3.5 h-3.5 text-slate-400 dark:text-gray-500" />
                     <span>{new Date(item.createdAt).toLocaleString()}</span>
                   </div>
 
-                  <div className="flex items-center gap-1 bg-[#182030] px-2 py-0.5 rounded-md text-gray-300">
-                    <Users className="w-3.5 h-3.5 text-orange-400" />
+                  <div className="flex items-center gap-1 bg-slate-100 dark:bg-[#182030] px-2 py-0.5 rounded-md text-slate-700 dark:text-gray-300 font-medium">
+                    <Users className="w-3.5 h-3.5 text-orange-500" />
                     <span>{item.recipientsCount} recipients</span>
                   </div>
 
@@ -387,7 +387,7 @@ export default function AnnouncementsPage() {
                     <button
                       onClick={() => handleDeleteAnnouncement(item.id)}
                       disabled={deletingId === item.id}
-                      className="p-1.5 rounded-lg text-gray-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors ml-1"
+                      className="p-1.5 rounded-lg text-slate-400 dark:text-gray-500 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors ml-1"
                       title="Delete Announcement"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -397,25 +397,25 @@ export default function AnnouncementsPage() {
               </div>
 
               {/* Body Content */}
-              <div className="text-sm text-gray-300 whitespace-pre-line leading-relaxed mb-4 pl-0.5">
+              <div className="text-sm text-slate-700 dark:text-gray-300 whitespace-pre-line leading-relaxed mb-4 pl-0.5">
                 {item.body || item.rawContent}
               </div>
 
               {/* Author Footer */}
-              <div className="flex items-center justify-between pt-3 border-t border-gray-800/60 text-xs text-gray-500">
+              <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-gray-800/60 text-xs text-slate-500">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-orange-600/20 text-orange-400 font-semibold flex items-center justify-center text-[10px]">
+                  <div className="w-6 h-6 rounded-full bg-orange-600/15 text-orange-600 dark:text-orange-400 font-semibold flex items-center justify-center text-[10px]">
                     {item.sender?.name?.[0] || "A"}
                   </div>
                   <span>
                     Posted by{" "}
-                    <span className="text-gray-300 font-medium">
+                    <span className="text-slate-800 dark:text-gray-300 font-medium">
                       {item.sender?.name || "Tenant Administrator"}
                     </span>
                   </span>
                 </div>
 
-                <div className="flex items-center gap-1 text-emerald-400">
+                <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>Delivered via Mobile Push & In-App Feed</span>
                 </div>
@@ -427,24 +427,24 @@ export default function AnnouncementsPage() {
 
       {/* Broadcast Announcement Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-[#111622] border border-gray-800 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden my-8">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/70 backdrop-blur-xs p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-[#111622] border border-slate-200 dark:border-gray-800 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden my-8">
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-5 border-b border-gray-800 bg-[#161c2a]">
+            <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-gray-800 bg-slate-50/80 dark:bg-[#161c2a]">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-orange-500/15 border border-orange-500/25 flex items-center justify-center text-orange-400">
+                <div className="w-9 h-9 rounded-xl bg-orange-500/15 border border-orange-500/25 flex items-center justify-center text-orange-500">
                   <Megaphone className="w-4 h-4" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-white">Broadcast Announcement</h2>
-                  <p className="text-xs text-gray-400">
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">Broadcast Announcement</h2>
+                  <p className="text-xs text-slate-500 dark:text-gray-400">
                     Send real-time circular to field representatives and managers
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-gray-800 transition-colors"
+                className="text-slate-400 hover:text-slate-600 dark:text-gray-400 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-gray-800 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -454,7 +454,7 @@ export default function AnnouncementsPage() {
             <form onSubmit={handleCreateAnnouncement} className="p-6 space-y-5">
               {/* Target Audience */}
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-gray-400 mb-2">
                   Target Audience
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
@@ -463,12 +463,12 @@ export default function AnnouncementsPage() {
                     onClick={() => setFormTargetRole("ALL")}
                     className={`p-3 rounded-xl border text-left transition-all ${
                       formTargetRole === "ALL"
-                        ? "bg-orange-600/15 border-orange-500 text-white shadow-sm"
-                        : "bg-[#182030] border-gray-700/60 text-gray-400 hover:text-white"
+                        ? "bg-orange-50 dark:bg-orange-600/15 border-orange-500 text-orange-700 dark:text-white shadow-xs"
+                        : "bg-slate-50 dark:bg-[#182030] border-slate-200 dark:border-gray-700/60 text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white"
                     }`}
                   >
                     <div className="font-semibold text-xs mb-0.5">All Members</div>
-                    <div className="text-[11px] text-gray-400">MRs, Managers, Staff</div>
+                    <div className="text-[11px] text-slate-500 dark:text-gray-400">MRs, Managers, Staff</div>
                   </button>
 
                   <button
@@ -476,12 +476,12 @@ export default function AnnouncementsPage() {
                     onClick={() => setFormTargetRole("MR")}
                     className={`p-3 rounded-xl border text-left transition-all ${
                       formTargetRole === "MR"
-                        ? "bg-orange-600/15 border-orange-500 text-white shadow-sm"
-                        : "bg-[#182030] border-gray-700/60 text-gray-400 hover:text-white"
+                        ? "bg-orange-50 dark:bg-orange-600/15 border-orange-500 text-orange-700 dark:text-white shadow-xs"
+                        : "bg-slate-50 dark:bg-[#182030] border-slate-200 dark:border-gray-700/60 text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white"
                     }`}
                   >
                     <div className="font-semibold text-xs mb-0.5">Field Reps (MRs)</div>
-                    <div className="text-[11px] text-gray-400">Medical Representatives only</div>
+                    <div className="text-[11px] text-slate-500 dark:text-gray-400">Medical Representatives only</div>
                   </button>
 
                   <button
@@ -489,27 +489,27 @@ export default function AnnouncementsPage() {
                     onClick={() => setFormTargetRole("MANAGER")}
                     className={`p-3 rounded-xl border text-left transition-all ${
                       formTargetRole === "MANAGER"
-                        ? "bg-orange-600/15 border-orange-500 text-white shadow-sm"
-                        : "bg-[#182030] border-gray-700/60 text-gray-400 hover:text-white"
+                        ? "bg-orange-50 dark:bg-orange-600/15 border-orange-500 text-orange-700 dark:text-white shadow-xs"
+                        : "bg-slate-50 dark:bg-[#182030] border-slate-200 dark:border-gray-700/60 text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white"
                     }`}
                   >
                     <div className="font-semibold text-xs mb-0.5">Managers Only</div>
-                    <div className="text-[11px] text-gray-400">Area & Regional Managers</div>
+                    <div className="text-[11px] text-slate-500 dark:text-gray-400">Area & Regional Managers</div>
                   </button>
                 </div>
               </div>
 
               {/* Priority */}
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-gray-400 mb-2">
                   Priority Level
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {[
-                    { key: "NORMAL", label: "Normal", color: "sky" },
-                    { key: "HIGH", label: "High", color: "amber" },
-                    { key: "URGENT", label: "Urgent", color: "rose" },
-                    { key: "POLICY", label: "Policy", color: "purple" },
+                    { key: "NORMAL", label: "Normal" },
+                    { key: "HIGH", label: "High" },
+                    { key: "URGENT", label: "Urgent" },
+                    { key: "POLICY", label: "Policy" },
                   ].map((p) => (
                     <button
                       key={p.key}
@@ -517,8 +517,8 @@ export default function AnnouncementsPage() {
                       onClick={() => setFormPriority(p.key as AnnouncementPriority)}
                       className={`py-2 px-3 rounded-xl text-xs font-semibold border text-center transition-all ${
                         formPriority === p.key
-                          ? "bg-orange-600 text-white border-orange-500 shadow-sm"
-                          : "bg-[#182030] border-gray-700/60 text-gray-400 hover:text-white"
+                          ? "bg-orange-600 text-white border-orange-500 shadow-xs"
+                          : "bg-slate-50 dark:bg-[#182030] border-slate-200 dark:border-gray-700/60 text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white"
                       }`}
                     >
                       {p.label}
@@ -529,7 +529,7 @@ export default function AnnouncementsPage() {
 
               {/* Title */}
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-gray-400 mb-1.5">
                   Announcement Title *
                 </label>
                 <input
@@ -538,13 +538,13 @@ export default function AnnouncementsPage() {
                   placeholder="e.g. Q4 Target Revision & Product Launch Schedule"
                   value={formTitle}
                   onChange={(e) => setFormTitle(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-[#182030] border border-gray-700/60 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-orange-500"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-[#182030] border border-slate-200 dark:border-gray-700/60 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-gray-500 focus:outline-none focus:border-orange-500"
                 />
               </div>
 
               {/* Content Body */}
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-gray-400 mb-1.5">
                   Announcement Details *
                 </label>
                 <textarea
@@ -553,17 +553,17 @@ export default function AnnouncementsPage() {
                   placeholder="Provide complete guidelines, instructions, or meeting details..."
                   value={formContent}
                   onChange={(e) => setFormContent(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-[#182030] border border-gray-700/60 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 resize-none"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-[#182030] border border-slate-200 dark:border-gray-700/60 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-gray-500 focus:outline-none focus:border-orange-500 resize-none"
                 />
               </div>
 
               {/* Push Notification Toggle */}
-              <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#182030] border border-gray-700/60">
+              <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 dark:bg-[#182030] border border-slate-200 dark:border-gray-700/60">
                 <div className="flex items-center gap-2.5">
-                  <Smartphone className="w-5 h-5 text-sky-400" />
+                  <Smartphone className="w-5 h-5 text-sky-500" />
                   <div>
-                    <div className="text-xs font-semibold text-white">Instant Push Notification</div>
-                    <div className="text-[11px] text-gray-400">
+                    <div className="text-xs font-semibold text-slate-900 dark:text-white">Instant Push Notification</div>
+                    <div className="text-[11px] text-slate-500 dark:text-gray-400">
                       Vibrates mobile devices with sound and banners via FCM
                     </div>
                   </div>
@@ -575,29 +575,29 @@ export default function AnnouncementsPage() {
                     onChange={(e) => setFormSendPush(e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
+                  <div className="w-11 h-6 bg-slate-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
                 </label>
               </div>
 
               {/* Mobile Preview Box */}
               {(formTitle || formContent) && (
-                <div className="p-3.5 rounded-xl bg-gray-900/80 border border-gray-800">
-                  <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-1.5">
-                    <Smartphone className="w-3.5 h-3.5 text-orange-400" />
+                <div className="p-3.5 rounded-xl bg-slate-100 dark:bg-gray-900/80 border border-slate-200 dark:border-gray-800">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-gray-400 mb-2 flex items-center gap-1.5">
+                    <Smartphone className="w-3.5 h-3.5 text-orange-500" />
                     <span>Live Field Representative Notification Preview</span>
                   </div>
-                  <div className="bg-[#1a2232] rounded-lg p-3 border border-gray-700/50">
+                  <div className="bg-white dark:bg-[#1a2232] rounded-lg p-3 border border-slate-200 dark:border-gray-700/50 shadow-xs">
                     <div className="flex items-center gap-2 mb-1">
                       <div className="w-4 h-4 rounded-full bg-orange-600 flex items-center justify-center text-[8px] text-white font-bold">
                         M
                       </div>
-                      <span className="text-[11px] font-bold text-white">Mediqbyte</span>
-                      <span className="text-[10px] text-gray-400">• now</span>
+                      <span className="text-[11px] font-bold text-slate-900 dark:text-white">Mediqbyte</span>
+                      <span className="text-[10px] text-slate-400 dark:text-gray-400">• now</span>
                     </div>
-                    <div className="text-xs font-semibold text-white">
+                    <div className="text-xs font-semibold text-slate-900 dark:text-white">
                       📢 Announcement: {formTitle || "Announcement Title"}
                     </div>
-                    <div className="text-[11px] text-gray-300 line-clamp-2 mt-0.5">
+                    <div className="text-[11px] text-slate-600 dark:text-gray-300 line-clamp-2 mt-0.5">
                       {formContent || "Details will appear here..."}
                     </div>
                   </div>
@@ -605,12 +605,12 @@ export default function AnnouncementsPage() {
               )}
 
               {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-800">
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200 dark:border-gray-800">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
                   disabled={isSubmitting}
-                  className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+                  className="px-4 py-2 text-sm text-slate-500 hover:text-slate-800 dark:text-gray-400 dark:hover:text-white transition-colors"
                 >
                   Cancel
                 </button>
