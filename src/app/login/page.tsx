@@ -82,8 +82,8 @@ export default function LoginPage() {
             const parsed = authStore ? JSON.parse(authStore) : null;
             const persistedRole = parsed?.state?.user?.role;
             if (persistedRole === "SUPER_ADMIN") {
-              // Superadmin has no tenant subdomain — just go to dashboard
-              router.replace("/");
+              // Superadmin has no tenant subdomain — go to companies management
+              router.replace("/companies");
               return;
             }
           } catch {}

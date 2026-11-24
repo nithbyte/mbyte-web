@@ -105,7 +105,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }, [isLoading, router, pathname, currentSubdomain]);
 
   useEffect(() => {
-    if (canonicalRole === "SUPER_ADMIN" && pathname === "/") {
+    if (canonicalRole === "SUPER_ADMIN" && (pathname === "/" || pathname === "/dashboard")) {
       router.replace("/companies");
     } else if (canonicalRole && canonicalRole !== "SUPER_ADMIN" && pathname.startsWith("/companies")) {
       router.replace("/");

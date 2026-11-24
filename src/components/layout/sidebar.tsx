@@ -665,8 +665,8 @@ export function Sidebar() {
                 {section.items.map((item) => {
                   const Icon = item.icon;
                   const isActive =
-                    item.href === "/"
-                      ? pathname === "/"
+                    item.href === "/" || item.href === "/dashboard"
+                      ? pathname === "/" || pathname === "/dashboard"
                       : pathname.startsWith(item.href);
 
                   return (

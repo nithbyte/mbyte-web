@@ -57,6 +57,20 @@ export function middleware(request: NextRequest) {
       const loginUrl = new URL(`/login?tenant=${encodeURIComponent(subdomain)}`, `${protocol}//${envRoot}`);
       return NextResponse.redirect(loginUrl, 307);
     }
+
+    // 4. On a tenant subdomain with an active session, rewrite root / to /dashboard so tenant command center renders
+    if (pathname === "/" || pathname === "") {
+      const rewriteUrl = new URL(`/dashboard${request.nextUrl.search}`, request.url);
+      const res = NextResponse.rewrite(rewriteUrl);
+      res.headers.set("x-tenant-subdomain", subdomain);
+      const cookieDomain = process.env.NODE_ENV === "production" ? `.${rootHost}` : undefined;
+      res.cookies.set("mbyte_tenant_subdomain", subdomain, {
+        path: "/",
+        domain: cookieDomain,
+        sameSite: "lax",
+      });
+      return res;
+    }
   }
 
   const response = NextResponse.next();

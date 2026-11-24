@@ -278,3 +278,47 @@ header {
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* Landing Page Specific Tokens and Utilities */
+.apple-glow {
+  text-shadow: 0 0 35px rgba(255, 107, 0, 0.45);
+}
+
+.titanium-gradient {
+  background: linear-gradient(180deg, #FFFFFF 0%, #E2E8F0 45%, #94A3B8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.orange-gradient {
+  background: linear-gradient(135deg, #FF8A34 0%, #FF6B00 60%, #FF3D00 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.aurora-bg {
+  background: radial-gradient(circle at 50% 0%, rgba(255, 107, 0, 0.15) 0%, rgba(10, 21, 38, 0.4) 40%, rgba(5, 7, 11, 0) 75%);
+}
+
+.glass-card-hover {
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.glass-card-hover:hover {
+  transform: translateY(-4px);
+  background: rgba(20, 30, 52, 0.7);
+  border-color: rgba(255, 107, 0, 0.3);
+  box-shadow: 0 20px 40px -15px rgba(255, 107, 0, 0.15);
+}
+
+/* Shimmer animation */
+@keyframes shimmer-border {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animated-border {
+  background-size: 200% 200%;
+  animation: shimmer-border 6s ease infinite;
+}
+
