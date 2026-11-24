@@ -18,7 +18,8 @@ export function middleware(request: NextRequest) {
   const hostname = host.split(":")[0].toLowerCase();
 
   const defaultRoot = process.env.NODE_ENV === "production" ? "mediqbyte.com" : "localhost:3000";
-  const envRoot = (process.env.NEXT_PUBLIC_ROOT_DOMAIN || defaultRoot).toLowerCase();
+  const rawEnvRoot = (process.env.NEXT_PUBLIC_ROOT_DOMAIN || defaultRoot).toLowerCase();
+  const envRoot = rawEnvRoot.replace(/^https?:\/\//i, "").replace(/\/+$/, "");
   const rootHost = envRoot.split(":")[0];
 
   let subdomain: string | null = null;
@@ -32,16 +33,30 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // If someone visits /admin or /companies while on a tenant subdomain, redirect to central platform
-  if (
-    subdomain &&
-    (request.nextUrl.pathname.startsWith("/admin") ||
-      request.nextUrl.pathname.startsWith("/companies"))
-  ) {
-    const isLocal = rootHost.includes("localhost") || rootHost.startsWith("127.");
-    const protocol = isLocal ? "http:" : "https:";
-    const targetUrl = new URL(request.nextUrl.pathname + request.nextUrl.search, `${protocol}//${envRoot}`);
-    return NextResponse.redirect(targetUrl, 307);
+  const isLocal = rootHost.includes("localhost") || rootHost.startsWith("127.");
+  const protocol = isLocal ? "http:" : "https:";
+
+  if (subdomain) {
+    const pathname = request.nextUrl.pathname;
+
+    // 1. If someone visits /admin or /companies while on a tenant subdomain, redirect to central platform
+    if (pathname.startsWith("/admin") || pathname.startsWith("/companies")) {
+      const targetUrl = new URL(pathname + request.nextUrl.search, `${protocol}//${envRoot}`);
+      return NextResponse.redirect(targetUrl, 307);
+    }
+
+    // 2. If someone visits /login on a tenant subdomain, redirect to canonical root login with tenant query
+    if (pathname === "/login" || pathname === "/login/") {
+      const loginUrl = new URL(`/login?tenant=${encodeURIComponent(subdomain)}`, `${protocol}//${envRoot}`);
+      return NextResponse.redirect(loginUrl, 307);
+    }
+
+    // 3. If someone visits / without an auth token cookie, redirect immediately to canonical root login with tenant query
+    const authToken = request.cookies.get("mbyte_auth_token")?.value;
+    if ((pathname === "/" || pathname === "") && !authToken) {
+      const loginUrl = new URL(`/login?tenant=${encodeURIComponent(subdomain)}`, `${protocol}//${envRoot}`);
+      return NextResponse.redirect(loginUrl, 307);
+    }
   }
 
   const response = NextResponse.next();

@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { authService } from "@/services/authService";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useFilterStore } from "@/store";
-import { getRootDomain } from "@/lib/subdomain";
+import { getRootDomain, buildRootLoginUrl } from "@/lib/subdomain";
 import type { User } from "@/types";
 
 export function useCurrentUser() {
@@ -130,13 +130,8 @@ export function useLogout() {
       // Logout store once (authService.logout already did it too, deduplicate)
       logout();
       if (typeof window !== "undefined") {
-        // Always redirect to root domain login — never to a tenant subdomain
-        const rootDomain = getRootDomain();
-        const rootHost = rootDomain.split(":")[0];
-        const isLocal = rootHost.includes("localhost") || rootHost.startsWith("127.");
-        const protocol = isLocal ? "http:" : "https:";
-        // Use the root host directly, not whatever getRootDomain() returns when on a subdomain
-        window.location.replace(`${protocol}//${rootHost}${isLocal ? `:${rootDomain.split(":")[1] || "3000"}` : ""}/login`);
+        // Always redirect to canonical root domain login — never to a tenant subdomain
+        window.location.replace(buildRootLoginUrl());
       }
     },
   });

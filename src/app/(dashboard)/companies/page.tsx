@@ -30,7 +30,7 @@ import { Modal } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { buildTenantSubdomainUrl, getRootDomain } from "@/lib/subdomain";
+import { buildTenantSubdomainUrl, getRootDomain, buildRootLoginUrl } from "@/lib/subdomain";
 
 export default function CompaniesPage() {
   const { data: currentUser } = useCurrentUser();
@@ -459,7 +459,7 @@ export default function CompaniesPage() {
                               {org.code}
                             </span>
                             <a
-                              href={`/login?tenant=${org.slug}`}
+                              href={buildRootLoginUrl(org.slug)}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="inline-flex items-center gap-1 text-[11px] font-medium text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300 hover:underline transition-colors"

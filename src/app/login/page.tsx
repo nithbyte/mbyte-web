@@ -15,7 +15,7 @@ import { useLogin, useSelectCompany } from "@/hooks";
 import { normalizeRole } from "@/types";
 import { MByteLogo } from "@/components/ui/mbyte-logo";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { getTenantSubdomain, buildTenantSubdomainUrl, getRootDomain } from "@/lib/subdomain";
+import { getTenantSubdomain, buildTenantSubdomainUrl, getRootDomain, buildRootLoginUrl } from "@/lib/subdomain";
 import { tokenStorage } from "@/lib/api-client";
 
 export default function LoginPage() {
@@ -76,11 +76,8 @@ export default function LoginPage() {
 
       // If landed on a tenant subdomain without auth, redirect to root login with tenant hint
       if (currentSubdomain) {
-        const rootDomain = getRootDomain();
-        const rootHost = rootDomain.split(":")[0];
-        const isLocal = rootHost.includes("localhost") || rootHost.startsWith("127.");
-        const protocol = isLocal ? "http:" : "https:";
-        window.location.replace(`${protocol}//${rootDomain}/login?tenant=${encodeURIComponent(currentSubdomain)}`);
+        window.location.replace(buildRootLoginUrl(currentSubdomain));
+        return;
       }
     }
   }, [router]);

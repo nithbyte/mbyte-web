@@ -32,7 +32,7 @@ import { GlobalSearch } from "./global-search";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { getLocalTodayDate, getLocalYesterdayDate, isValidIsoDate, cn } from "@/lib/utils";
-import { getRootDomain } from "@/lib/subdomain";
+import { buildRootLoginUrl } from "@/lib/subdomain";
 
 export function Header() {
   const router = useRouter();
@@ -164,9 +164,7 @@ export function Header() {
     } finally {
       setIsProfileModalOpen(false);
       if (typeof window !== "undefined") {
-        const rootDomain = getRootDomain();
-        const rootHost = rootDomain.split(":")[0];
-        window.location.href = `https://${rootHost}/login`;
+        window.location.href = buildRootLoginUrl();
       }
     }
   };

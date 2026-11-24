@@ -64,6 +64,7 @@ import { Modal } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { organizationService } from "@/services/organizationService";
+import { buildRootLoginUrl } from "@/lib/subdomain";
 
 const FEATURE_ICONS: Record<string, React.ReactNode> = {
   Stethoscope: <Stethoscope className="h-4 w-4" />,
@@ -473,7 +474,7 @@ export default function TenantDetailsPage() {
               </div>
               <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
                 <a
-                  href={`/login?tenant=${org.slug}`}
+                  href={buildRootLoginUrl(org.slug)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-sky-600 hover:underline"

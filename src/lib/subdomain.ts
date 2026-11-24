@@ -15,7 +15,10 @@ const RESERVED_SUBDOMAINS = new Set([
  */
 export function getRootDomain(): string {
   if (process.env.NEXT_PUBLIC_ROOT_DOMAIN) {
-    return process.env.NEXT_PUBLIC_ROOT_DOMAIN.trim().toLowerCase();
+    let domain = process.env.NEXT_PUBLIC_ROOT_DOMAIN.trim().toLowerCase();
+    // Strip protocol if accidentally included in env var (e.g. "https://mediqbyte.com" -> "mediqbyte.com")
+    domain = domain.replace(/^https?:\/\//i, "").replace(/\/+$/, "");
+    return domain;
   }
   if (typeof window !== "undefined") {
     const host = window.location.host.toLowerCase();
@@ -67,15 +70,50 @@ export function getTenantSubdomain(): string | null {
 }
 
 /**
+ * Constructs the canonical root login URL with the tenant query parameter.
+ * Handles both localhost/dev and production environments cleanly using standard URL API.
+ * e.g. "kovelbyte" -> "https://mediqbyte.com/login?tenant=kovelbyte"
+ *      or in dev -> "http://localhost:3000/login?tenant=kovelbyte"
+ */
+export function buildRootLoginUrl(tenantSlug?: string | null): string {
+  const rootDomain = getRootDomain();
+  const rootHost = rootDomain.split(":")[0];
+  const isLocal = rootHost.includes("localhost") || rootHost.startsWith("127.");
+  const protocol = isLocal ? "http:" : "https:";
+  const baseUrl = `${protocol}//${rootDomain}`;
+
+  const url = new URL("/login", baseUrl);
+  if (tenantSlug) {
+    const cleanSlug = tenantSlug.trim().toLowerCase();
+    if (cleanSlug && !RESERVED_SUBDOMAINS.has(cleanSlug)) {
+      url.searchParams.set("tenant", cleanSlug);
+    }
+  }
+  return url.toString();
+}
+
+/**
  * Builds the full URL for a specific tenant organization subdomain portal.
  * e.g. "kovel" -> "https://kovel.mediqbyte.com/login" or "http://kovel.localhost:3000/login"
  */
 export function buildTenantSubdomainUrl(slug: string, path: string = ""): string {
   const rootDomain = getRootDomain();
-  const isLocal = rootDomain.includes("localhost") || rootDomain.startsWith("127.");
+  const rootHost = rootDomain.split(":")[0];
+  const isLocal = rootHost.includes("localhost") || rootHost.startsWith("127.");
   const protocol = isLocal ? "http:" : "https:";
   const cleanSlug = slug.trim().toLowerCase();
-  const cleanPath = path.startsWith("/") ? path : path ? `/${path}` : "";
 
+  // Guard against absolute URLs or protocols passed as path to prevent /https://... malformations
+  let relativePath = path;
+  if (relativePath.startsWith("http://") || relativePath.startsWith("https://")) {
+    try {
+      const parsed = new URL(relativePath);
+      relativePath = parsed.pathname + parsed.search + parsed.hash;
+    } catch {
+      relativePath = "/";
+    }
+  }
+
+  const cleanPath = relativePath.startsWith("/") ? relativePath : relativePath ? `/${relativePath}` : "";
   return `${protocol}//${cleanSlug}.${rootDomain}${cleanPath}`;
 }

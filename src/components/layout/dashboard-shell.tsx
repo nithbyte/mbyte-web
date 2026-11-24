@@ -11,7 +11,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { useCurrentUser } from "@/hooks";
 import { tokenStorage } from "@/lib/api-client";
 import { normalizeRole, type AppFeatures } from "@/types";
-import { getTenantSubdomain, getRootDomain, buildTenantSubdomainUrl } from "@/lib/subdomain";
+import { getTenantSubdomain, getRootDomain, buildTenantSubdomainUrl, buildRootLoginUrl } from "@/lib/subdomain";
 import { cn } from "@/lib/utils";
 import { useWebRTCCall } from "@/features/chat/useWebRTCCall";
 import { CallOverlay } from "@/features/chat/CallOverlay";
@@ -85,19 +85,24 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     }
   }, [currentUser?.id]);
 
+  const currentSubdomain = typeof window !== "undefined" ? getTenantSubdomain() : null;
+
   useEffect(() => {
     const token = tokenStorage.getAccessToken();
     // If no token exists, redirect to appropriate portal login
     if (!token && !isLoading) {
       if (pathname.startsWith("/companies") || pathname.startsWith("/admin")) {
         router.replace("/admin/login");
+      } else if (currentSubdomain) {
+        // When on a tenant subdomain without credentials, redirect to canonical root login with tenant param
+        window.location.replace(buildRootLoginUrl(currentSubdomain));
       } else {
         router.replace("/login");
       }
     } else {
       setAuthChecked(true);
     }
-  }, [isLoading, router, pathname]);
+  }, [isLoading, router, pathname, currentSubdomain]);
 
   useEffect(() => {
     if (canonicalRole === "SUPER_ADMIN" && pathname === "/") {
@@ -107,7 +112,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     }
   }, [canonicalRole, pathname, router]);
 
-  const currentSubdomain = typeof window !== "undefined" ? getTenantSubdomain() : null;
   const userOrgSlug =
     currentUser?.organization?.slug ||
     (currentUser?.organizationName
