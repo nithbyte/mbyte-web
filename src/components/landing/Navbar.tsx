@@ -162,36 +162,57 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDemo }) => {
           })}
         </nav>
 
-        {/* Right CTA Actions */}
-        <div className="hidden lg:flex items-center gap-2.5">
-          {onOpenDemo && (
-            <button
-              onClick={onOpenDemo}
-              className="text-xs font-bold text-slate-200 hover:text-white px-4 py-2 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/12 hover:border-[#FF6B00]/40 transition-all cursor-pointer"
+        {/* Right Actions & Kovelbyte Brand */}
+        <div className="flex items-center gap-2.5 sm:gap-4">
+          {/* Desktop CTA Actions */}
+          <div className="hidden lg:flex items-center gap-2.5">
+            {onOpenDemo && (
+              <button
+                onClick={onOpenDemo}
+                className="text-xs font-bold text-slate-200 hover:text-white px-4 py-2 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/12 hover:border-[#FF6B00]/40 transition-all cursor-pointer"
+              >
+                Request Demo
+              </button>
+            )}
+            <a
+              href="/login"
+              className="relative group overflow-hidden rounded-full p-[1px] focus:outline-none"
             >
-              Request Demo
-            </button>
-          )}
-          <a
-            href="/login"
-            className="relative group overflow-hidden rounded-full p-[1px] focus:outline-none"
-          >
-            <span className="absolute inset-0 bg-gradient-to-r from-[#FF8A34] via-[#FF6B00] to-[#E05300] rounded-full animated-border group-hover:opacity-100 transition-opacity" />
-            <span className="relative flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#070A0F] text-xs font-bold text-white transition-all group-hover:bg-[#070A0F]/80">
-              <span>Launch Mediqbyte</span>
-              <ArrowUpRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-white transition-colors" />
-            </span>
-          </a>
-        </div>
+              <span className="absolute inset-0 bg-gradient-to-r from-[#FF8A34] via-[#FF6B00] to-[#E05300] rounded-full animated-border group-hover:opacity-100 transition-opacity" />
+              <span className="relative flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#070A0F] text-xs font-bold text-white transition-all group-hover:bg-[#070A0F]/80">
+                <span>Launch Mediqbyte</span>
+                <ArrowUpRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-white transition-colors" />
+              </span>
+            </a>
+          </div>
 
-        {/* Mobile menu trigger */}
-        <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
-          className="lg:hidden p-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
-        >
-          {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
+          {/* Kovelbyte Logo (Right End - Dark Theme) */}
+          <a
+            href="https://kovelbyte.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center pl-2 sm:pl-3.5 lg:border-l lg:border-white/10 group cursor-pointer"
+            title="Kövelbyte"
+          >
+            <img
+              src="/brand/kovelbyte-logo-dark.png"
+              alt="Kövelbyte"
+              className="h-6 sm:h-7 md:h-8 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src = "/kovelbyte-logo-dark.png";
+              }}
+            />
+          </a>
+
+          {/* Mobile menu trigger */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+            className="lg:hidden p-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
+          >
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile Drawer */}
