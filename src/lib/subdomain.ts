@@ -115,5 +115,11 @@ export function buildTenantSubdomainUrl(slug: string, path: string = ""): string
   }
 
   const cleanPath = relativePath.startsWith("/") ? relativePath : relativePath ? `/${relativePath}` : "";
+
+  // On localhost / dev environments where *.localhost DNS is not configured by default, stay on root domain
+  if (isLocal) {
+    return `${protocol}//${rootDomain}${cleanPath}`;
+  }
+
   return `${protocol}//${cleanSlug}.${rootDomain}${cleanPath}`;
 }

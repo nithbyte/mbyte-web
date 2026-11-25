@@ -148,7 +148,7 @@ export default function LoginPage() {
         } else if (canonicalRole === "MR") {
           targetPath = "/visits";
         } else if (canonicalRole === "ADMIN" || canonicalRole === "TERRITORY_MANAGER") {
-          targetPath = "/";
+          targetPath = "/dashboard";
         }
 
         const orgSlug =
@@ -164,8 +164,9 @@ export default function LoginPage() {
           } catch {}
         }
 
-        // Redirect tenant users to their dedicated tenant subdomain portal
-        if (orgSlug && canonicalRole !== "SUPER_ADMIN" && currentSubdomain !== orgSlug) {
+        // Redirect tenant users to their dedicated tenant subdomain portal (in production environments)
+        const isLocalHost = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname.startsWith("127."));
+        if (!isLocalHost && orgSlug && canonicalRole !== "SUPER_ADMIN" && currentSubdomain !== orgSlug) {
           const destinationUrl = buildTenantSubdomainUrl(orgSlug, targetPath);
           window.location.replace(destinationUrl);
           return;
@@ -198,7 +199,7 @@ export default function LoginPage() {
       } else if (canonicalRole === "MR") {
         targetPath = "/visits";
       } else if (canonicalRole === "ADMIN" || canonicalRole === "TERRITORY_MANAGER") {
-        targetPath = "/";
+        targetPath = "/dashboard";
       }
 
       const selectedCompany = multiCompanyData.availableCompanies.find((c) => c.id === companyId);
@@ -216,8 +217,9 @@ export default function LoginPage() {
         } catch {}
       }
 
-      // Redirect tenant users to their dedicated tenant subdomain portal
-      if (orgSlug && canonicalRole !== "SUPER_ADMIN" && currentSubdomain !== orgSlug) {
+      // Redirect tenant users to their dedicated tenant subdomain portal (in production environments)
+      const isLocalHost = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname.startsWith("127."));
+      if (!isLocalHost && orgSlug && canonicalRole !== "SUPER_ADMIN" && currentSubdomain !== orgSlug) {
         const destinationUrl = buildTenantSubdomainUrl(orgSlug, targetPath);
         window.location.replace(destinationUrl);
         return;
