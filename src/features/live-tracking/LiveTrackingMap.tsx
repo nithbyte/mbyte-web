@@ -302,7 +302,7 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
 
         if (moved) {
           if (existing.rafId) cancelAnimationFrame(existing.rafId);
-          const durationMs = 700;
+          const durationMs = 950;
           const startTs = performance.now();
 
           const animate = (nowTs: number) => {
