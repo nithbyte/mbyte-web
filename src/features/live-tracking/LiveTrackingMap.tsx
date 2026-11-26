@@ -454,9 +454,10 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
         const startLat = existing.currentLat;
         const startLng = existing.currentLng;
 
-        const moved =
-          Math.abs(targetLat - startLat) > 0.000002 ||
-          Math.abs(targetLng - startLng) > 0.000002;
+        // Ignore stationary micro-drift (< 4m) to keep the representative marker rock-solid on their true position
+        const distMeters = haversineMeters(startLat, startLng, targetLat, targetLng);
+        const isStationary = mr.movementState !== "MOVING" && (mr.speedKmh || 0) < 1.5;
+        const moved = isStationary ? distMeters >= 4.5 : distMeters >= 1.5;
 
         if (moved) {
           if (existing.rafId) cancelAnimationFrame(existing.rafId);
