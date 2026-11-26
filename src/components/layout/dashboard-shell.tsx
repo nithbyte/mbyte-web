@@ -13,8 +13,6 @@ import { tokenStorage } from "@/lib/api-client";
 import { normalizeRole, type AppFeatures } from "@/types";
 import { getTenantSubdomain, getRootDomain, buildTenantSubdomainUrl, buildRootLoginUrl } from "@/lib/subdomain";
 import { cn } from "@/lib/utils";
-import { useWebRTCCall } from "@/features/chat/useWebRTCCall";
-import { CallOverlay } from "@/features/chat/CallOverlay";
 import { PageTransition } from "./page-transition";
 
 const MR_RESTRICTED_PREFIXES = [
@@ -74,9 +72,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   const canonicalRole = normalizeRole(currentUser?.role);
 
-  // Global incoming call listener on all dashboard pages except /chat (which manages its own call state)
-  const isChatRoute = pathname.startsWith("/chat");
-  const globalCall = useWebRTCCall(currentUser?.id, !isChatRoute && Boolean(currentUser?.id));
 
   // Request browser Notification permission once when logged in so background-tab call alerts work
   useEffect(() => {
@@ -299,30 +294,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
 
-      {!isChatRoute && globalCall.activeCall && (
-        <CallOverlay
-          activeCall={globalCall.activeCall}
-          callDuration={globalCall.callDuration}
-          isMuted={globalCall.isMuted}
-          isVideoEnabled={globalCall.isVideoEnabled}
-          isScreenSharing={globalCall.isScreenSharing}
-          localStream={globalCall.localStream}
-          remoteStream={globalCall.remoteStream}
-          currentUserId={currentUser?.id}
-          hasRealMic={globalCall.hasRealMic}
-          micError={globalCall.micError}
-          micLevel={globalCall.micLevel}
-          audioInputDevices={globalCall.audioInputDevices}
-          selectedAudioDeviceId={globalCall.selectedAudioDeviceId}
-          onAccept={globalCall.acceptCall}
-          onReject={globalCall.rejectCall}
-          onEndCall={globalCall.endCall}
-          onToggleMute={globalCall.toggleMute}
-          onToggleVideo={globalCall.toggleVideo}
-          onToggleScreenShare={globalCall.toggleScreenShare}
-          onSwitchMicrophone={globalCall.switchMicrophone}
-        />
-      )}
+
     </div>
   );
 }

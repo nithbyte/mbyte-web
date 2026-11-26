@@ -7,8 +7,6 @@ import {
   MessageSquare,
   Search,
   Plus,
-  Phone,
-  Video,
   Send,
   Paperclip,
   Image as ImageIcon,
@@ -39,8 +37,6 @@ import {
 import { useCurrentUser, useOrganizations } from "@/hooks";
 import { useAuthStore } from "@/store/useAuthStore";
 import { cn } from "@/lib/utils";
-import { useWebRTCCall } from "@/features/chat/useWebRTCCall";
-import { CallOverlay } from "@/features/chat/CallOverlay";
 
 export default function ChatPage() {
   const router = useRouter();
@@ -93,9 +89,6 @@ export default function ChatPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // WebRTC Calling Hook
-  const callState = useWebRTCCall(currentUserId);
-
   const closeChatPanel = useCallback(() => {
     const prevRoute =
       typeof window !== "undefined"
@@ -109,7 +102,7 @@ export default function ChatPage() {
   // Close chat when clicking outside the chat panel (on outer backdrop) or pressing Escape
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
-      if (isNewChatModalOpen || callState.activeCall) return;
+      if (isNewChatModalOpen) return;
       const target = event.target as HTMLElement | null;
       if (!target || !chatContainerRef.current) return;
       if (chatContainerRef.current.contains(target)) return;
@@ -127,9 +120,7 @@ export default function ChatPage() {
         setIsGroupMode(false);
         return;
       }
-      if (!callState.activeCall) {
-        closeChatPanel();
-      }
+      closeChatPanel();
     };
 
     document.addEventListener("mousedown", handleOutsideClick);
@@ -138,7 +129,7 @@ export default function ChatPage() {
       document.removeEventListener("mousedown", handleOutsideClick);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [callState.activeCall, closeChatPanel, isNewChatModalOpen]);
+  }, [closeChatPanel, isNewChatModalOpen]);
 
   // Load initial conversations and contacts, and keep recent chats in sync
   useEffect(() => {
@@ -435,42 +426,6 @@ export default function ChatPage() {
     }
   };
 
-  // Call colleague directly from roster or modal
-  const handleCallColleague = async (colleague: ColleagueContact, type: "AUDIO" | "VIDEO") => {
-    setIsNewChatModalOpen(false);
-    try {
-      const conv = await chatService.createConversation(
-        {
-          type: "DIRECT",
-          recipientId: colleague.id,
-          participantIds: [colleague.id],
-        },
-        colleague.organizationId || (selectedTenantOrgId !== "all" ? selectedTenantOrgId : undefined)
-      );
-      setConversations((prev) => [conv, ...prev.filter((c) => c.id !== conv.id)]);
-      setSelectedConversationId(conv.id);
-      callState.startCall(conv.id, colleague.id, colleague.name, type);
-    } catch (err) {
-      console.error("Failed to call colleague", err);
-    }
-  };
-
-  // Start Call from conversation header
-  const handleInitiateCall = (type: "AUDIO" | "VIDEO") => {
-    if (!activeConversation) return;
-    const partner = activeConversation.participants?.find(
-      (p: any) => (p.userId || p.user?.id) !== currentUserId
-    );
-    const receiverId = partner?.userId || (partner as any)?.user?.id;
-    const receiverName =
-      partner?.name ||
-      ((partner as any)?.user
-        ? `${(partner as any).user.firstName} ${(partner as any).user.lastName}`.trim()
-        : null) ||
-      activeConversation.title;
-
-    callState.startCall(activeConversation.id, receiverId, receiverName, type);
-  };
 
   // Create Conversation
   const handleCreateConversation = async (participantId: string) => {
@@ -575,29 +530,6 @@ export default function ChatPage() {
       ref={chatContainerRef}
       className="flex h-[calc(100vh-5.5rem)] overflow-hidden rounded-3xl border border-[#E5E1D9] bg-white shadow-xl dark:border-[#333333] dark:bg-[#1E1E1E]"
     >
-      {/* Global Call Overlay (Mounts Audio/Video Call View) */}
-      <CallOverlay
-        activeCall={callState.activeCall}
-        callDuration={callState.callDuration}
-        isMuted={callState.isMuted}
-        isVideoEnabled={callState.isVideoEnabled}
-        isScreenSharing={callState.isScreenSharing}
-        localStream={callState.localStream}
-        remoteStream={callState.remoteStream}
-        currentUserId={currentUserId}
-        hasRealMic={callState.hasRealMic}
-        micError={callState.micError}
-        micLevel={callState.micLevel}
-        audioInputDevices={callState.audioInputDevices}
-        selectedAudioDeviceId={callState.selectedAudioDeviceId}
-        onAccept={callState.acceptCall}
-        onReject={callState.rejectCall}
-        onEndCall={callState.endCall}
-        onToggleMute={callState.toggleMute}
-        onToggleVideo={callState.toggleVideo}
-        onToggleScreenShare={callState.toggleScreenShare}
-        onSwitchMicrophone={callState.switchMicrophone}
-      />
 
       {/* LEFT PANEL: Conversation Directory */}
       <div
@@ -742,18 +674,11 @@ export default function ChatPage() {
 
                   <div className="flex items-center gap-1.5 shrink-0">
                     <button
-                      onClick={() => handleCallColleague(c, "AUDIO")}
-                      className="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 cursor-pointer transition-colors"
-                      title={"Call " + c.name}
+                      onClick={() => handleCreateConversation(c.id)}
+                      className="px-2.5 py-1.5 rounded-xl bg-orange-50 hover:bg-orange-100 text-[#FF6B00] dark:bg-orange-950/40 text-xs font-semibold cursor-pointer transition-colors"
+                      title={"Message " + c.name}
                     >
-                      <Phone className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => handleCallColleague(c, "VIDEO")}
-                      className="p-2 rounded-xl bg-orange-50 hover:bg-orange-100 text-[#FF6B00] dark:bg-orange-950/40 cursor-pointer transition-colors"
-                      title={"Video Call " + c.name}
-                    >
-                      <Video className="w-3.5 h-3.5" />
+                      Message
                     </button>
                   </div>
                 </div>
@@ -894,27 +819,6 @@ export default function ChatPage() {
                     (activeConversation.isOnline ? "Active now" : "Offline")}
                 </p>
               </div>
-            </div>
-
-            {/* Calling Action Buttons */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => handleInitiateCall("AUDIO")}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-emerald-50 hover:text-emerald-600 text-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-emerald-950/30 dark:hover:text-emerald-400 text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95"
-                title="Start Voice Call"
-              >
-                <Phone className="w-4 h-4 text-emerald-500" />
-                <span className="hidden sm:inline">Voice Call</span>
-              </button>
-
-              <button
-                onClick={() => handleInitiateCall("VIDEO")}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-[#FF6B00]/10 hover:text-[#FF6B00] text-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-[#FF6B00]/20 dark:hover:text-[#FF6B00] text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95"
-                title="Start Video Call"
-              >
-                <Video className="w-4 h-4 text-[#FF6B00]" />
-                <span className="hidden sm:inline">Video Call</span>
-              </button>
             </div>
           </div>
 
@@ -1250,27 +1154,7 @@ export default function ChatPage() {
                       </div>
                     ) : (
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleCallColleague(c, "AUDIO");
-                          }}
-                          className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-600 transition-colors"
-                          title="Call"
-                        >
-                          <Phone className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleCallColleague(c, "VIDEO");
-                          }}
-                          className="p-1.5 rounded-lg bg-orange-50 hover:bg-orange-100 text-[#FF6B00] transition-colors"
-                          title="Video Call"
-                        >
-                          <Video className="w-3.5 h-3.5" />
-                        </button>
-                        <span className="text-xs text-[#FF6B00] font-semibold hover:underline ml-1">
+                        <span className="text-xs text-[#FF6B00] font-semibold hover:underline">
                           Message &rarr;
                         </span>
                       </div>
