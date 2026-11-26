@@ -149,6 +149,144 @@ function buildVisitPinHtml(pin: LiveMrVisitPin, isSelected: boolean, sequence: n
   `;
 }
 
+function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371000;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function chaikinSmooth(points: L.LatLngTuple[], iterations = 1): L.LatLngTuple[] {
+  if (points.length <= 2) return points;
+  let current = points;
+  for (let it = 0; it < iterations; it++) {
+    const smoothed: L.LatLngTuple[] = [];
+    smoothed.push(current[0]);
+    for (let i = 0; i < current.length - 1; i++) {
+      const p0 = current[i];
+      const p1 = current[i + 1];
+      const q: L.LatLngTuple = [0.75 * p0[0] + 0.25 * p1[0], 0.75 * p0[1] + 0.25 * p1[1]];
+      const r: L.LatLngTuple = [0.25 * p0[0] + 0.75 * p1[0], 0.25 * p0[1] + 0.75 * p1[1]];
+      smoothed.push(q);
+      smoothed.push(r);
+    }
+    smoothed.push(current[current.length - 1]);
+    current = smoothed;
+  }
+  return current;
+}
+
+/**
+ * Intelligent Trajectory Filter & Route Smoother:
+ * 1. Filters out indoor GPS multipath reflections & Wi-Fi triangulation bounce spikes (the "spiderweb")
+ * 2. Collapses stationary dwell clusters inside clinics/hospitals (< 22m radius) into clean dwell anchors
+ * 3. Applies Chaikin curve smoothing so road routes follow streets cleanly without jagged stair-steps
+ */
+function cleanAndSmoothRouteTrail(rawTrail: RouteBreadcrumb[]): L.LatLngTuple[] {
+  if (!rawTrail || rawTrail.length === 0) return [];
+
+  // 1. Filter out invalid/zero coordinates and sort chronologically
+  const valid = rawTrail
+    .filter(
+      (p) =>
+        typeof p.latitude === "number" &&
+        typeof p.longitude === "number" &&
+        !isNaN(p.latitude) &&
+        !isNaN(p.longitude) &&
+        (p.latitude !== 0 || p.longitude !== 0),
+    )
+    .sort((a, b) => new Date(a.capturedAt).getTime() - new Date(b.capturedAt).getTime());
+
+  if (valid.length <= 1) {
+    return valid.map((p) => [p.latitude, p.longitude]);
+  }
+
+  // 2. Filter out poor accuracy fixes (> 45m) when good fixes exist
+  const hasGood = valid.some((p) => p.accuracy && p.accuracy <= 35);
+  const accuracyFiltered = hasGood
+    ? valid.filter((p) => !p.accuracy || p.accuracy <= 45)
+    : valid;
+
+  const basePoints = accuracyFiltered.length >= 2 ? accuracyFiltered : valid;
+
+  // 3. Remove Multipath Rebound Spikes (The Spiderweb Killer)
+  // If point i jumps out and next point (or i+2) returns close to previous point:
+  const noSpikes: RouteBreadcrumb[] = [];
+  noSpikes.push(basePoints[0]);
+
+  for (let i = 1; i < basePoints.length - 1; i++) {
+    const prev = noSpikes[noSpikes.length - 1];
+    const curr = basePoints[i];
+    const next = basePoints[i + 1];
+
+    const dPrevCurr = haversineMeters(prev.latitude, prev.longitude, curr.latitude, curr.longitude);
+    const dCurrNext = haversineMeters(curr.latitude, curr.longitude, next.latitude, next.longitude);
+    const dPrevNext = haversineMeters(prev.latitude, prev.longitude, next.latitude, next.longitude);
+
+    // If current point jumped out >= 28m and next point snaps back close to prev:
+    const isSingleSpike =
+      dPrevCurr >= 28 &&
+      dCurrNext >= 28 &&
+      dPrevNext <= Math.max(dPrevCurr * 0.45, 25);
+
+    if (isSingleSpike) {
+      continue;
+    }
+
+    // Check two-point spike
+    if (i < basePoints.length - 2) {
+      const nextNext = basePoints[i + 2];
+      const dPrevNextNext = haversineMeters(prev.latitude, prev.longitude, nextNext.latitude, nextNext.longitude);
+      const isDoubleSpike =
+        dPrevCurr >= 28 &&
+        dPrevNextNext <= Math.max(dPrevCurr * 0.45, 25);
+      if (isDoubleSpike) {
+        continue;
+      }
+    }
+
+    noSpikes.push(curr);
+  }
+
+  noSpikes.push(basePoints[basePoints.length - 1]);
+
+  // 4. Stationary Dwell Clustering
+  // Collapse stationary jitter inside clinics (< 22m radius) into clean dwell anchors
+  const clustered: L.LatLngTuple[] = [];
+  let clusterAnchor = noSpikes[0];
+  clustered.push([clusterAnchor.latitude, clusterAnchor.longitude]);
+
+  for (let i = 1; i < noSpikes.length; i++) {
+    const pt = noSpikes[i];
+    const distFromAnchor = haversineMeters(
+      clusterAnchor.latitude,
+      clusterAnchor.longitude,
+      pt.latitude,
+      pt.longitude,
+    );
+
+    if (i === noSpikes.length - 1) {
+      clustered.push([pt.latitude, pt.longitude]);
+      break;
+    }
+
+    if (distFromAnchor >= 22) {
+      clustered.push([pt.latitude, pt.longitude]);
+      clusterAnchor = pt;
+    }
+  }
+
+  // 5. Road-curve smoothing
+  return chaikinSmooth(clustered, 1);
+}
+
 export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
   mrs,
   selectedMrId,
@@ -292,7 +430,7 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
         const accuracyCircle =
           isSelected && mr.accuracy && mr.accuracy > 0
             ? L.circle([mr.latitude, mr.longitude], {
-                radius: Math.min(mr.accuracy, 250),
+                radius: Math.min(mr.accuracy, 120),
                 color: "#FF6B00",
                 fillColor: "#FF6B00",
                 fillOpacity: 0.12,
@@ -351,10 +489,10 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
         // Manage accuracy ring for selected MR
         if (isSelected && mr.accuracy && mr.accuracy > 0) {
           if (existing.accuracyCircle) {
-            existing.accuracyCircle.setRadius(Math.min(mr.accuracy, 250));
+            existing.accuracyCircle.setRadius(Math.min(mr.accuracy, 120));
           } else {
             existing.accuracyCircle = L.circle([targetLat, targetLng], {
-              radius: Math.min(mr.accuracy, 250),
+              radius: Math.min(mr.accuracy, 120),
               color: "#FF6B00",
               fillColor: "#FF6B00",
               fillOpacity: 0.12,
@@ -416,7 +554,7 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
     }
   }, [fitAllSignal, mrs]);
 
-  // Render live breadcrumb route trail for selected MR
+  // Render live breadcrumb route trail for selected MR (filtered & smoothed)
   useEffect(() => {
     const layer = trailLayerRef.current;
     if (!layer) return;
@@ -426,10 +564,12 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
       return;
     }
 
-    const latLngs: L.LatLngTuple[] = selectedMr.trail.map((pt) => [pt.latitude, pt.longitude]);
+    // Filter out indoor GPS multipath rebounds, collapse clinic dwell jitter, and smooth curve
+    const cleanCoords = cleanAndSmoothRouteTrail(selectedMr.trail);
+    if (cleanCoords.length === 0) return;
 
     // Outer glow stroke + crisp inner orange route line
-    L.polyline(latLngs, {
+    L.polyline(cleanCoords, {
       color: "#FF6B00",
       weight: 7,
       opacity: 0.22,
@@ -437,7 +577,7 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
       lineJoin: "round",
     }).addTo(layer);
 
-    L.polyline(latLngs, {
+    L.polyline(cleanCoords, {
       color: "#FF6B00",
       weight: 3.5,
       opacity: 0.92,
@@ -446,16 +586,16 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
     }).addTo(layer);
 
     // Start point flag
-    const startPt = selectedMr.trail[0];
+    const startPt = cleanCoords[0];
     const startIcon = L.divIcon({
       className: "mbyte-start-pin",
       html: `<div style="transform:translate(-50%,-50%);padding:2px 6px;border-radius:9999px;background:#0f172a;color:#fff;font-size:10px;font-weight:700;border:2px solid #10b981;box-shadow:0 2px 6px rgba(0,0,0,0.3);">START</div>`,
       iconSize: [0, 0],
     });
-    L.marker([startPt.latitude, startPt.longitude], { icon: startIcon, zIndexOffset: 100 })
+    L.marker([startPt[0], startPt[1]], { icon: startIcon, zIndexOffset: 100 })
       .bindPopup(
         `<div style="font-size:12px;"><strong>Shift Route Start</strong><br/>${new Date(
-          startPt.capturedAt,
+          selectedMr.trail[0].capturedAt,
         ).toLocaleTimeString()}</div>`,
       )
       .addTo(layer);
