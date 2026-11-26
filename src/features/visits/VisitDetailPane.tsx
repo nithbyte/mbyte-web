@@ -11,6 +11,7 @@ import {
   Building2,
   Clock,
   User,
+  Users,
   ShieldCheck,
   FileText,
   Boxes,
@@ -19,11 +20,13 @@ import {
   Plus,
   AlertTriangle,
   CheckCircle,
+  CheckCircle2,
   XCircle,
   Calendar,
   X,
   Phone,
   Compass,
+  MapPin,
 } from "lucide-react";
 
 interface VisitDetailPaneProps {
@@ -127,6 +130,15 @@ export const VisitDetailPane: React.FC<VisitDetailPaneProps> = ({
                 {visit.customerName}
               </h2>
               {getStatusBadge(visit.status)}
+              {visit.isJointVisit && (
+                <Badge
+                  variant="outline"
+                  className="bg-indigo-50 dark:bg-indigo-950/60 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 gap-1 text-[11px] font-bold"
+                >
+                  <Users className="h-3 w-3" />
+                  JOINT VISIT
+                </Badge>
+              )}
             </div>
             <p className="text-xs text-slate-500 mt-0.5 truncate">
               {visit.specialty || "General Practice"} • {visit.customerType} • Priority: {visit.priority || "NORMAL"}
@@ -202,6 +214,125 @@ export const VisitDetailPane: React.FC<VisitDetailPaneProps> = ({
             </div>
           </div>
         </div>
+
+        {/* JOINT FIELD VISIT TELEMETRY & PARTICIPATING MRs */}
+        {visit.isJointVisit && (
+          <div className="p-4 rounded-xl border border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/40 dark:bg-indigo-950/20 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                <h4 className="font-bold text-slate-900 dark:text-slate-100 text-xs">
+                  Joint Field Telemetry ({visit.participants?.length || 2} Participating Representatives)
+                </h4>
+              </div>
+              <Badge
+                variant="outline"
+                className="bg-indigo-100 dark:bg-indigo-900/60 border-indigo-300 dark:border-indigo-700 text-indigo-800 dark:text-indigo-200 text-[10px] font-bold"
+              >
+                SHARED VISIT
+              </Badge>
+            </div>
+
+            <div className="space-y-2.5">
+              {visit.participants && visit.participants.length > 0 ? (
+                visit.participants.map((p) => {
+                  const isInitiator = p.role === "INITIATOR" || p.mrId === visit.initiatedByMrId || p.mrId === visit.mrId;
+                  const mrName =
+                    p.mr?.name ||
+                    (p.mr?.user ? `${p.mr.user.firstName || ""} ${p.mr.user.lastName || ""}`.trim() : null) ||
+                    (isInitiator ? visit.mrName : p.mrId);
+                  const isAccepted = p.inviteStatus === "ACCEPTED";
+                  const isPending = p.inviteStatus === "PENDING";
+
+                  return (
+                    <div
+                      key={p.id}
+                      className="p-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2 shadow-xs"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div
+                            className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                              isInitiator
+                                ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                                : "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300"
+                            }`}
+                          >
+                            {isInitiator ? "H" : "J"}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-bold text-slate-900 dark:text-slate-100 text-xs truncate">
+                              {mrName}
+                            </div>
+                            <div className="text-[10px] text-slate-500 truncate">
+                              {isInitiator ? "Host / Initiator" : "Joint Participant"} • Code: {p.mr?.employeeCode || "MR"} • {p.mr?.territoryName || visit.territoryName || "Territory"}
+                            </div>
+                          </div>
+                        </div>
+
+                        <Badge
+                          variant={isAccepted ? "success" : isPending ? "warning" : "destructive"}
+                          className="text-[9px] font-semibold py-0 px-1.5 h-4.5"
+                        >
+                          {p.inviteStatus}
+                        </Badge>
+                      </div>
+
+                      {/* GPS Check-in & Check-out telemetry */}
+                      <div className="grid grid-cols-2 gap-2 text-[10px] pt-1.5 border-t border-slate-100 dark:border-slate-800/60 font-mono">
+                        <div>
+                          <span className="text-slate-400 block font-sans text-[9px] uppercase">GPS Check-In:</span>
+                          {p.checkInAt ? (
+                            <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                              <CheckCircle2 className="h-3 w-3" />
+                              {new Date(p.checkInAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                              {p.checkInDistance != null && ` (${Math.round(p.checkInDistance)}m)`}
+                            </span>
+                          ) : isInitiator && visit.verifiedDistance != null ? (
+                            <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                              <CheckCircle2 className="h-3 w-3" />
+                              Verified ({Math.round(visit.verifiedDistance)}m)
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 italic">Not checked in</span>
+                          )}
+                        </div>
+
+                        <div>
+                          <span className="text-slate-400 block font-sans text-[9px] uppercase">GPS Check-Out:</span>
+                          {p.checkOutAt ? (
+                            <span className="text-slate-700 dark:text-slate-300 font-semibold flex items-center gap-1">
+                              <Clock className="h-3 w-3 text-slate-400" />
+                              {new Date(p.checkOutAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                              {p.durationSeconds != null && ` (${Math.floor(p.durationSeconds / 60)}m)`}
+                            </span>
+                          ) : visit.actualEndTime ? (
+                            <span className="text-slate-700 dark:text-slate-300 font-semibold flex items-center gap-1">
+                              <Clock className="h-3 w-3 text-slate-400" />
+                              {new Date(visit.actualEndTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 italic">In progress / active</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {p.notes && (
+                        <div className="text-[10px] bg-slate-50 dark:bg-slate-950 p-2 rounded text-slate-600 dark:text-slate-300 italic border border-slate-100 dark:border-slate-800">
+                          &ldquo;{p.notes}&rdquo;
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="p-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-500 italic">
+                  Joint visit recorded with multiple field representatives. Telemetry synchronized.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* GEOFENCE EXCEPTION REVIEW PANEL */}
         {visit.verificationStatus === "EXCEPTION_REQUESTED" && (

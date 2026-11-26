@@ -19,11 +19,68 @@ function mapApiVisit(v: any): Visit {
     }
   }
 
+  const participants = Array.isArray(v.participants)
+    ? v.participants.map((p: any) => ({
+        id: p.id,
+        visitId: p.visitId || v.id,
+        medicalRepresentativeId: p.medicalRepresentativeId || p.mrId,
+        mrId: p.mrId || p.medicalRepresentativeId,
+        role: p.role || "PARTICIPANT",
+        inviteStatus: p.inviteStatus || "PENDING",
+        invitedByUserId: p.invitedByUserId,
+        invitedAt: p.invitedAt || v.createdAt,
+        respondedAt: p.respondedAt,
+        declineReason: p.declineReason,
+        checkInAt: p.checkInAt,
+        checkInLat: p.checkInLat != null ? Number(p.checkInLat) : null,
+        checkInLng: p.checkInLng != null ? Number(p.checkInLng) : null,
+        checkInAccuracy: p.checkInAccuracy != null ? Number(p.checkInAccuracy) : null,
+        checkInDistance: p.checkInDistance != null ? Number(p.checkInDistance) : null,
+        checkInVerificationStatus: p.checkInVerificationStatus,
+        checkOutAt: p.checkOutAt,
+        checkOutLat: p.checkOutLat != null ? Number(p.checkOutLat) : null,
+        checkOutLng: p.checkOutLng != null ? Number(p.checkOutLng) : null,
+        checkOutAccuracy: p.checkOutAccuracy != null ? Number(p.checkOutAccuracy) : null,
+        checkOutDistance: p.checkOutDistance != null ? Number(p.checkOutDistance) : null,
+        durationSeconds: p.durationSeconds != null ? Number(p.durationSeconds) : null,
+        notes: p.notes,
+        mr: p.mr || (p.medicalRepresentative
+          ? {
+              id: p.medicalRepresentative.id,
+              employeeCode: p.medicalRepresentative.employeeCode || "",
+              name: p.medicalRepresentative.name || (p.medicalRepresentative.user
+                ? `${p.medicalRepresentative.user.firstName || ""} ${p.medicalRepresentative.user.lastName || ""}`.trim()
+                : p.medicalRepresentative.employeeCode || "MR"),
+              designation: p.medicalRepresentative.designation,
+              territoryId: p.medicalRepresentative.territoryId,
+              territoryName: p.medicalRepresentative.territory?.name || p.medicalRepresentative.territoryName,
+              user: p.medicalRepresentative.user,
+            }
+          : undefined),
+      }))
+    : [];
+
+  const isJoint = Boolean(
+    v.isJointVisit ||
+    v.visitType === "JOINT" ||
+    participants.length > 1
+  );
+
+  const initiatorMr = participants.find((p: any) => p.role === "INITIATOR");
+  const hostName =
+    v.mr?.name ||
+    (v.mr?.user ? `${v.mr.user.firstName || ""} ${v.mr.user.lastName || ""}`.trim() : null) ||
+    v.mrName ||
+    initiatorMr?.mr?.name ||
+    "Medical Representative";
+
   return {
     id: v.id,
     organizationId: v.organizationId || "",
     mrId: v.mrId || v.mr?.id || "mr_001",
-    mrName: v.mr?.name || v.mrName || "Medical Representative",
+    mrName: hostName,
+    employeeCode: v.mr?.employeeCode || v.employeeCode,
+    mrPhone: v.mr?.phone || v.mrPhone,
     territoryId: v.territoryId || v.customer?.territoryId || v.mr?.territoryId || "",
     territoryName: v.territoryName || v.mr?.territoryName || "Central Territory",
     customerId: v.customer?.id || v.doctorId || v.pharmacyId || v.distributorId || v.customerId,
@@ -50,6 +107,13 @@ function mapApiVisit(v: any): Visit {
     feedbackNotes: v.feedbackNotes,
     doctorFeedback: v.feedbackNotes,
     durationSeconds: v.durationSeconds,
+    visitType: isJoint ? "JOINT" : (v.visitType || "SOLO"),
+    isJointVisit: isJoint,
+    initiatedByMrId: v.initiatedByMrId,
+    initiatedByMrName: v.initiatedByMr?.user
+      ? `${v.initiatedByMr.user.firstName || ""} ${v.initiatedByMr.user.lastName || ""}`.trim()
+      : v.initiatedByMrName,
+    participants,
     createdAt: v.createdAt,
   };
 }

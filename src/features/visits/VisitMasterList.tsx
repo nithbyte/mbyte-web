@@ -11,6 +11,7 @@ import {
   Clock,
   MapPin,
   User,
+  Users,
   CheckCircle,
   AlertTriangle,
   XCircle,
@@ -205,7 +206,18 @@ export const VisitMasterList: React.FC<VisitMasterListProps> = ({
                 >
                   {v.customerName}
                 </span>
-                <div className="shrink-0">{getStatusBadge(v.status)}</div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {v.isJointVisit && (
+                    <Badge
+                      variant="outline"
+                      className="bg-indigo-50 dark:bg-indigo-950/60 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 gap-1 text-[9px] font-bold py-0 px-1.5 h-5"
+                    >
+                      <Users className="h-2.5 w-2.5" />
+                      JOINT ({v.participants && v.participants.length > 0 ? v.participants.length : 2} MRs)
+                    </Badge>
+                  )}
+                  {getStatusBadge(v.status)}
+                </div>
               </div>
 
               {/* Specialty / Address */}
@@ -214,17 +226,40 @@ export const VisitMasterList: React.FC<VisitMasterListProps> = ({
               </div>
 
               {/* MR & Territory */}
-              <div className="flex items-center gap-2 text-[11px] text-slate-600 dark:text-slate-300 pt-0.5">
-                <span className="flex items-center gap-1 font-semibold truncate">
-                  <User className="h-3 w-3 text-slate-400 shrink-0" />
-                  <span className="truncate">{v.mrName}</span>
-                </span>
-                <span className="text-slate-300 dark:text-slate-700">•</span>
-                <span className="flex items-center gap-1 text-slate-500 truncate text-[10px]">
-                  <MapPin className="h-2.5 w-2.5 text-sky-600 shrink-0" />
-                  <span className="truncate">{v.territoryName}</span>
-                </span>
-              </div>
+              {v.isJointVisit ? (
+                <div className="space-y-0.5 pt-0.5">
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate-700 dark:text-slate-200 font-semibold truncate">
+                    <Users className="h-3 w-3 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                    <span className="truncate">
+                      Host: {v.mrName}
+                      {(v.participants || []).filter((p) => p.mrId !== v.mrId && p.role !== "INITIATOR").length > 0 && (
+                        <span className="text-indigo-600 dark:text-indigo-400 font-medium">
+                          {" "}+ Joint: {(v.participants || [])
+                            .filter((p) => p.mrId !== v.mrId && p.role !== "INITIATOR")
+                            .map((p) => p.mr?.name || p.mrId)
+                            .join(", ")}
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 text-slate-500 truncate text-[10px] pl-4.5">
+                    <MapPin className="h-2.5 w-2.5 text-sky-600 shrink-0" />
+                    <span className="truncate">{v.territoryName}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-[11px] text-slate-600 dark:text-slate-300 pt-0.5">
+                  <span className="flex items-center gap-1 font-semibold truncate">
+                    <User className="h-3 w-3 text-slate-400 shrink-0" />
+                    <span className="truncate">{v.mrName}</span>
+                  </span>
+                  <span className="text-slate-300 dark:text-slate-700">•</span>
+                  <span className="flex items-center gap-1 text-slate-500 truncate text-[10px]">
+                    <MapPin className="h-2.5 w-2.5 text-sky-600 shrink-0" />
+                    <span className="truncate">{v.territoryName}</span>
+                  </span>
+                </div>
+              )}
 
               {/* Footer: Time Window + GPS Badge */}
               <div className="flex items-center justify-between pt-1 text-[10px]">

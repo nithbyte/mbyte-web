@@ -97,7 +97,55 @@ export interface Visit {
   orderPlaced?: boolean;
   orderValue?: number;
   collectionAmount?: number;
+  visitType?: "SOLO" | "JOINT";
+  isJointVisit?: boolean;
+  initiatedByMrId?: string;
+  initiatedByMrName?: string;
+  participants?: VisitParticipant[];
   createdAt: string;
+}
+
+export type VisitParticipantInviteStatus = "PENDING" | "ACCEPTED" | "DECLINED" | "CANCELLED";
+export type VisitParticipantRole = "INITIATOR" | "PARTICIPANT";
+
+export interface VisitParticipant {
+  id: string;
+  visitId: string;
+  medicalRepresentativeId: string;
+  mrId?: string;
+  role: VisitParticipantRole;
+  inviteStatus: VisitParticipantInviteStatus;
+  invitedByUserId?: string | null;
+  invitedAt: string;
+  respondedAt?: string | null;
+  declineReason?: string | null;
+  checkInAt?: string | null;
+  checkInLat?: number | null;
+  checkInLng?: number | null;
+  checkInAccuracy?: number | null;
+  checkInDistance?: number | null;
+  checkInVerificationStatus?: string | null;
+  checkOutAt?: string | null;
+  checkOutLat?: number | null;
+  checkOutLng?: number | null;
+  checkOutAccuracy?: number | null;
+  checkOutDistance?: number | null;
+  durationSeconds?: number | null;
+  notes?: string | null;
+  mr?: {
+    id: string;
+    employeeCode: string;
+    name?: string;
+    designation?: string;
+    territoryId?: string;
+    territoryName?: string;
+    user?: {
+      id?: string;
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+    };
+  };
 }
 
 export interface VisitCounts {
