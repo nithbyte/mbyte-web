@@ -178,8 +178,18 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
   const onSelectVisitRef = useRef(onSelectVisit);
   onSelectVisitRef.current = onSelectVisit;
 
-  // Default to STREET (OpenStreetMap) so it loads immediately without watermarks or payment gates
-  const [layerKey, setLayerKey] = useState<MapLayerKey>("STREET");
+  // Default to GOOGLE (Google Road) as the primary map layer
+  const [layerKey, setLayerKey] = useState<MapLayerKey>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("mbyte_map_layer") as MapLayerKey | null;
+        if (saved && TILE_LAYERS[saved]) {
+          return saved;
+        }
+      } catch {}
+    }
+    return "GOOGLE";
+  });
 
   // Initialize Leaflet map once
   useEffect(() => {
@@ -194,11 +204,16 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
 
     L.control.zoom({ position: "bottomright" }).addTo(map);
 
-    const cfg = TILE_LAYERS.STREET;
+    const initialKey: MapLayerKey =
+      (typeof window !== "undefined"
+        ? (localStorage.getItem("mbyte_map_layer") as MapLayerKey | null)
+        : null) || "GOOGLE";
+    const cfg = TILE_LAYERS[initialKey] || TILE_LAYERS.GOOGLE;
     tileLayerRef.current = L.tileLayer(cfg.url, {
       attribution: cfg.attribution,
       maxZoom: cfg.maxZoom,
-      subdomains: cfg.subdomains || ["a", "b", "c"],
+      maxNativeZoom: cfg.maxNativeZoom,
+      subdomains: cfg.subdomains || ["mt0", "mt1", "mt2", "mt3"],
     }).addTo(map);
 
     trailLayerRef.current = L.layerGroup().addTo(map);
@@ -221,19 +236,24 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
     };
   }, []);
 
-  // Switch tile layer
+  // Switch tile layer and persist preference
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("mbyte_map_layer", layerKey);
+      } catch {}
+    }
     const map = mapRef.current;
     if (!map) return;
     if (tileLayerRef.current) {
       map.removeLayer(tileLayerRef.current);
     }
-    const cfg = TILE_LAYERS[layerKey] || TILE_LAYERS.STREET;
+    const cfg = TILE_LAYERS[layerKey] || TILE_LAYERS.GOOGLE;
     tileLayerRef.current = L.tileLayer(cfg.url, {
       attribution: cfg.attribution,
       maxZoom: cfg.maxZoom,
       maxNativeZoom: cfg.maxNativeZoom,
-      subdomains: cfg.subdomains || ["a", "b", "c"],
+      subdomains: cfg.subdomains || ["mt0", "mt1", "mt2", "mt3"],
     }).addTo(map);
   }, [layerKey]);
 
@@ -629,7 +649,7 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
       {/* Top-Left Map Layer Switcher (Street, Detailed, Satellite) */}
       <div className="absolute top-3 left-3 z-[400] flex items-center gap-1 rounded-lg border border-slate-200/90 bg-white/95 p-1 shadow-md backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">
         <Layers className="h-3.5 w-3.5 text-slate-500 ml-1.5 mr-0.5" />
-        {(["STREET", "GOOGLE", "SATELLITE"] as MapLayerKey[]).map((key) => (
+        {(["GOOGLE", "STREET", "SATELLITE"] as MapLayerKey[]).map((key) => (
           <button
             key={key}
             type="button"
