@@ -9,7 +9,7 @@ import { Header } from "./header";
 import { useSidebarStore } from "@/store";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useCurrentUser } from "@/hooks";
-import { tokenStorage } from "@/lib/api-client";
+import { tokenStorage, refreshAuthSession, isTokenExpired } from "@/lib/api-client";
 import { normalizeRole, type AppFeatures } from "@/types";
 import { getTenantSubdomain, getRootDomain, buildTenantSubdomainUrl, buildRootLoginUrl } from "@/lib/subdomain";
 import { cn } from "@/lib/utils";
@@ -83,21 +83,51 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const currentSubdomain = typeof window !== "undefined" ? getTenantSubdomain() : null;
 
   useEffect(() => {
-    const token = tokenStorage.getAccessToken();
-    // If no token exists, redirect to appropriate portal login
-    if (!token && !isLoading) {
-      if (pathname.startsWith("/companies") || pathname.startsWith("/admin")) {
-        router.replace("/admin/login");
-      } else if (currentSubdomain) {
-        // When on a tenant subdomain without credentials, redirect to canonical root login with tenant param
-        window.location.replace(buildRootLoginUrl(currentSubdomain));
-      } else {
-        router.replace("/login");
+    let isMounted = true;
+
+    async function checkAuth() {
+      let token = tokenStorage.getAccessToken();
+
+      // If access token is expired or missing, check if a valid refresh token exists to restore session
+      if (!token) {
+        const refreshToken = tokenStorage.getRefreshToken();
+        if (refreshToken && !isTokenExpired(refreshToken)) {
+          token = await refreshAuthSession();
+        }
       }
-    } else {
-      setAuthChecked(true);
+
+      if (!token && !isLoading && isMounted) {
+        if (pathname.startsWith("/companies") || pathname.startsWith("/admin")) {
+          router.replace("/admin/login");
+        } else if (currentSubdomain) {
+          // When on a tenant subdomain without credentials, redirect to canonical root login with tenant param
+          window.location.replace(buildRootLoginUrl(currentSubdomain));
+        } else {
+          router.replace("/login");
+        }
+      } else if (isMounted) {
+        setAuthChecked(true);
+      }
     }
+
+    checkAuth();
+
+    return () => {
+      isMounted = false;
+    };
   }, [isLoading, router, pathname, currentSubdomain]);
+
+  // Periodic silent background refresh: keeps active dashboard sessions alive automatically
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const refreshToken = tokenStorage.getRefreshToken();
+      if (refreshToken && !isTokenExpired(refreshToken)) {
+        await refreshAuthSession();
+      }
+    }, 10 * 60 * 1000); // Silent refresh check every 10 minutes
+
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (canonicalRole === "SUPER_ADMIN" && (pathname === "/" || pathname === "/dashboard")) {

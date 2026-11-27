@@ -89,28 +89,10 @@ export const tokenStorage = {
       const cookieToken = getCookie("mbyte_auth_token");
       let localToken = window.localStorage.getItem("mbyte_admin_access_token");
 
-      // In a shared-cookie multi-tenant environment (e.g. .mediqbyte.com),
-      // if the cross-subdomain auth cookie is absent, any surviving token in this origin's
-      // localStorage is orphaned (e.g. user logged out on another subdomain). Discard it.
-      const isDomainShared = !!getCookieDomain();
-      if (isDomainShared && !cookieToken && localToken) {
-        tokenStorage.clearTokens();
-        try {
-          window.localStorage.removeItem("mbyte_tenant_slug");
-          window.localStorage.removeItem("mbyte_auth_user");
-          window.localStorage.removeItem("mbyte_selected_org_id");
-        } catch {}
-        return null;
-      }
-
       const candidateToken = cookieToken || localToken || memoryAccessToken;
       if (candidateToken && isTokenExpired(candidateToken)) {
-        tokenStorage.clearTokens();
-        try {
-          window.localStorage.removeItem("mbyte_tenant_slug");
-          window.localStorage.removeItem("mbyte_auth_user");
-          window.localStorage.removeItem("mbyte_selected_org_id");
-        } catch {}
+        // DO NOT call clearTokens()! A valid refresh token may exist to silently renew the session.
+        // Return null for the expired access token so that interceptors / guards can trigger refresh.
         return null;
       }
 
@@ -221,12 +203,53 @@ export function isTokenExpired(token: string | null): boolean {
   }
 }
 
+// Shared in-flight promise to prevent duplicate concurrent refresh requests
+let refreshPromise: Promise<string | null> | null = null;
+
+export async function refreshAuthSession(): Promise<string | null> {
+  const refreshToken = tokenStorage.getRefreshToken();
+  if (!refreshToken || isTokenExpired(refreshToken)) {
+    return null;
+  }
+
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
+  refreshPromise = (async () => {
+    try {
+      const res = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken });
+      const newAccessToken =
+        res.data?.data?.accessToken ||
+        res.data?.accessToken;
+      const newRefreshToken =
+        res.data?.data?.refreshToken ||
+        res.data?.refreshToken ||
+        refreshToken;
+
+      if (newAccessToken) {
+        tokenStorage.setTokens(newAccessToken, newRefreshToken);
+        return newAccessToken;
+      } else {
+        return null;
+      }
+    } catch (err) {
+      console.warn("Silent session token refresh failed:", err);
+      return null;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
 // Ensure a valid authenticated manager session exists if token is already present
 let authPromise: Promise<string | null> | null = null;
 export async function ensureAuthenticated(): Promise<string | null> {
   const existing = tokenStorage.getAccessToken();
   if (existing && !isTokenExpired(existing)) return existing;
-  return null;
+  return refreshAuthSession();
 }
 
 // Request Interceptor: Attach Bearer JWT if available and validate endpoint
@@ -244,24 +267,11 @@ axiosInstance.interceptors.request.use(
 
     let token = tokenStorage.getAccessToken();
 
-    // If token exists but expired, and refreshToken exists, try to refresh
-    if (token && isTokenExpired(token) && !config.url?.includes("/auth/login") && !config.url?.includes("/auth/refresh")) {
+    // If access token is expired or missing, check if a valid refresh token exists to renew session
+    if (!token && !config.url?.includes("/auth/login") && !config.url?.includes("/auth/refresh")) {
       const refreshToken = tokenStorage.getRefreshToken();
-      if (refreshToken) {
-        try {
-          const refreshRes = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken });
-          const newAccessToken = refreshRes.data?.data?.accessToken || refreshRes.data?.accessToken;
-          const newRefreshToken = refreshRes.data?.data?.refreshToken || refreshRes.data?.refreshToken;
-          if (newAccessToken) {
-            tokenStorage.setTokens(newAccessToken, newRefreshToken);
-            token = newAccessToken;
-          }
-        } catch {
-          tokenStorage.clearTokens();
-          token = null;
-        }
-      } else {
-        token = null;
+      if (refreshToken && !isTokenExpired(refreshToken)) {
+        token = await refreshAuthSession();
       }
     }
 
