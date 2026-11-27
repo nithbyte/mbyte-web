@@ -28,6 +28,8 @@ import {
   AnnouncementPriority,
   AnnouncementTargetRole,
 } from "@/types/chat";
+import { Modal } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 export default function AnnouncementsPage() {
   const { data: currentUserQuery } = useCurrentUser();
@@ -431,216 +433,197 @@ export default function AnnouncementsPage() {
       </div>
 
       {/* Broadcast Announcement Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/70 backdrop-blur-xs p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-[#111622] border border-slate-200 dark:border-gray-800 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden my-8">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-gray-800 bg-slate-50/80 dark:bg-[#161c2a]">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-orange-500/15 border border-orange-500/25 flex items-center justify-center text-orange-500">
-                  <Megaphone className="w-4 h-4" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">Broadcast Announcement</h2>
-                  <p className="text-xs text-slate-500 dark:text-gray-400">
-                    Send real-time circular to field representatives and managers
-                  </p>
-                </div>
-              </div>
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Broadcast Announcement"
+        description="Send real-time circular to field representatives and managers"
+        maxWidth="2xl"
+      >
+        <form onSubmit={handleCreateAnnouncement} className="space-y-4">
+          {/* Target Audience */}
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-gray-400 mb-2">
+              Target Audience
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               <button
-                onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 dark:text-gray-400 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-gray-800 transition-colors"
+                type="button"
+                onClick={() => setFormTargetRole("ALL")}
+                className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                  formTargetRole === "ALL"
+                    ? "bg-orange-50 dark:bg-orange-600/15 border-[#FF6B00] text-orange-700 dark:text-orange-400 shadow-xs font-semibold"
+                    : "bg-slate-50 dark:bg-[#182030] border-slate-200 dark:border-gray-700/60 text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white"
+                }`}
               >
-                <X className="w-5 h-5" />
+                <div className="font-semibold text-xs mb-0.5">All Members</div>
+                <div className="text-[11px] text-slate-500 dark:text-gray-400">MRs, Managers, Staff</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFormTargetRole("MR")}
+                className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                  formTargetRole === "MR"
+                    ? "bg-orange-50 dark:bg-orange-600/15 border-[#FF6B00] text-orange-700 dark:text-orange-400 shadow-xs font-semibold"
+                    : "bg-slate-50 dark:bg-[#182030] border-slate-200 dark:border-gray-700/60 text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white"
+                }`}
+              >
+                <div className="font-semibold text-xs mb-0.5">Field Reps (MRs)</div>
+                <div className="text-[11px] text-slate-500 dark:text-gray-400">Medical Representatives only</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFormTargetRole("MANAGER")}
+                className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                  formTargetRole === "MANAGER"
+                    ? "bg-orange-50 dark:bg-orange-600/15 border-[#FF6B00] text-orange-700 dark:text-orange-400 shadow-xs font-semibold"
+                    : "bg-slate-50 dark:bg-[#182030] border-slate-200 dark:border-gray-700/60 text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white"
+                }`}
+              >
+                <div className="font-semibold text-xs mb-0.5">Managers Only</div>
+                <div className="text-[11px] text-slate-500 dark:text-gray-400">Area & Regional Managers</div>
               </button>
             </div>
-
-            {/* Modal Form */}
-            <form onSubmit={handleCreateAnnouncement} className="p-6 space-y-5">
-              {/* Target Audience */}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-gray-400 mb-2">
-                  Target Audience
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => setFormTargetRole("ALL")}
-                    className={`p-3 rounded-xl border text-left transition-all ${
-                      formTargetRole === "ALL"
-                        ? "bg-orange-50 dark:bg-orange-600/15 border-orange-500 text-orange-700 dark:text-white shadow-xs"
-                        : "bg-slate-50 dark:bg-[#182030] border-slate-200 dark:border-gray-700/60 text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white"
-                    }`}
-                  >
-                    <div className="font-semibold text-xs mb-0.5">All Members</div>
-                    <div className="text-[11px] text-slate-500 dark:text-gray-400">MRs, Managers, Staff</div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setFormTargetRole("MR")}
-                    className={`p-3 rounded-xl border text-left transition-all ${
-                      formTargetRole === "MR"
-                        ? "bg-orange-50 dark:bg-orange-600/15 border-orange-500 text-orange-700 dark:text-white shadow-xs"
-                        : "bg-slate-50 dark:bg-[#182030] border-slate-200 dark:border-gray-700/60 text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white"
-                    }`}
-                  >
-                    <div className="font-semibold text-xs mb-0.5">Field Reps (MRs)</div>
-                    <div className="text-[11px] text-slate-500 dark:text-gray-400">Medical Representatives only</div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setFormTargetRole("MANAGER")}
-                    className={`p-3 rounded-xl border text-left transition-all ${
-                      formTargetRole === "MANAGER"
-                        ? "bg-orange-50 dark:bg-orange-600/15 border-orange-500 text-orange-700 dark:text-white shadow-xs"
-                        : "bg-slate-50 dark:bg-[#182030] border-slate-200 dark:border-gray-700/60 text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white"
-                    }`}
-                  >
-                    <div className="font-semibold text-xs mb-0.5">Managers Only</div>
-                    <div className="text-[11px] text-slate-500 dark:text-gray-400">Area & Regional Managers</div>
-                  </button>
-                </div>
-              </div>
-
-              {/* Priority */}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-gray-400 mb-2">
-                  Priority Level
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {[
-                    { key: "NORMAL", label: "Normal" },
-                    { key: "HIGH", label: "High" },
-                    { key: "URGENT", label: "Urgent" },
-                    { key: "POLICY", label: "Policy" },
-                  ].map((p) => (
-                    <button
-                      key={p.key}
-                      type="button"
-                      onClick={() => setFormPriority(p.key as AnnouncementPriority)}
-                      className={`py-2 px-3 rounded-xl text-xs font-semibold border text-center transition-all ${
-                        formPriority === p.key
-                          ? "bg-orange-600 text-white border-orange-500 shadow-xs"
-                          : "bg-slate-50 dark:bg-[#182030] border-slate-200 dark:border-gray-700/60 text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white"
-                      }`}
-                    >
-                      {p.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Title */}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-gray-400 mb-1.5">
-                  Announcement Title *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Q4 Target Revision & Product Launch Schedule"
-                  value={formTitle}
-                  onChange={(e) => setFormTitle(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-[#182030] border border-slate-200 dark:border-gray-700/60 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-gray-500 focus:outline-none focus:border-orange-500"
-                />
-              </div>
-
-              {/* Content Body */}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-gray-400 mb-1.5">
-                  Announcement Details *
-                </label>
-                <textarea
-                  required
-                  rows={4}
-                  placeholder="Provide complete guidelines, instructions, or meeting details..."
-                  value={formContent}
-                  onChange={(e) => setFormContent(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-[#182030] border border-slate-200 dark:border-gray-700/60 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-gray-500 focus:outline-none focus:border-orange-500 resize-none"
-                />
-              </div>
-
-              {/* Push Notification Toggle */}
-              <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 dark:bg-[#182030] border border-slate-200 dark:border-gray-700/60">
-                <div className="flex items-center gap-2.5">
-                  <Smartphone className="w-5 h-5 text-sky-500" />
-                  <div>
-                    <div className="text-xs font-semibold text-slate-900 dark:text-white">Instant Push Notification</div>
-                    <div className="text-[11px] text-slate-500 dark:text-gray-400">
-                      Vibrates mobile devices with sound and banners via FCM
-                    </div>
-                  </div>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formSendPush}
-                    onChange={(e) => setFormSendPush(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-slate-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
-                </label>
-              </div>
-
-              {/* Mobile Preview Box */}
-              {(formTitle || formContent) && (
-                <div className="p-3.5 rounded-xl bg-slate-100 dark:bg-gray-900/80 border border-slate-200 dark:border-gray-800">
-                  <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-gray-400 mb-2 flex items-center gap-1.5">
-                    <Smartphone className="w-3.5 h-3.5 text-orange-500" />
-                    <span>Live Field Representative Notification Preview</span>
-                  </div>
-                  <div className="bg-white dark:bg-[#1a2232] rounded-lg p-3 border border-slate-200 dark:border-gray-700/50 shadow-xs">
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className="w-4 h-4 rounded-full bg-orange-600 flex items-center justify-center text-[8px] text-white font-bold">
-                        M
-                      </div>
-                      <span className="text-[11px] font-bold text-slate-900 dark:text-white">Mediqbyte</span>
-                      <span className="text-[10px] text-slate-400 dark:text-gray-400">• now</span>
-                    </div>
-                    <div className="text-xs font-semibold text-slate-900 dark:text-white">
-                      📢 Announcement: {formTitle || "Announcement Title"}
-                    </div>
-                    <div className="text-[11px] text-slate-600 dark:text-gray-300 line-clamp-2 mt-0.5">
-                      {formContent || "Details will appear here..."}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200 dark:border-gray-800">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  disabled={isSubmitting}
-                  className="px-4 py-2 text-sm text-slate-500 hover:text-slate-800 dark:text-gray-400 dark:hover:text-white transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white text-sm font-semibold shadow-lg shadow-orange-600/20 transition-all"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>Broadcasting...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4" />
-                      <span>Broadcast to Organization</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
           </div>
-        </div>
-      )}
+
+          {/* Priority */}
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-gray-400 mb-2">
+              Priority Level
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {[
+                { key: "NORMAL", label: "Normal" },
+                { key: "HIGH", label: "High" },
+                { key: "URGENT", label: "Urgent" },
+                { key: "POLICY", label: "Policy" },
+              ].map((p) => (
+                <button
+                  key={p.key}
+                  type="button"
+                  onClick={() => setFormPriority(p.key as AnnouncementPriority)}
+                  className={`py-2 px-3 rounded-xl text-xs font-semibold border text-center transition-all cursor-pointer ${
+                    formPriority === p.key
+                      ? "bg-[#FF6B00] text-white border-[#FF6B00] shadow-xs"
+                      : "bg-slate-50 dark:bg-[#182030] border-slate-200 dark:border-gray-700/60 text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white"
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Title */}
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-gray-400 mb-1.5">
+              Announcement Title *
+            </label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. Q4 Target Revision & Product Launch Schedule"
+              value={formTitle}
+              onChange={(e) => setFormTitle(e.target.value)}
+              className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-[#182030] border border-slate-200 dark:border-gray-700/60 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#FF6B00]"
+            />
+          </div>
+
+          {/* Content Body */}
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-gray-400 mb-1.5">
+              Announcement Details *
+            </label>
+            <textarea
+              required
+              rows={4}
+              placeholder="Provide complete guidelines, instructions, or meeting details..."
+              value={formContent}
+              onChange={(e) => setFormContent(e.target.value)}
+              className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-[#182030] border border-slate-200 dark:border-gray-700/60 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#FF6B00] resize-none"
+            />
+          </div>
+
+          {/* Push Notification Toggle */}
+          <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 dark:bg-[#182030] border border-slate-200 dark:border-gray-700/60">
+            <div className="flex items-center gap-2.5">
+              <Smartphone className="w-5 h-5 text-sky-500" />
+              <div>
+                <div className="text-xs font-semibold text-slate-900 dark:text-white">Instant Push Notification</div>
+                <div className="text-[11px] text-slate-500 dark:text-gray-400">
+                  Vibrates mobile devices with sound and banners via FCM
+                </div>
+              </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formSendPush}
+                onChange={(e) => setFormSendPush(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-slate-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#FF6B00]"></div>
+            </label>
+          </div>
+
+          {/* Mobile Preview Box */}
+          {(formTitle || formContent) && (
+            <div className="p-3.5 rounded-xl bg-slate-100 dark:bg-gray-900/80 border border-slate-200 dark:border-gray-800">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-gray-400 mb-2 flex items-center gap-1.5">
+                <Smartphone className="w-3.5 h-3.5 text-[#FF6B00]" />
+                <span>Live Field Representative Notification Preview</span>
+              </div>
+              <div className="bg-white dark:bg-[#1a2232] rounded-lg p-3 border border-slate-200 dark:border-gray-700/50 shadow-xs">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-4 h-4 rounded-full bg-[#FF6B00] flex items-center justify-center text-[8px] text-white font-bold">
+                    M
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-900 dark:text-white">Mediqbyte</span>
+                  <span className="text-[10px] text-slate-400 dark:text-gray-400">• now</span>
+                </div>
+                <div className="text-xs font-semibold text-slate-900 dark:text-white">
+                  📢 Announcement: {formTitle || "Announcement Title"}
+                </div>
+                <div className="text-[11px] text-slate-600 dark:text-gray-300 line-clamp-2 mt-0.5">
+                  {formContent || "Details will appear here..."}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-white/10">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsModalOpen(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={isSubmitting}
+              className="flex items-center gap-2"
+            >
+              {isSubmitting ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>Broadcasting...</span>
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4" />
+                  <span>Broadcast to Organization</span>
+                </>
+              )}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
