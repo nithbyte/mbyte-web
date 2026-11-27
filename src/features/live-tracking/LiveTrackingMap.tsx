@@ -183,11 +183,52 @@ function chaikinSmooth(points: L.LatLngTuple[], iterations = 1): L.LatLngTuple[]
   return current;
 }
 
+function perpendicularDistanceMeters(
+  p: L.LatLngTuple,
+  a: L.LatLngTuple,
+  b: L.LatLngTuple,
+): number {
+  const l2 = (b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2;
+  if (l2 === 0) return haversineMeters(p[0], p[1], a[0], a[1]);
+  let t = ((p[0] - a[0]) * (b[0] - a[0]) + (p[1] - a[1]) * (b[1] - a[1])) / l2;
+  t = Math.max(0, Math.min(1, t));
+  const projLat = a[0] + t * (b[0] - a[0]);
+  const projLng = a[1] + t * (b[1] - a[1]);
+  return haversineMeters(p[0], p[1], projLat, projLng);
+}
+
+function ramerDouglasPeucker(
+  points: L.LatLngTuple[],
+  epsilonMeters = 8,
+): L.LatLngTuple[] {
+  if (points.length <= 2) return points;
+  let dmax = 0;
+  let index = 0;
+  const last = points.length - 1;
+
+  for (let i = 1; i < last; i++) {
+    const d = perpendicularDistanceMeters(points[i], points[0], points[last]);
+    if (d > dmax) {
+      index = i;
+      dmax = d;
+    }
+  }
+
+  if (dmax > epsilonMeters) {
+    const rec1 = ramerDouglasPeucker(points.slice(0, index + 1), epsilonMeters);
+    const rec2 = ramerDouglasPeucker(points.slice(index), epsilonMeters);
+    return rec1.slice(0, -1).concat(rec2);
+  } else {
+    return [points[0], points[last]];
+  }
+}
+
 /**
  * Intelligent Trajectory Filter & Route Smoother:
  * 1. Filters out indoor GPS multipath reflections & Wi-Fi triangulation bounce spikes (the "spiderweb")
- * 2. Collapses stationary dwell clusters inside clinics/hospitals (< 22m radius) into clean dwell anchors
- * 3. Applies Chaikin curve smoothing so road routes follow streets cleanly without jagged stair-steps
+ * 2. True Dwell Cluster Collapse: Collapses stationary jitter clusters inside clinics/hospitals (< 48m) into a SINGLE clean stop
+ * 3. Ramer-Douglas-Peucker simplification to eliminate road stair-stepping
+ * 4. Chaikin curve smoothing so road routes follow streets cleanly
  */
 function cleanAndSmoothRouteTrail(rawTrail: RouteBreadcrumb[]): L.LatLngTuple[] {
   if (!rawTrail || rawTrail.length === 0) return [];
@@ -209,17 +250,15 @@ function cleanAndSmoothRouteTrail(rawTrail: RouteBreadcrumb[]): L.LatLngTuple[] 
   }
 
   // 2. Filter out poor accuracy fixes (> 45m) when good fixes exist
-  const hasGood = valid.some((p) => p.accuracy && p.accuracy <= 35);
+  const hasGood = valid.some((p) => p.accuracy && p.accuracy <= 30);
   const accuracyFiltered = hasGood
     ? valid.filter((p) => !p.accuracy || p.accuracy <= 45)
     : valid;
 
   const basePoints = accuracyFiltered.length >= 2 ? accuracyFiltered : valid;
 
-  // 3. Remove Multipath Rebound Spikes (The Spiderweb Killer)
-  // If point i jumps out and next point (or i+2) returns close to previous point:
-  const noSpikes: RouteBreadcrumb[] = [];
-  noSpikes.push(basePoints[0]);
+  // 3. Remove Multipath Rebound Spikes (acute bounce / hairpin rejection)
+  const noSpikes: RouteBreadcrumb[] = [basePoints[0]];
 
   for (let i = 1; i < basePoints.length - 1; i++) {
     const prev = noSpikes[noSpikes.length - 1];
@@ -230,11 +269,11 @@ function cleanAndSmoothRouteTrail(rawTrail: RouteBreadcrumb[]): L.LatLngTuple[] 
     const dCurrNext = haversineMeters(curr.latitude, curr.longitude, next.latitude, next.longitude);
     const dPrevNext = haversineMeters(prev.latitude, prev.longitude, next.latitude, next.longitude);
 
-    // If current point jumped out >= 28m and next point snaps back close to prev:
+    // If current point jumped out >= 25m and next point snaps back close to prev:
     const isSingleSpike =
-      dPrevCurr >= 28 &&
-      dCurrNext >= 28 &&
-      dPrevNext <= Math.max(dPrevCurr * 0.45, 25);
+      dPrevCurr >= 25 &&
+      dCurrNext >= 25 &&
+      dPrevNext <= Math.max(dPrevCurr * 0.5, 28);
 
     if (isSingleSpike) {
       continue;
@@ -245,8 +284,8 @@ function cleanAndSmoothRouteTrail(rawTrail: RouteBreadcrumb[]): L.LatLngTuple[] 
       const nextNext = basePoints[i + 2];
       const dPrevNextNext = haversineMeters(prev.latitude, prev.longitude, nextNext.latitude, nextNext.longitude);
       const isDoubleSpike =
-        dPrevCurr >= 28 &&
-        dPrevNextNext <= Math.max(dPrevCurr * 0.45, 25);
+        dPrevCurr >= 25 &&
+        dPrevNextNext <= Math.max(dPrevCurr * 0.5, 28);
       if (isDoubleSpike) {
         continue;
       }
@@ -257,34 +296,62 @@ function cleanAndSmoothRouteTrail(rawTrail: RouteBreadcrumb[]): L.LatLngTuple[] 
 
   noSpikes.push(basePoints[basePoints.length - 1]);
 
-  // 4. Stationary Dwell Clustering
-  // Collapse stationary jitter inside clinics (< 22m radius) into clean dwell anchors
+  // 4. True Dwell Cluster Collapse:
+  // Identify dwell clusters where representative stays at a location (< 48m radius or speed < 2.2 km/h).
+  // Collapse entire dwell period into a SINGLE representative centroid point.
+  // NEVER draw lines inside the dwell cluster!
+  const DWELL_RADIUS_METERS = 48;
   const clustered: L.LatLngTuple[] = [];
-  let clusterAnchor = noSpikes[0];
-  clustered.push([clusterAnchor.latitude, clusterAnchor.longitude]);
+  let dwellPoints: RouteBreadcrumb[] = [noSpikes[0]];
 
   for (let i = 1; i < noSpikes.length; i++) {
     const pt = noSpikes[i];
+    const dwellAnchor = dwellPoints[0];
     const distFromAnchor = haversineMeters(
-      clusterAnchor.latitude,
-      clusterAnchor.longitude,
+      dwellAnchor.latitude,
+      dwellAnchor.longitude,
       pt.latitude,
       pt.longitude,
     );
+    const speed = pt.speedKmh ?? 0;
+    const isStationary = speed < 2.2 || distFromAnchor < DWELL_RADIUS_METERS;
 
-    if (i === noSpikes.length - 1) {
+    if (isStationary && distFromAnchor < DWELL_RADIUS_METERS) {
+      dwellPoints.push(pt);
+    } else {
+      // MR has moved away: emit ONE representative point for the dwell
+      if (dwellPoints.length > 1) {
+        const avgLat = dwellPoints.reduce((s, p) => s + p.latitude, 0) / dwellPoints.length;
+        const avgLng = dwellPoints.reduce((s, p) => s + p.longitude, 0) / dwellPoints.length;
+        clustered.push([avgLat, avgLng]);
+      } else {
+        clustered.push([dwellAnchor.latitude, dwellAnchor.longitude]);
+      }
       clustered.push([pt.latitude, pt.longitude]);
-      break;
-    }
-
-    if (distFromAnchor >= 22) {
-      clustered.push([pt.latitude, pt.longitude]);
-      clusterAnchor = pt;
+      dwellPoints = [pt];
     }
   }
 
-  // 5. Road-curve smoothing
-  return chaikinSmooth(clustered, 1);
+  // Push final dwell cluster point
+  if (dwellPoints.length > 0) {
+    if (dwellPoints.length > 1) {
+      const avgLat = dwellPoints.reduce((s, p) => s + p.latitude, 0) / dwellPoints.length;
+      const avgLng = dwellPoints.reduce((s, p) => s + p.longitude, 0) / dwellPoints.length;
+      clustered.push([avgLat, avgLng]);
+    } else {
+      clustered.push([dwellPoints[0].latitude, dwellPoints[0].longitude]);
+    }
+  }
+
+  if (clustered.length <= 2) {
+    return clustered;
+  }
+
+  // 5. Ramer-Douglas-Peucker simplification to eliminate road jitter
+  const simplified = ramerDouglasPeucker(clustered, 8);
+
+  // 6. Road-curve smoothing
+  return chaikinSmooth(simplified, 1);
 }
 
 export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
