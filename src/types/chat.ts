@@ -100,11 +100,13 @@ export interface ColleagueContact {
 
 export type AnnouncementPriority = 'NORMAL' | 'HIGH' | 'URGENT' | 'POLICY';
 export type AnnouncementTargetRole = 'ALL' | 'MR' | 'MANAGER';
+export type AnnouncementScope = 'GLOBAL' | 'TENANT';
 
 export interface CreateAnnouncementInput {
   title: string;
   content: string;
   organizationId?: string;
+  scope?: AnnouncementScope;
   priority?: AnnouncementPriority;
   targetRole?: AnnouncementTargetRole;
   sendNotification?: boolean;
@@ -114,6 +116,11 @@ export interface AnnouncementItem {
   id: string;
   conversationId: string;
   organizationId?: string;
+  organizationName?: string;
+  organizationCode?: string;
+  scope?: AnnouncementScope;
+  isOverallApp?: boolean;
+  broadcastId?: string;
   title: string;
   body: string;
   priority: AnnouncementPriority;

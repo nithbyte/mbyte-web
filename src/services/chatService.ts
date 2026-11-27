@@ -329,6 +329,7 @@ export const chatService = {
     limit?: number;
     offset?: number;
     organizationId?: string;
+    scope?: string;
   }): Promise<AnnouncementsResponse> {
     try {
       const res = await apiClient.get<any>("/chat/announcements", { params });

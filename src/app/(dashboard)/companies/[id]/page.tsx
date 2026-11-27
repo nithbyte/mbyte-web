@@ -41,7 +41,11 @@ import {
   UserPlus,
   SlidersHorizontal,
   RotateCcw,
+  Megaphone,
+  Globe,
 } from "lucide-react";
+import { chatService } from "@/services/chatService";
+import { AnnouncementItem } from "@/types/chat";
 import {
   useOrganization,
   useUpdateOrganization,
@@ -81,7 +85,7 @@ const FEATURE_ICONS: Record<string, React.ReactNode> = {
   Clock: <Clock className="h-4 w-4" />,
 };
 
-type ActiveTab = "USERS" | "FEATURES" | "SETTINGS";
+type ActiveTab = "USERS" | "FEATURES" | "SETTINGS" | "ANNOUNCEMENTS";
 
 export default function TenantDetailsPage() {
   const params = useParams();
@@ -94,10 +98,28 @@ export default function TenantDetailsPage() {
   const [roleFilter, setRoleFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
 
+  // Tenant Announcements State
+  const [tenantAnnouncements, setTenantAnnouncements] = useState<AnnouncementItem[]>([]);
+  const [isTenantAnnouncementsLoading, setIsTenantAnnouncementsLoading] = useState(false);
+
   // Queries
   const { data: org, isLoading: isOrgLoading, refetch: refetchOrg } = useOrganization(orgId);
   const { data: tenantFeatures, isLoading: isFeaturesLoading, refetch: refetchFeatures } = useTenantFeatures(orgId);
   const { data: users = [], isLoading: isUsersLoading, refetch: refetchUsers } = useTenantUsers(orgId);
+
+  // Load tenant announcements when tab is active
+  React.useEffect(() => {
+    if (activeTab === "ANNOUNCEMENTS" && orgId) {
+      setIsTenantAnnouncementsLoading(true);
+      chatService
+        .getAnnouncements({ organizationId: orgId, limit: 50 })
+        .then((res) => {
+          setTenantAnnouncements(res?.items || []);
+        })
+        .catch((err) => console.error("Failed to load tenant announcements", err))
+        .finally(() => setIsTenantAnnouncementsLoading(false));
+    }
+  }, [activeTab, orgId]);
 
   // Mutations
   const updateOrgMutation = useUpdateOrganization();
@@ -632,6 +654,18 @@ export default function TenantDetailsPage() {
             <ShieldCheck className="h-4 w-4" />
             <span>Geofence Policy & Company Settings</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab("ANNOUNCEMENTS")}
+            className={`flex items-center gap-2 py-3 px-1 border-b-2 font-semibold text-xs transition-colors cursor-pointer ${
+              activeTab === "ANNOUNCEMENTS"
+                ? "border-[#FF6B00] text-[#FF6B00]"
+                : "border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+            }`}
+          >
+            <Megaphone className="h-4 w-4" />
+            <span>Tenant Announcements</span>
+          </button>
         </nav>
       </div>
 
@@ -1056,6 +1090,114 @@ export default function TenantDetailsPage() {
               </Button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* TAB 4: TENANT ANNOUNCEMENTS */}
+      {activeTab === "ANNOUNCEMENTS" && (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 rounded-2xl border border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-xs">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-orange-500/15 text-[#FF6B00]">
+                  <Building2 className="w-3 h-3" /> TENANT ISOLATED CHANNEL
+                </span>
+                <span className="text-xs text-slate-500 dark:text-gray-400">
+                  {org.name} ({org.code})
+                </span>
+              </div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                Company Announcements & Circulars
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-gray-400">
+                Notices broadcasted to field reps and managers in this organization, plus platform-wide overall app announcements.
+              </p>
+            </div>
+
+            <Link
+              href={`/announcements?organizationId=${orgId}`}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#FF6B00] hover:bg-[#E85E00] text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            >
+              <Megaphone className="w-4 h-4" />
+              <span>Open Dedicated Announcement Page</span>
+              <ExternalLink className="w-3.5 h-3.5 ml-0.5" />
+            </Link>
+          </div>
+
+          {/* Announcements list */}
+          {isTenantAnnouncementsLoading ? (
+            <div className="p-12 text-center rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+              <RefreshCw className="w-6 h-6 text-[#FF6B00] animate-spin mx-auto mb-2" />
+              <p className="text-xs text-slate-500">Loading announcements for {org.name}...</p>
+            </div>
+          ) : tenantAnnouncements.length === 0 ? (
+            <div className="p-12 text-center rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+              <Megaphone className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+              <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-1">
+                No Announcements Yet
+              </h4>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto mb-4">
+                No circulars have been broadcasted for {org.name}. Click below to broadcast an announcement to this tenant.
+              </p>
+              <Link
+                href={`/announcements?organizationId=${orgId}`}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#FF6B00] text-white text-xs font-semibold hover:bg-[#E85E00]"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create Announcement for {org.name}</span>
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {tenantAnnouncements.map((item) => {
+                const isGlobal = Boolean(item.isOverallApp || item.scope === "GLOBAL");
+                return (
+                  <div
+                    key={item.id}
+                    className={`p-4 rounded-xl border bg-white dark:bg-slate-900 shadow-xs space-y-2 ${
+                      isGlobal
+                        ? "border-violet-300/80 dark:border-violet-900/60"
+                        : "border-slate-200 dark:border-slate-800"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        {isGlobal ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-500/15 text-violet-600 dark:text-violet-400 border border-violet-500/30">
+                            <Globe className="w-3 h-3" /> OVERALL APP
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                            <Building2 className="w-3 h-3" /> TENANT NOTICE
+                          </span>
+                        )}
+                        <span className="text-xs font-bold text-slate-900 dark:text-white">
+                          {item.title}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                        <Clock className="w-3 h-3" />
+                        <span>{new Date(item.createdAt).toLocaleDateString()}</span>
+                        <span className="px-1.5 py-0.2 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                          {item.recipientsCount} recipients
+                        </span>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-3">
+                      {item.body || item.rawContent}
+                    </p>
+
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between text-[11px] text-slate-500">
+                      <span>Posted by: <strong className="text-slate-700 dark:text-slate-300">{item.sender?.name || (isGlobal ? "Super Admin" : "Company Admin")}</strong></span>
+                      <span className="text-emerald-600 dark:text-emerald-400 font-medium">Delivered to field force</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
